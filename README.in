@@ -1,0 +1,90 @@
+Documentation
+=============
+
+Prerequisites
+-------------
+
+Make sure the applications mentioned below are in your PATH
+
+* ligprep: ligprep, epik 
+
+* glide: prepwizard, glide, ligprep, glide_sort, pdbconvert
+
+* autodock: prepare_ligand4.py, prepare_receptor4.py, prepare_dpf4.py, prepare_gpf4.py, autogrid4, autodock4, babel
+
+* vina: prepare_ligand4.py, prepare_receptor4.py, vina, babel
+
+* moe: moebatch
+
+* dock: chimera, dms, sphgen_cpp, sphere_selector, showbox, grid, dock6
+
+
+LigPrep
+-------
+
+Used to prepare the ligand structure
+
+--- The command will return immediately, it will launch a background job using the schrodinger serial job engine. It's okay to log out while the job is running. To check your job you can use:
+        jobcontrol -list
+    You can also read the log file, see below.
+    
+--- LigPrep will also generate a job log file, in the example "drugbank100_lp.log". Intermediate files will be stored in a gzipped tar archive, in the example "drugbank100_lp.tar.gz".
+
+--- The easiest way to monitor the progress of the job is to just tail the log file. When it's done you will get the message "ligprep complete." plus the number of structures in the output and the run time.
+
+--- Note I'm not running the full drugbank.sdf as some of the structures had errors, I think this is a problem with the original SDF I download from DrugBank, but I don't have time to track down the problem structures
+
+--- With my example drugbank500.sdf it took 37 minutes on silence to process the file, generating 852 output structures. With the "-r 3" option it took 1h 44min and generated 1570 structures.
+
+
+Steps:
+
+    sdconvert
+        -- Just converts the input sdf to the schrodinger format
+    applyhtreat
+        -- Adds (or deletes) hydrogen atoms
+        -- Chemical structures often are specified with implicit hydrogens
+        -- The default treatment should be fine "All-atom with No-Lp" (lone pair)
+        -- Note that for AutoDock you need to remove non-polar hydrogens, but this will be taken care of later by the ligand preparation script for AutoDock
+        -- Also if you are preparing the ligands for a particular force field you may want to select a different treatment, or again you can post-process it
+    desalter
+        -- Normally you should just leave this on
+        -- This will remove the counter-ions that you sometimes find in chemical database structures
+        -- Also rarely there might be multiple unbonded molecules stored as a single "structure", this will just pick the single largest molecule (for example, this happens in drugbank with some "drugs" that are mixtures)
+    neutralizer
+        -- The default is to neutralize, that is normally what you want
+        -- It will do this by adding/removing protons
+        -- Can check the manual for the exact list of changes that it may make
+    ionizer
+        -- This doesn't run by default
+        -- For docking normally a neutral state only is what you want... at least that's what we've done in the past
+    tautomerizer
+        -- This will generate multiple isomers from the input structures by moving protons & double bonds
+        -- The default is up to 8 tautomers
+        -- The default is to exclude tautomers with probability < 0.01
+    stereoizer
+        -- This will generate multiple stereoisomers (e.g. at carbon stereo centers or double-bonds)
+        -- It will keep the chirality from the input structures where it is specified, but where it is not specified it will generate most possible stereoisomers (up to the max stereoisomers allowed)
+        -- There are some restrictions it will apply by default, i.e. it will exclude some states are not achievable for geometric reasons or are atypical for some types of natural products (e.g. peptides and steroids).
+        -- The default is up to 32 stereoisomers
+    ring_conf
+        -- For non-flexible rings it will always use the input conformation
+        -- By default this will only generate a single (most likely) ring conformation
+        -- Might be worth trying to increase the max number of ring conformations, e.g. add the ligprep option "-r 3"
+    premin & bmin
+        -- Uses a forcefield to generate a 3D conformation
+        -- One reasonable conformation should be fine, the docking program will explore other conformations
+        -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
+
+Glide
+----- 
+
+parameters
+
+* outerbox: box within which the grids are calculated. This is also the box within which all the ligand atoms must be contained. The maximum size of the enclosing box is 50Å.
+
+* innerbox: box explored by the ligand center (restricted to a cube whose sides cannot be longer than 40Å)
+
+
+* DOCKING_METHOD = confgen ensure flexible docking
+
