@@ -1,0 +1,284 @@
+#!/global/software/python-2.7.2/bin/python
+from __future__ import with_statement
+
+import sys
+import os
+import subprocess
+import shutil
+import argparse
+import ConfigParser
+import stat
+import time
+import ligprep
+import glob
+
+import numpy as np
+
+class PrepVSConfigError(Exception):
+    pass
+
+class PrepVSConfig(object):
+
+    def __init__(self, args):
+
+        # check if config file exist
+        if not os.path.exists(args.config_file):
+            raise PrepVSConfigError("Config file %s not found!"%(args.config_file))
+
+        config = ConfigParser.SafeConfigParser()
+        config.read(args.config_file)
+
+        self.input_file_l = []
+        for file_l in args.input_file_l:
+            # check if ligand file exists
+            if not os.path.exists(file_l):
+                raise PrepVSConfigError("File %s not found!"%(self.input_file_l))
+            self.input_file_l.append(os.path.abspath(file_l))
+        self.nfiles_l = len(self.input_file_l)
+
+        self.input_file_r = []
+        for file_r in args.input_file_r:
+            # check if ligand file exists
+            if not os.path.exists(file_r):
+                raise PrepVSConfigError("File %s not found!"%(self.input_file_r))
+            self.input_file_r.append(os.path.abspath(file_r))
+        self.nfiles_r = len(self.input_file_r)
+
+        self.set_general_options(config)
+        self.set_ligprep_options(config)
+        self.set_sitefind_options(config, args)
+
+    def set_general_options(self, config):
+
+        section = 'PREPVS'
+        if config.has_section(section):
+            prepvs = dict(config.items(section))
+            if config.has_option(section, 'namesingle'):
+                yesno = config.get(section, 'namesingle').lower()
+                if yesno == 'yes':
+                    self.namesingle = True
+                elif yesno == 'no':
+                    self.namesingle = False
+                else:
+                    raise PrepVSConfigError("option namesingle should be yes or no!")
+            else:
+                self.namesingle = False
+
+    def set_ligprep_options(self, config):
+        """set ligprep options"""
+
+        section = 'LIGPREP'
+        self.ligprep = {}
+        if config.has_section(section):
+            self.ligprep = dict(config.items(section))
+        # set ligprep defaults options if they are not mentionned in the config file
+        for key, value in ligprep.ligprep_default_options.items():
+            if key not in self.ligprep:
+                self.ligprep[key] = value
+
+    def set_sitefind_options(self, config, args):
+        """set options for the binding site"""
+
+        known_sitefind_programs = ['moe']
+
+        self.site = {}
+        if args.sitefind:
+            section = 'SITEFINDER'
+            if config.has_section(section):
+                if not config.has_option(section, 'program'):
+                    raise PrepVSConfigError("Option program in section %s is required in config file for local docking!"%section)
+                if config.get(section, 'program').lower() not in known_sitefind_programs:
+                    raise PrepVSConfigError("Option program in section %s should be one of "%section + ", ".join(known_sitefind_programs))
+                config_c = dict(config.items(section))
+                for key, value in config_c.iteritems():
+                    self.site[key] = value
+                # set site finder default options if they are not mentionned in the config file
+                program = self.site['program']
+                __import__(program)
+                default_settings = getattr(sys.modules[program], 'default_sitefind_settings')
+                for key, value in default_settings.iteritems():
+                    self.site[key] = value
+            else:
+                raise PrepVSConfigError("Section %s is required in config file for blind docking!"%section)
+
+class PrepVS(object):
+
+    def create_arg_parser(self):
+
+        parser = argparse.ArgumentParser(description="Prepare files for virtual screening")
+
+        parser.add_argument('-l',
+            type=str,
+            dest='input_file_l',
+            required=True,
+            nargs='+',
+            help = 'Ligand coordinate file(s): .pdb, .sdf, .smi')
+
+        parser.add_argument('-r',
+            type=str,
+            dest='input_file_r',
+            required=True,
+            nargs='+',
+            help = 'Receptor coordinate file(s): .pdb')
+
+        parser.add_argument('-f',
+            dest='config_file',
+            required=True,
+            help='config file: .ini')
+
+        parser.add_argument('--sitefind',
+            dest='sitefind',
+            action='store_true',
+            default=False,
+            help='Find possible binding sites (blind docking)')
+
+        return parser
+
+    def prepare_vs(self, config, args):
+
+        # prepare structures
+        self.prepare_structures(config, args)
+
+        # (A) LIGAND level
+        for idx in range(config.nfiles_l):
+            if config.nfiles_l == 1 and not config.namesingle:
+                ligdir = '.'
+            else:
+                ligdir = 'lig' + str(idx)
+                if os.path.isdir(ligdir):
+                    shutil.rmtree(ligdir)
+                os.mkdir(ligdir)
+
+            # (B) RECEPTOR level
+            for jdx in range(config.nfiles_r):
+                recdir = ligdir
+                if config.nfiles_r == 1 and not config.namesingle:
+                    recdir += '/.'
+                else:
+                    recdir += '/rec' + str(jdx)
+                    if os.path.isdir(recdir):
+                        shutil.rmtree(recdir)
+                    os.mkdir(recdir)
+
+                # (C) ISOMER.SITE level
+                ligpdir = '.ligprep' + str(idx)
+                recpdir = '.recprep' + str(jdx)
+                for sdffile in sorted(glob.glob(ligpdir+'/*.prep_*.sdf')):
+                    suffix = os.path.splitext(sdffile)[0]
+                    kdx = suffix.split('_')[-1]
+                    if args.sitefind:
+                        table = np.loadtxt(recpdir+'/sitefinder.log')
+                        for line in table:
+                            isodir = recdir
+                            ldx = int(line[0])
+                            isodir += '/isomer' + kdx + '.site' + str(ldx)
+                            if os.path.isdir(isodir):
+                                shutil.rmtree(isodir)
+                            os.mkdir(isodir)
+
+                            # maybe include ligand size to compute boxsize
+                            self.update_site_config_file(args.config_file, line[2:5], 2*line[5], isodir)
+
+                            # copy the files for ligand and receptor in the corresponding dir
+                            shutil.copyfile(sdffile, isodir + '/lig.sdf')
+                            shutil.copyfile(recpdir+'/rec.pdb', isodir+'/rec.pdb')
+                    else:
+                        isodir = recdir
+                        isodir += '/isomer' + kdx
+                        if os.path.isdir(isodir):
+                            shutil.rmtree(isodir)
+                        os.mkdir(isodir)
+                        # copy the config file in the directory
+                        shutil.copyfile(args.config_file, isodir + '/config.ini')
+  
+                        # copy the files for ligand and receptor in the corresponding dir
+                        shutil.copyfile(sdffile, isodir + '/lig.sdf')
+                        shutil.copyfile(recpdir+'/rec.pdb', isodir+'/rec.pdb')
+
+    def prepare_structures(self, config, args):
+
+        curdir = os.getcwd()
+        print "Preparing ligands..."
+        for idx, file_l in enumerate(config.input_file_l):
+            ligpdir = '.ligprep' + str(idx)
+            if os.path.isdir(ligpdir):
+                shutil.rmtree(ligpdir)
+            os.mkdir(ligpdir)
+            os.chdir(ligpdir)
+            ligprep.prepare_ligand(file_l, config)
+            os.chdir(curdir)
+
+        print "Preparing receptors..."
+        for idx, file_r in enumerate(config.input_file_r):
+            recpdir = '.recprep' + str(idx)
+            if os.path.isdir(recpdir):
+                shutil.rmtree(recpdir)
+            os.mkdir(recpdir)
+            os.chdir(recpdir)
+            shutil.copyfile(file_r, 'rec.pdb')
+            if args.sitefind:
+                self.find_binding_sites(config)
+            os.chdir(curdir)
+
+    def update_site_config_file(self, config_file, center, boxsize, ligdir):
+
+        new_config_file = ligdir + '/' + config_file
+        shutil.copyfile(config_file, new_config_file)
+
+        tmp_config_file = list(os.path.splitext(new_config_file))
+        tmp_config_file.insert(1,'_tmp')
+        tmp_config_file = ''.join(tmp_config_file)
+
+        # remove section 'SITE' of config file if exists
+        with open(tmp_config_file, 'w') as tmpf:
+            with open(new_config_file, 'r') as newf:
+                sitesection = False
+                for line in newf:
+                    if line.startswith('[SITE]'):
+                        sitesection = True
+                    if sitesection:
+                        if line.startswith('[') and not line.startswith('[SITE]'): # if reach new section
+                            sitesection = False
+                    if not sitesection:
+                        tmpf.write(line)
+
+        shutil.move(tmp_config_file, new_config_file)
+
+        # add new section 'SITE'
+        center_conf = ', '.join(map(str, center.tolist()))
+        boxsize_conf = ', '.join(map(str, [boxsize for idx in range(3)]))
+        newsite_section = """
+[SITE]
+center = %(center_conf)s
+boxsize = %(boxsize_conf)s"""% locals()
+
+        with open(new_config_file, 'a') as newf:
+            newf.write(newsite_section)
+
+    def find_binding_sites(self, config):
+
+        program = config.site['program']
+
+        # (A) write script
+        script_name = 'find_binding_sites.sh'
+        write_sitefinder_script = getattr(sys.modules[program], 'write_sitefinder_script')
+        write_sitefinder_script(script_name, 'rec.pdb', config)
+        os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+
+        # (B) execute script
+        subprocess.check_call("./" + script_name + " &> sitefinder.log", shell=True, executable='/bin/bash')
+
+    def run(self):
+
+        parser = self.create_arg_parser()
+        args = parser.parse_args()
+
+        tcpu1 = time.time()
+        config = PrepVSConfig(args)
+
+        # prepare virtual screening
+        self.prepare_vs(config, args)
+        tcpu2 = time.time()
+
+if __name__ == '__main__':
+    PrepVS().run()

@@ -8,15 +8,19 @@ import util.pdbtools as pdbt
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 
-default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', \
-'sphere_radius': '10.0', 'box_size': '10.0', 'grid_spacing': '0.3', 'attractive_exponent': '6', 'repulsive_exponent': '12', \
-'max_orientations': '10000', 'num_scored_conformers': '10'}
+default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
+'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
 
-known_settings = {'herg': {'center': '"3.966 8.683 11.093"'}, \
-'herg-cut': {'center': '"3.966 8.683 11.093"'}, \
-'herg-inactivated': {'center': '"0.000 0.000 -5.000"'}}
+def set_site_options(config):
 
-required_settings_names = ['center']
+    # set box center
+    center = config.site['center']
+    config.options['dock']['center'] = '\"' + ' '.join(map(str.strip, center.split(','))) + '\"'
+
+    # set box size
+    boxsize = config.site['boxsize']
+    boxsize = map(float, map(str.strip, boxsize.split(',')))
+    config.options['dock']['sphgen_radius'] = str(max(boxsize)/2)
 
 def write_docking_script(filename, input_file_r, input_file_l, config):
 
@@ -61,13 +65,13 @@ python shift_lig_coords.py lig.pdb lig_s.pdb %(center)s
 echo "write format mol2 #0 lig.mol2" > pdb2mol.cmd
 chimera --nogui --silent lig_s.pdb pdb2mol.cmd
 rm -rf pdb2mol.cmd
-# selecting spheres
-sphere_selector target_noH_site.sph lig.mol2 %(sphere_radius)s
+# selecting spheres within a user-defined radius (sphgen_radius)
+sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
 
 # create box - the second argument in the file showbox.in
-# is the radius used with sphere_selector
+# is the extra margin to also be enclosed to the box (angstroms)
 echo "Y
-%(box_size)s
+%(extra_margin)s
 selected_spheres.sph
 1
 target_noH_box.pdb" > showbox.in

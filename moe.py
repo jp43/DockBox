@@ -11,11 +11,84 @@ required_programs = ['moebatch']
 default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250', 
 'scoring': 'London dG', 'maxpose': '20', 'gtest': '0.01', 'rescoring': 'London dG', 'remaxpose': '20', 'binding_radius': '10000'}
 
-known_settings = {'herg': {'binding_site': '3.966, 8.683, 11.093'}, \
-'herg-cut': {'binding_site': '3.966, 8.683, 11.093'}, \
-'herg-inactivated': {'binding_site': '0.000, 0.000, -5.000'}}
+default_sitefind_settings = {'minplb': '1.0'}
 
-required_settings_names = ['binding_site']
+def set_site_options(config):
+
+    # set box center
+    center = config.site['center']
+    config.options['moe']['binding_site'] = ', '.join(map(str.strip, center.split(',')))
+
+    # set box size
+    boxsize = config.site['boxsize']
+    boxsize = map(float, map(str.strip, boxsize.split(',')))
+    config.options['moe']['binding_radius'] = max(boxsize)
+
+def write_sitefinder_script(filename, file_r, config):
+    
+    write_moe_sitefinder_script('sitefinder.svl', file_r, config)
+
+    sitefinder_cmd = chkl.eval("moebatch -run sitefinder.svl"%locals(), 'moe') # cmd for docking
+
+    # write script
+    with open(filename, 'w') as file:
+        script ="""#!/bin/bash
+
+# run docking
+%(sitefinder_cmd)s
+"""% locals()
+        file.write(script)
+
+def write_moe_sitefinder_script(filename, file_r, config):
+
+    # write vina script
+    with open(filename, 'w') as file:
+        script ="""#svl
+
+local function main []
+    local chains = ReadAuto ['%(file_r)s', []];
+    local rec = cat cAtoms chains; // extract atom info from atom
+
+    // locate alpha sites
+    local alpha_sites = run['sitefind.svl', [rec, []], 'AlphaSites'];
+
+    local dummy, x, dist;
+    local a_sites, plb;
+    local minplb = %(minplb)s, maxdist;
+    local idx;
+    local nsites;
+    local cog; // center of geometry
+
+    write ['#ID    PLB     x     y    z   radius\\n'];
+
+    for idx = 1, length alpha_sites loop
+        plb = alpha_sites(idx)(4)(2);
+
+        if plb > minplb then
+            a_sites = alpha_sites(idx)(1)(2);
+            nsites = length a_sites(1);
+
+            // get center of geometry of the alpha sites
+            cog = [0.0, 0.0, 0.0];
+            for x = 1, nsites loop
+                cog = add[[a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)], cog];
+            endloop
+            cog = div[cog, nsites];
+            maxdist = 0;
+
+            // get distance to the farthest atom
+            for x = 1, nsites loop
+                dist = sqrt add pow[sub[[a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)], cog], 2];
+                if dist > maxdist or idx == 1 then
+                    maxdist = dist;
+                endif
+            endloop
+            write ['{f.0}  {f.2} {f.3} {f.3}\\n', idx, plb, cog, maxdist];
+        endif
+    endloop
+endfunction;""" %dict(dict(locals()).items()+config.site.items())
+        file.write(script)
+
 
 def write_docking_script(filename, input_file_r, input_file_l, config):
 
@@ -26,7 +99,7 @@ def write_docking_script(filename, input_file_r, input_file_l, config):
 
     dock_cmd = chkl.eval("moebatch -run moe_dock.svl -rec %(input_file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
 
-    # write autodock script
+    # write script
     with open(filename, 'w') as file:
         script ="""#!/bin/bash
 set -e
@@ -129,7 +202,7 @@ ArgvReset ArgvExpand argv;
     rrec = cat cResidues chains; // extract residues info
     for idx = 1, length rrec loop
         com = oCenterOfMass rrec(idx);
-        dist = sqrt add pow[sub[binding_site, com],2];
+        dist = sqrt add pow[sub[binding_site, com], 2];
         if dist < binding_radius then
             binding_res = append [binding_res, rrec(idx)];
         endif
@@ -138,19 +211,18 @@ ArgvReset ArgvExpand argv;
 
     View (Atoms[]);
 
-    local alpha_sites =  run ['sitefind.svl', [rrec, []], 'AlphaSites'];
+    local alpha_sites = run['sitefind.svl', [rrec, []], 'AlphaSites'];
 
     // Take first/highest scoring pocket alpha_sites(1)
     // Take fpos data alpha_sites(1)(1)
     // Take only coords of fpos data alpha_sites(1)(1)(2)
-    local a_sites = apt cat alpha_sites(1)(1)(2); // x,y,z coords
-
+    local a_sites = apt cat alpha_sites(1)(1)(2); // x, y, z coords
 
     // Make dummy He atoms for alpha site
-    local dummy, x,y,z;
-    for x = 1, length a_sites loop
+    local dummy, x, y, z;
+    for x = 1, length a_sites(1) loop
         dummy(x) = sm_Build ['[He]'];
-        aSetPos [dummy(x), a_sites(x)];
+        aSetPos [dummy(x), [a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)]];
     endloop
 
     // Make a collection of site atoms to send to docking
@@ -222,7 +294,7 @@ def extract_docking_results(file_r, file_l, file_s, config):
     subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True)
 
     # save ligand structures in PDB file
-    subprocess.check_call("babel %s %s"%(sdffile, file_l), shell=True)
+    subprocess.check_call("babel %s %s &>/dev/null"%(sdffile, file_l), shell=True)
 
     # save scores
     with open(sdffile, 'r') as sdff:

@@ -13,15 +13,23 @@ required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4
 
 default_settings = {'ga_run': '100', 'spacing': '0.238'}
 
-# options for known systems
-known_settings = {'herg': {'npts': '108,106,108', 'spacing': '0.238', 'gridcenter': '"3.966 8.683 11.093"'}, \
-'herg-cut': {'npts': '108,106,108', 'spacing': '0.258', 'gridcenter': '"3.966 8.683 11.093"'}, \
-'herg-inactivated': {'npts': '108,106,108', 'spacing': '0.258', 'gridcenter': '"0.000 0.000 -5.000"'}}
-
-required_settings_names = ['npts', 'gridcenter']
-
 autogrid_options_names = ['npts', 'spacing', 'gridcenter']
 autodock_options_names = ['ga_run', 'ga_pop_size', 'ga_num_evals', 'ga_num_generations', 'outlev']
+
+def set_site_options(config):
+
+    # set box center
+    center = config.site['center'] # set box
+    config.options['autodock']['gridcenter'] = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
+
+    # set box size
+    boxsize = config.site['boxsize']
+    boxsize = map(float, map(str.strip, boxsize.split(',')))
+    spacing = float(config.options['autodock']['spacing'])
+    npts = []
+    for size in boxsize:
+         npts.append(str(int(size/spacing)))
+    config.options['autodock']['npts'] =  ','.join(npts)
 
 def write_docking_script(filename, input_file_r, input_file_l, config):
 

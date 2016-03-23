@@ -17,7 +17,7 @@ ligprep_value_flags = {'ionization': '-i'}
 known_formats = ['.sdf', '.smi', '.txt']
 known_systems = ['herg', 'herg-cut', 'herg-inactivated']
 
-def prepare_ligand(config):
+def prepare_ligand(file_l, config):
 
     # construct the command to execute ligprep
     ligprep_flags_str = ""
@@ -30,8 +30,8 @@ def prepare_ligand(config):
         else:
             raise ValueError("Option %s does not look like a ligprep option!"%key)
 
-    sdffile = os.path.basename(config.input_file_l)
-    shutil.copyfile(config.input_file_l, sdffile)
+    sdffile = os.path.basename(file_l)
+    shutil.copyfile(file_l, sdffile)
 
     outputfile = generate_3D_structure(sdffile, ligprep_flags_str, config)
 
@@ -40,25 +40,8 @@ def prepare_ligand(config):
     outputsdffile = suffix + '_.sdf'
     subprocess.check_call('babel %s %s -m 2>/dev/null'%(outputfile,outputsdffile), shell=True)
 
-    nfiles = 0
-    for idx in glob.glob(suffix + '_*.sdf'):
-        nfiles += 1
-    config.nisomers = nfiles
-
-    sdffiles_l = []
-    for idx in range(nfiles):
-        if nfiles == 1:
-            sdffile = suffix + '.sdf'
-            shutil.move(suffix+'_1.sdf', sdffile)
-        else:
-            sdffile = suffix + '_%i.sdf'%(idx+1)
-        sdffiles_l.append(os.path.abspath(sdffile))
-
-    config.input_files_l = sdffiles_l
-
     # clean up
-    if config.cleanup:
-        os.remove(outputfile)
+    os.remove(outputfile)
 
 def generate_3D_structure(ff, flags, config):
 
@@ -81,7 +64,6 @@ ligprep -WAIT -W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14 -ac %(inputflag)s %(ff)s 
     for logf in glob.glob(suffix +'*.log'):
        os.remove(logf)
 
-    if config.cleanup:
-       os.remove('ligprep.sh')
+    #os.remove('ligprep.sh')
 
     return outputfile

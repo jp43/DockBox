@@ -8,11 +8,19 @@ required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babe
 
 default_settings = {'cpu': '1'}
 
-known_settings = {'herg': {'center_x': '3.966', 'center_y': '8.683', 'center_z': '11.093', 'size_x': '30.0', 'size_y': '30.0', 'size_z': '30.0'}, \
-'herg-cut': {'center_x': '3.966', 'center_y': '8.683', 'center_z': '11.093', 'size_x': '30.0', 'size_y': '30.0', 'size_z': '30.0'}, \
-'herg-inactivated': {'center_x': '0.000', 'center_y': '0.000', 'center_z': '-5.000', 'size_x': '30.0', 'size_y': '30.0', 'size_z': '30.0'}}
+def set_site_options(config):
 
-required_settings_names = ['center_x', 'center_y', 'center_z', 'size_x', 'size_y', 'size_z']
+    # set box center
+    center = config.site['center'] # set box
+    center = map(str.strip, center.split(','))
+
+    boxsize = config.site['boxsize']
+    boxsize = map(str.strip, boxsize.split(','))
+    xyz = ['x', 'y', 'z']
+
+    for idx, axis in enumerate(xyz):
+        config.options['vina']['center_'+axis] = center[idx]
+        config.options['vina']['size_'+axis] = boxsize[idx]
 
 def write_docking_script(filename, input_file_r, input_file_l, config):
 

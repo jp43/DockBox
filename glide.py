@@ -18,11 +18,26 @@ known_settings = {'herg': {'grid_center': '3.966, 8.683, 11.093'}, \
 
 required_settings_names = ['grid_center']
 
-def write_docking_script(filename, input_file_r, input_file_l, config):
+def set_site_options(config):
 
-    outerbox = config.options['glide']['actxrange'] + ', ' + \
-               config.options['glide']['actyrange'] + ', ' + \
-               config.options['glide']['actzrange']
+    # set box center
+    center = config.site['center'] # set box
+    config.options['glide']['grid_center'] = ', '.join(map(str.strip, center.split(',')))
+
+    # set box size
+    boxsize = config.site['boxsize']
+    boxsize = map(str.strip, boxsize.split(','))
+    config.options['glide']['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
+
+    for idx, axis in enumerate(['x', 'y', 'z']):
+         size = float(boxsize[idx]) + 10.0
+         config.options['glide']['act' + axis + 'range'] = str(size)
+
+    config.options['glide']['outerbox'] = config.options['glide']['actxrange'] + ', ' + \
+           config.options['glide']['actyrange'] + ', ' + \
+           config.options['glide']['actzrange']
+
+def write_docking_script(filename, input_file_r, input_file_l, config):
 
     # prepare protein
     prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(input_file_r)s target.mae"%locals(), 'glide') # receptor prepare
@@ -68,7 +83,6 @@ RECEP_FILE target.mae" > grid.in
 echo "WRITEREPT YES
 USECOMPMAE YES
 DOCKING_METHOD confgen
-SAMPLE_RINGS False
 POSES_PER_LIG %(poses_per_lig)s
 POSE_RMSD %(pose_rmsd)s
 GRIDFILE $PWD/grid.zip
