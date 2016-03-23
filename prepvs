@@ -51,6 +51,7 @@ class PrepVSConfig(object):
     def set_general_options(self, config):
 
         section = 'PREPVS'
+        self.namesingle = False
         if config.has_section(section):
             prepvs = dict(config.items(section))
             if config.has_option(section, 'namesingle'):
@@ -61,8 +62,6 @@ class PrepVSConfig(object):
                     self.namesingle = False
                 else:
                     raise PrepVSConfigError("option namesingle should be yes or no!")
-            else:
-                self.namesingle = False
 
     def set_ligprep_options(self, config):
         """set ligprep options"""
