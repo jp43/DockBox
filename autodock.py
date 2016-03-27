@@ -16,42 +16,42 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 autogrid_options_names = ['npts', 'spacing', 'gridcenter']
 autodock_options_names = ['ga_run', 'ga_pop_size', 'ga_num_evals', 'ga_num_generations', 'outlev']
 
-def set_site_options(config):
+def set_site_options(config, options):
 
     # set box center
     center = config.site['center'] # set box
-    config.options['autodock']['gridcenter'] = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
+    options['gridcenter'] = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
 
     # set box size
     boxsize = config.site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
-    spacing = float(config.options['autodock']['spacing'])
+    spacing = float(options['spacing'])
     npts = []
     for size in boxsize:
          npts.append(str(int(size/spacing)))
-    config.options['autodock']['npts'] =  ','.join(npts)
+    options['npts'] =  ','.join(npts)
 
-def write_docking_script(filename, input_file_r, input_file_l, config):
+def write_docking_script(filename, input_file_r, input_file_l, config, options):
 
     prepare_pdbfile(input_file_l, 'lig.pdb', config)
 
     autogrid_options = {}
     for name in autogrid_options_names:
-        if name in config.options['autodock']:
-            autogrid_options[name] = config.options['autodock'][name]
+        if name in options:
+            autogrid_options[name] = options[name]
     
     # create flag with specified options for autogrid
     autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in autogrid_options.iteritems()])
 
     autodock_options = {}
     for name in autodock_options_names:
-        if name in config.options['autodock']:
-            autodock_options[name] = config.options['autodock'][name]
+        if name in options:
+            autodock_options[name] = options[name]
 
     # create flag with specified options for autodock
     autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in autodock_options.iteritems()])
 
-    if 'ga_num_evals' not in config.options['autodock']:
+    if 'ga_num_evals' not in options:
         ga_num_evals_lines="""prepare_dpf4.py -l lig.pdbqt -r target.pdbqt -o dock.dpf -p move=lig.pdbqt
 ga_num_evals_flag=`python -c \"with open('dock.dpf') as ff:
     for line in ff:
@@ -140,6 +140,8 @@ def extract_docking_results(file_r, file_l, file_s, config):
 
     if config.extract in ['lowest', 'all']:
         cleanup_pose(file_l, config)
+
+#def get_score():
 
 def prepare_pdbfile(file_l, pdbfile, config):
 

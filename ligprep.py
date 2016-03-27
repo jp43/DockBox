@@ -7,6 +7,7 @@ import glob
 import shutil
 import fileinput
 import subprocess
+import util.check_license as chkl
 
 ligprep_default_options = {'tautomerizer': False, 'ring_conf': False, 'stereoizer': False, 'tarfiles': False, 'ionization': '1'}
 
@@ -54,9 +55,11 @@ def generate_3D_structure(ff, flags, config):
     suffix = (os.path.splitext(ff)[0]).split('/')[-1]
     outputfile = suffix + ".prep.sdf"
 
+    ligprep_cmd = chkl.eval("ligprep -WAIT -W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14 -ac %(inputflag)s %(ff)s -osd %(outputfile)s %(flags)s"%locals(), 'glide')
+
     with open('ligprep.sh', 'w') as file:
         script ="""#!/bin/bash
-ligprep -WAIT -W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14 -ac %(inputflag)s %(ff)s -osd %(outputfile)s %(flags)s"""% locals()
+%(ligprep_cmd)s"""% locals()
         file.write(script)
 
     subprocess.check_output('bash ligprep.sh', shell=True)

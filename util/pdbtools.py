@@ -129,7 +129,7 @@ def format_lig_file(file_l):
 
     shutil.move(tmpfile, file_l)
 
-def create_reclig_file(file_r, file_l, file_rl, config):
+def create_reclig_file(file_r, file_l, file_rl):
     """Create a PDB file containing both receptor and ligand"""
 
     nends = [0, 0]
@@ -182,7 +182,6 @@ def create_reclig_file(file_r, file_l, file_rl, config):
                             if is_atom_on_last_line:
                                 reclf.write('ENDMDL\n')
                                 break
-                reclf.write('END')
         else:
             with open(file_r, 'r') as recf:
                 with open(file_l, 'r') as ligf:
@@ -217,7 +216,6 @@ def create_reclig_file(file_r, file_l, file_rl, config):
                                 if is_atom_on_last_line:
                                     reclf.write('ENDMDL\n')
                                     break
-                    reclf.write('END')
 
 # the following lines can be used in case we want unique atom numbers and residue numbers
 # when the file .pdb containing the complex target+ligand is created. In this case, the

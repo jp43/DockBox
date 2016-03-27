@@ -12,32 +12,26 @@ required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert
 default_settings = {'actxrange': '30.0', 'actyrange': '30.0', 'actzrange': '30.0', \
 'innerbox': '10, 10, 10', 'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'tmpdir': None}
 
-known_settings = {'herg': {'grid_center': '3.966, 8.683, 11.093'}, \
-'herg-cut': {'grid_center': '3.966, 8.683, 11.093'}, \
-'herg-inactivated': {'grid_center': '0.000, 0.000, -5.000'}}
-
-required_settings_names = ['grid_center']
-
-def set_site_options(config):
+def set_site_options(config, options):
 
     # set box center
     center = config.site['center'] # set box
-    config.options['glide']['grid_center'] = ', '.join(map(str.strip, center.split(',')))
+    options['grid_center'] = ', '.join(map(str.strip, center.split(',')))
 
     # set box size
     boxsize = config.site['boxsize']
     boxsize = map(str.strip, boxsize.split(','))
-    config.options['glide']['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
+    options['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
 
     for idx, axis in enumerate(['x', 'y', 'z']):
          size = float(boxsize[idx]) + 10.0
-         config.options['glide']['act' + axis + 'range'] = str(size)
+         options['act' + axis + 'range'] = str(size)
 
-    config.options['glide']['outerbox'] = config.options['glide']['actxrange'] + ', ' + \
-           config.options['glide']['actyrange'] + ', ' + \
-           config.options['glide']['actzrange']
+    options['outerbox'] = options['actxrange'] + ', ' + \
+           options['actyrange'] + ', ' + \
+           options['actzrange']
 
-def write_docking_script(filename, input_file_r, input_file_l, config):
+def write_docking_script(filename, input_file_r, input_file_l, config, options):
 
     # prepare protein
     prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(input_file_r)s target.mae"%locals(), 'glide') # receptor prepare
@@ -50,8 +44,8 @@ def write_docking_script(filename, input_file_r, input_file_l, config):
     glide_dock_cmd = chkl.eval("glide -WAIT dock.in", 'glide') # docking command
     glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'glide') # cmd to extract results
 
-    if config.options['glide']['tmpdir']:
-        tmpdirline = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%config.options['glide']
+    if options['tmpdir']:
+        tmpdirline = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%options
     else:
         tmpdirline = ""
 
@@ -91,23 +85,13 @@ PRECISION %(precision)s" > dock.in
 
 %(glide_dock_cmd)s
 
-%(glide_sort_cmd)s"""%dict(dict(locals()).items()+config.options['glide'].items())
+%(glide_sort_cmd)s"""%dict(dict(locals()).items()+options.items())
         file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, config):
 
     subprocess.call(chkl.eval("pdbconvert -brief -imae dock_sorted.mae -opdb dock_sorted.pdb", 'glide', redirect='/dev/null'), shell=True)
     shutil.copyfile(config.input_file_r, file_r)
-
-    ## write file with receptor
-    #with open('dock_sorted-1.pdb', 'r') as ffin:
-    #    with open(file_r, 'w') as ffout:
-    #        line = ffin.next()
-    #        while not line.startswith('MODEL'):
-    #            line = ffin.next()
-    #        ffout.write(line)
-    #        for line in ffin:
-    #            ffout.write(line)
 
     if config.extract == 'lowest':
         # write file with ligand

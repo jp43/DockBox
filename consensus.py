@@ -53,7 +53,7 @@ def prepare_files_for_consensus(config):
         pdbt.remove_hydrogens('rec.out.pdb', 'rec-c.out.pdb')
 
         # create the corresponding file both the receptors and ligands
-        pdbt.create_reclig_file('rec-c.out.pdb', 'lig-c.out.pdb', 'rec-lig.out.pdb', config)
+        pdbt.create_reclig_file('rec-c.out.pdb', 'lig-c.out.pdb', 'rec-lig.out.pdb')
         os.chdir(curdir)
         with open(prgdir+'/rec-lig.out.pdb') as pdbfi:
             for line in pdbfi:

@@ -160,8 +160,8 @@ class PrepVS(object):
                     os.mkdir(recdir)
 
                 # (C) ISOMER.SITE level
-                ligpdir = '.ligprep' + str(idx)
-                recpdir = '.recprep' + str(jdx)
+                ligpdir = 'ligprep' + str(idx)
+                recpdir = 'recprep' + str(jdx)
                 for sdffile in sorted(glob.glob(ligpdir+'/*.prep_*.sdf')):
                     suffix = os.path.splitext(sdffile)[0]
                     kdx = suffix.split('_')[-1]
@@ -199,7 +199,7 @@ class PrepVS(object):
         curdir = os.getcwd()
         print "Preparing ligands..."
         for idx, file_l in enumerate(config.input_file_l):
-            ligpdir = '.ligprep' + str(idx)
+            ligpdir = 'ligprep' + str(idx)
             if os.path.isdir(ligpdir):
                 shutil.rmtree(ligpdir)
             os.mkdir(ligpdir)
@@ -209,7 +209,7 @@ class PrepVS(object):
 
         print "Preparing receptors..."
         for idx, file_r in enumerate(config.input_file_r):
-            recpdir = '.recprep' + str(idx)
+            recpdir = 'recprep' + str(idx)
             if os.path.isdir(recpdir):
                 shutil.rmtree(recpdir)
             os.mkdir(recpdir)

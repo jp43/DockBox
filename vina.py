@@ -4,11 +4,13 @@ import glob
 import autodock
 import shutil
 
+import util.pdbtools as pdbt
+
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
 default_settings = {'cpu': '1'}
 
-def set_site_options(config):
+def set_site_options(config, options):
 
     # set box center
     center = config.site['center'] # set box
@@ -19,10 +21,10 @@ def set_site_options(config):
     xyz = ['x', 'y', 'z']
 
     for idx, axis in enumerate(xyz):
-        config.options['vina']['center_'+axis] = center[idx]
-        config.options['vina']['size_'+axis] = boxsize[idx]
+        options['center_'+axis] = center[idx]
+        options['size_'+axis] = boxsize[idx]
 
-def write_docking_script(filename, input_file_r, input_file_l, config):
+def write_docking_script(filename, input_file_r, input_file_l, config, options, score_only=False):
 
     autodock.prepare_pdbfile(input_file_l, 'lig.pdb', config)
 
@@ -30,8 +32,13 @@ def write_docking_script(filename, input_file_r, input_file_l, config):
     with open('vina.config', 'w') as config_file:
         print >> config_file, 'receptor = target.pdbqt'
         print >> config_file, 'ligand = lig.pdbqt'
-        for key, value in config.options['vina'].iteritems():
+        for key, value in options.iteritems():
             print >> config_file, key + ' = ' + value
+
+    if score_only:
+        score_only_flag = '--score_only'
+    else:
+        score_only_flag = ''
 
     # write vina script
     with open(filename, 'w') as file:
@@ -43,7 +50,7 @@ prepare_ligand4.py -l lig.pdb -o lig.pdbqt
 prepare_receptor4.py -r %(input_file_r)s -o target.pdbqt
 
 # run vina
-vina --config vina.config > vina.out"""% locals()
+vina --config %(score_only_flag)s vina.config > vina.out"""% locals()
         file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, config):
@@ -65,6 +72,11 @@ def extract_docking_results(file_r, file_l, file_s, config):
                             if config.extract == 'lowest':
                                 break
     autodock.cleanup_pose(file_l, config)
+
+def write_scoring_script(file_r, file_l, config, options):
+
+    write_docking_script('get_vina_score.sh', file_r, file_l, config, options, score_only=True)
+
 
 def cleanup(config):
 

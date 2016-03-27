@@ -13,16 +13,16 @@ default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placem
 
 default_sitefind_settings = {'minplb': '1.0'}
 
-def set_site_options(config):
+def set_site_options(config, options):
 
     # set box center
     center = config.site['center']
-    config.options['moe']['binding_site'] = ', '.join(map(str.strip, center.split(',')))
+    options['binding_site'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
 
     # set box size
     boxsize = config.site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
-    config.options['moe']['binding_radius'] = max(boxsize)
+    options['binding_radius'] = max(boxsize)
 
 def write_sitefinder_script(filename, file_r, config):
     
@@ -86,13 +86,13 @@ local function main []
             write ['{f.0}  {f.2} {f.3} {f.3}\\n', idx, plb, cog, maxdist];
         endif
     endloop
-endfunction;""" %dict(dict(locals()).items()+config.site.items())
+endfunction;""" %config.site.items()
         file.write(script)
 
 
-def write_docking_script(filename, input_file_r, input_file_l, config):
+def write_docking_script(filename, input_file_r, input_file_l, config, options):
 
-    write_moe_docking_script('moe_dock.svl', config)
+    write_moe_docking_script('moe_dock.svl', config, options)
 
     convertsdf_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
         db_ImportSD ['lig.mdb','%(input_file_l)s','mol']\""%locals(), 'moe') # create mdb for ligand 
@@ -111,9 +111,7 @@ set -e
 """% locals()
         file.write(script)
 
-def write_moe_docking_script(filename, config):
-
-    binding_site_moe = '[' + config.options['moe']['binding_site'] + ']'
+def write_moe_docking_script(filename, config, options):
 
     # write vina script
     with open(filename, 'w') as file:
@@ -191,7 +189,7 @@ ArgvReset ArgvExpand argv;
     local rec = cat cAtoms chains; // extract atom info from atom
 
     // get residues involved in the binding site
-    local binding_site = %(binding_site_moe)s; // center for the binding site
+    local binding_site = %(binding_site)s; // center for the binding site
     local binding_radius = %(binding_radius)s; // radius of the binding site
     local binding_res = []; // residues involved in binding site
 
@@ -282,7 +280,7 @@ ArgvReset ArgvExpand argv;
     db_Close lmdb;
     write ['Docking finished at {}.\\n', asctime []];
 
-endfunction;"""%dict(dict(locals()).items()+config.options['moe'].items())
+endfunction;"""%options
         file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, config):

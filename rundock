@@ -55,13 +55,16 @@ class DockingConfig(object):
             raise DockingConfigError("Config file should have section %s, check manual!"%section)
 
         if config.has_option(section, 'program'):
-            self.programs = []
+            self.programs = [] # program names with possible number
+            self.prgms = [] # exact program names
             programs = config.get(section, 'program').lower()
             programs = map(str.strip, programs.split(','))
             for program in programs:
-                if program not in known_programs:
-                    raise DockingConfigError("Option program should be one of " + ", ".join(known_programs))
+                prgm = ''.join([c for c in program if not c.isdigit()]) # get program exact name
+                if prgm not in known_programs:
+                    raise DockingConfigError("Docking programs should be one of " + ", ".join(known_programs))
                 self.programs.append(program)
+                self.prgms.append(prgm)
         else:
             raise DockingConfigError("option program in section %s is required in config file!"%section)
 
@@ -104,25 +107,25 @@ class DockingConfig(object):
     def set_program_specific_options(self, config):
         """set options that are specific to each docking method""" 
 
-        for program in self.programs:
-            __import__(program)
+        for prgm in set(self.prgms):
+            __import__(prgm)
 
         options = {}
-        for program in self.programs:
+        for idx, program in enumerate(self.programs):
             # check if all needed executables are available
-            if hasattr(sys.modules[program], 'default_settings'):
-                required_programs = getattr(sys.modules[program], 'required_programs')
+            if hasattr(sys.modules[self.prgms[idx]], 'default_settings'):
+                required_programs = getattr(sys.modules[self.prgms[idx]], 'required_programs')
                 for exe in required_programs:
                     try:
                         subprocess.check_call('which %s > /dev/null'%exe, shell=True)
                     except subprocess.CalledProcessError:
                         raise DockingConfigError('Executable %s needed for docking with %s is not found in your PATH! \
-Make sure the program has been installed!'%(exe,program))
+Make sure the program has been installed!'%(exe,self.prgms[idx]))
 
             options[program] = {}
             # load default parameters
-            if hasattr(sys.modules[program], 'default_settings'):
-                default_settings = getattr(sys.modules[program], 'default_settings')
+            if hasattr(sys.modules[self.prgms[idx]], 'default_settings'):
+                default_settings = getattr(sys.modules[self.prgms[idx]], 'default_settings')
                 for key, value in default_settings.iteritems():
                     options[program][key] = value
 
@@ -150,17 +153,16 @@ Make sure the program has been installed!'%(exe,program))
         else:
             raise DockingConfigError("Section %s is required in config file for local docking!"%section)
 
-        for program in self.programs:
+        for idx, program in enumerate(self.programs):
             # check if all required options have been set
-            if hasattr(sys.modules[program], 'set_site_options'):
-                set_site_options_prgm = getattr(sys.modules[program], 'set_site_options')
-                set_site_options_prgm(self)
+            if hasattr(sys.modules[self.prgms[idx]], 'set_site_options'):
+                set_site_options_prgm = getattr(sys.modules[self.prgms[idx]], 'set_site_options', program)
+                set_site_options_prgm(self, self.options[program])
 
     def set_consensus_options(self, config):
         """set consensus options"""
 
         section = 'CONSENSUS'
-
         if self.consensus['consensus']:
             # load default parameters
             if hasattr(sys.modules['consensus'], 'default_settings'):
@@ -205,9 +207,10 @@ class DockingWorker(object):
 
         curdir = os.getcwd()
 
-        for program in config.programs:
+        for idx, program in enumerate(config.programs):
 
-            print "Starting docking with %s..."%program.capitalize()
+            prgm = config.prgms[idx]
+            print "Starting docking with %s..."%prgm.capitalize()
             print "The following options will be used:"
             print config.options[program]
 
@@ -218,16 +221,16 @@ class DockingWorker(object):
             os.chdir(prgdir)
 
             # (A) write docking script
-            script_name = "run_" + program + ".sh"
-            write_docking_script = getattr(sys.modules[program], 'write_docking_script')
-            write_docking_script(script_name, config.input_file_r, config.input_file_l, config)
+            script_name = "run_" + prgm + ".sh"
+            write_docking_script = getattr(sys.modules[prgm], 'write_docking_script')
+            write_docking_script(script_name, config.input_file_r, config.input_file_l, config, config.options[program])
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
             # (B) execute docking procedure
-            subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash')
+            subprocess.check_call("./" + script_name + " &> " + prgm + ".log", shell=True, executable='/bin/bash')
 
             # (C) extract docking results
-            extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
+            extract_docking_results = getattr(sys.modules[prgm], 'extract_docking_results')
             extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', config)
 
             # (D) remove intermediate files if required
@@ -236,10 +239,7 @@ class DockingWorker(object):
                 cleanup(config)
  
             os.chdir(curdir)
-            print "Docking with %s done."%program.capitalize()
-
-        if config.consensus['consensus']:
-            consensus.find_consensus(config)
+            print "Docking with %s done."%prgm.capitalize()
 
     def run(self):
 
@@ -252,7 +252,11 @@ class DockingWorker(object):
         config = DockingConfig(args)
 
         # run docking
-        self.run_docking(config)
+        #self.run_docking(config)
+
+        if config.consensus['consensus']:
+            consensus.find_consensus(config)
+
 
         tcpu2 = time.time()
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
