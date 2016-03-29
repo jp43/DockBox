@@ -11,20 +11,20 @@ required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
 'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
 
-def set_site_options(config, options):
+def set_site_options(site, options):
 
     # set box center
-    center = config.site['center']
+    center = site['center']
     options['center'] = '\"' + ' '.join(map(str.strip, center.split(','))) + '\"'
 
     # set box size
-    boxsize = config.site['boxsize']
+    boxsize = site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
     options['sphgen_radius'] = str(max(boxsize)/2)
 
-def write_docking_script(filename, input_file_r, input_file_l, config, options):
+def write_docking_script(filename, input_file_r, input_file_l, options):
 
-    write_shift_coordinates_script(config)
+    write_shift_coordinates_script()
   
     # convert sdffile to PDBfile
     subprocess.check_call('babel %s %s 2>/dev/null'%(input_file_l,'lig.pdb'), shell=True)
@@ -182,16 +182,16 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in"""%dict(dict(locals()).items()+options.items())
         file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, config):
+def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
-    shutil.copyfile(config.input_file_r, file_r)
+    shutil.copyfile(input_file_r, file_r)
 
     # convert mol2 to pdb
-    if config.extract == 'lowest':
+    if extract == 'lowest':
         with open('pdb2mol.cmd', 'w') as ff:
             script = "write format pdb #0.1 %s" %file_l
             ff.write(script)
-    elif config.extract == 'all':
+    elif extract == 'all':
         with open('pdb2mol.cmd', 'w') as ff:
             script = "write format pdb #0 %s" %file_l
             ff.write(script)
@@ -205,10 +205,10 @@ def extract_docking_results(file_r, file_l, file_s, config):
             for line in ffin:
                 if line.startswith('##########    Grid Score:'):
                     print >> ffout, line.split()[3]
-                    if config.extract == 'lowest':
+                    if extract == 'lowest':
                         break
 
-def cleanup(config):
+def cleanup():
 
     # remove map files
     for ff in glob.glob('grid*'):
@@ -217,7 +217,7 @@ def cleanup(config):
     os.remove('selected_spheres.sph') 
     os.remove('target_noH.ms')
 
-def write_shift_coordinates_script(config):
+def write_shift_coordinates_script():
 
     with open('shift_lig_coords.py', 'w') as file:
         script ="""import sys

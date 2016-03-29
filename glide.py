@@ -12,14 +12,14 @@ required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert
 default_settings = {'actxrange': '30.0', 'actyrange': '30.0', 'actzrange': '30.0', \
 'innerbox': '10, 10, 10', 'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'tmpdir': None}
 
-def set_site_options(config, options):
+def set_site_options(site, options):
 
     # set box center
-    center = config.site['center'] # set box
+    center = site['center'] # set box
     options['grid_center'] = ', '.join(map(str.strip, center.split(',')))
 
     # set box size
-    boxsize = config.site['boxsize']
+    boxsize = site['boxsize']
     boxsize = map(str.strip, boxsize.split(','))
     options['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
 
@@ -31,7 +31,7 @@ def set_site_options(config, options):
            options['actyrange'] + ', ' + \
            options['actzrange']
 
-def write_docking_script(filename, input_file_r, input_file_l, config, options):
+def write_docking_script(filename, input_file_r, input_file_l, options):
 
     # prepare protein
     prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(input_file_r)s target.mae"%locals(), 'glide') # receptor prepare
@@ -88,12 +88,12 @@ PRECISION %(precision)s" > dock.in
 %(glide_sort_cmd)s"""%dict(dict(locals()).items()+options.items())
         file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, config):
+def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
     subprocess.call(chkl.eval("pdbconvert -brief -imae dock_sorted.mae -opdb dock_sorted.pdb", 'glide', redirect='/dev/null'), shell=True)
-    shutil.copyfile(config.input_file_r, file_r)
+    shutil.copyfile(input_file_r, file_r)
 
-    if config.extract == 'lowest':
+    if extract == 'lowest':
         # write file with ligand
         with open(file_l, 'w') as ffout:
             with open('dock_sorted-2.pdb', 'r') as ffin:
@@ -103,7 +103,7 @@ def extract_docking_results(file_r, file_l, file_s, config):
                 ffout.write(line)
                 for line in ffin:
                     ffout.write(line)
-    elif config.extract == 'all':
+    elif extract == 'all':
         # write file with ligand
         with open(file_l, 'w') as ffout:
             idxs = []
@@ -131,11 +131,11 @@ def extract_docking_results(file_r, file_l, file_s, config):
                 line = ffin.next()
                 if line.strip():
                     print >> ffout, line.split()[2]
-                    if config.extract == 'lowest':
+                    if extract == 'lowest':
                         break
                 else:
                     break
 
-def cleanup(config):
+def cleanup():
     for ff in glob.glob('dock_sorted*.pdb'):
         os.remove(ff)

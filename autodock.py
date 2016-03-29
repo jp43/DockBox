@@ -16,14 +16,14 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 autogrid_options_names = ['npts', 'spacing', 'gridcenter']
 autodock_options_names = ['ga_run', 'ga_pop_size', 'ga_num_evals', 'ga_num_generations', 'outlev']
 
-def set_site_options(config, options):
+def set_site_options(site, options):
 
     # set box center
-    center = config.site['center'] # set box
+    center = site['center'] # set box
     options['gridcenter'] = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
 
     # set box size
-    boxsize = config.site['boxsize']
+    boxsize = site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
     spacing = float(options['spacing'])
     npts = []
@@ -31,9 +31,9 @@ def set_site_options(config, options):
          npts.append(str(int(size/spacing)))
     options['npts'] =  ','.join(npts)
 
-def write_docking_script(filename, input_file_r, input_file_l, config, options):
+def write_docking_script(filename, input_file_r, input_file_l, options):
 
-    prepare_pdbfile(input_file_l, 'lig.pdb', config)
+    prepare_pdbfile(input_file_l, 'lig.pdb')
 
     autogrid_options = {}
     for name in autogrid_options_names:
@@ -82,13 +82,13 @@ prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(aut
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
         file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, config):
+def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
     for ff in [file_s, file_l]:
         if os.path.isfile(ff):
             os.remove(ff)
 
-    shutil.copyfile(config.input_file_r, file_r)
+    shutil.copyfile(input_file_r, file_r)
 
     hist = []
     with open('dock.dlg', 'r') as dlgfile:
@@ -105,9 +105,9 @@ def extract_docking_results(file_r, file_l, file_s, config):
                 break
             hist.append(int(line.split('|')[4].strip()))
 
-        if config.extract == 'lowest':
+        if extract == 'lowest':
             cluster_idxs = [np.argmax(np.array(hist))+1]
-        elif config.extract == 'all': 
+        elif extract == 'all': 
             cluster_idxs = (np.argsort(np.array(hist))+1).tolist()
             cluster_idxs =  cluster_idxs[::-1]
 
@@ -138,12 +138,10 @@ def extract_docking_results(file_r, file_l, file_s, config):
                     line = dlgfile.next()
                 print >> lf, "ENDMDL"
 
-    if config.extract in ['lowest', 'all']:
-        cleanup_pose(file_l, config)
+    if extract in ['lowest', 'all']:
+        cleanup_pose(file_l)
 
-#def get_score():
-
-def prepare_pdbfile(file_l, pdbfile, config):
+def prepare_pdbfile(file_l, pdbfile):
 
     # convert sdffile to PDBfile
     subprocess.check_call('babel -isdf %s -opdb %s 2>/dev/null'%(file_l,pdbfile), shell=True)
@@ -151,7 +149,7 @@ def prepare_pdbfile(file_l, pdbfile, config):
     # give unique atom names
     pdbt.give_unique_atom_names(pdbfile)
 
-def cleanup_pose(file_l, config):
+def cleanup_pose(file_l):
 
     atom_names = []
     with open('lig.pdb', 'r') as pdbfile:
@@ -164,13 +162,13 @@ def cleanup_pose(file_l, config):
 
     # remove/add hydrogens
     pdbt.format_lig_file('lig.out.pdb')
-    subprocess.check_call('babel -ipdb lig.out.pdb -opdb ligtmp.out.pdb -d -h 2>/dev/null', shell=True)
-    shutil.move('ligtmp.out.pdb','lig.out.pdb')
+    #subprocess.check_call('babel -ipdb lig.out.pdb -opdb ligtmp.out.pdb -d -h 2>/dev/null', shell=True)
+    #shutil.move('ligtmp.out.pdb','lig.out.pdb')
 
-    # give unique atom names
-    pdbt.give_unique_atom_names('lig.out.pdb')
+    ## give unique atom names
+    #pdbt.give_unique_atom_names('lig.out.pdb')
 
-def cleanup(config):
+def cleanup():
     # remove map files
     for ff in glob.glob('*map*'):
         os.remove(ff)

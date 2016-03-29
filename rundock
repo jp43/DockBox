@@ -10,172 +10,52 @@ import ConfigParser
 import stat
 import time
 
+import multi
 import consensus
 import numpy as np
 
-known_programs = ['autodock', 'vina', 'dock', 'glide', 'moe']
+class Worker(object):
 
-class DockingConfigError(Exception):
-    pass
+    def __init__(self):
 
-class DockingConfig(object):
-
-    def __init__(self, args):
+        print "Setting up parameters..."
+        parser = self.create_arg_parser()
+        args = parser.parse_args()
 
         # check if config file exist
         if not os.path.exists(args.config_file):
-            raise DockingConfigError("Config file %s not found!"%(args.config_file))
+            raise ValueError("Config file %s not found!"%(args.config_file))
 
         config = ConfigParser.SafeConfigParser()
         config.read(args.config_file)
 
-        self.set_general_options(config)
-
         self.input_file_l = os.path.abspath(args.input_file_l[0])
         # check if ligand file exists
         if not os.path.exists(self.input_file_l):
-            raise DockingConfigError("File %s not found!"%(self.input_file_l))
+            raise IOError("File %s not found!"%(self.input_file_l))
 
         self.input_file_r = os.path.abspath(args.input_file_r[0])
         # check if receptor file exists
         if not os.path.exists(self.input_file_r):
-            raise DockingConfigError("File %s not found!"%(self.input_file_r))
+            raise IOError("File %s not found!"%(self.input_file_r))
 
-        self.set_program_specific_options(config)
-        self.set_site_options(config)
+        self.docking = multi.MultiProgramDocking(config)
+        self.consensus = consensus.ConsensusDocking(config)
 
-        # set options for consensus docking
-        self.set_consensus_options(config)
+        self.cleanup = self.is_yesno_option(config, 'cleanup')
 
-    def set_general_options(self, config):
-        """set general options for docking"""
+    def is_yesno_option(self, config, option, default=False):
 
-        section = 'DOCKING' # section name in config file
-        if not config.has_section(section):
-            raise DockingConfigError("Config file should have section %s, check manual!"%section)
-
-        if config.has_option(section, 'program'):
-            self.programs = [] # program names with possible number
-            self.prgms = [] # exact program names
-            programs = config.get(section, 'program').lower()
-            programs = map(str.strip, programs.split(','))
-            for program in programs:
-                prgm = ''.join([c for c in program if not c.isdigit()]) # get program exact name
-                if prgm not in known_programs:
-                    raise DockingConfigError("Docking programs should be one of " + ", ".join(known_programs))
-                self.programs.append(program)
-                self.prgms.append(prgm)
-        else:
-            raise DockingConfigError("option program in section %s is required in config file!"%section)
-
-        # do consensus?
-        self.consensus = {}
-        if config.has_option(section, 'consensus'):
-            yesno = config.get(section, 'consensus').lower()
+        if config.has_option('DOCKING', option):
+            yesno = config.get('DOCKING', option).lower()
             if yesno == 'yes':
-                self.consensus['consensus'] = True
+                return True
             elif yesno == 'no':
-                self.consensus['consensus'] = False
+                return False
             else:
-                raise DockingConfigError("option consensus should be yes or no!")
+                raise ValueError("option %s should be yes or no!"%option)
         else:
-            self.consensus['consensus'] = False 
-
-        known_extract_options = ['all', 'lowest', 'none']
-        # get value for extract
-        if config.has_option(section, 'extract'):
-            extract = config.get(section, 'extract').lower()
-            if not extract in known_extract_options:
-                raise DockingConfigError("Extract option should be one of " + ", ".join(known_extract_options))
-        else:
-            extract = 'lowest'
-        self.extract = extract
-
-        # get value for cleanup
-        if config.has_option(section, 'cleanup'):
-            yesno = config.get(section, 'cleanup').lower()
-            if yesno == 'yes':
-                cleanup = True
-            elif yesno == 'no':
-                cleanup = False
-            else:
-                raise DockingConfigError("option consensus should be yes or no!")
-        else:
-            cleanup = False
-        self.cleanup = cleanup
-
-    def set_program_specific_options(self, config):
-        """set options that are specific to each docking method""" 
-
-        for prgm in set(self.prgms):
-            __import__(prgm)
-
-        options = {}
-        for idx, program in enumerate(self.programs):
-            # check if all needed executables are available
-            if hasattr(sys.modules[self.prgms[idx]], 'default_settings'):
-                required_programs = getattr(sys.modules[self.prgms[idx]], 'required_programs')
-                for exe in required_programs:
-                    try:
-                        subprocess.check_call('which %s > /dev/null'%exe, shell=True)
-                    except subprocess.CalledProcessError:
-                        raise DockingConfigError('Executable %s needed for docking with %s is not found in your PATH! \
-Make sure the program has been installed!'%(exe,self.prgms[idx]))
-
-            options[program] = {}
-            # load default parameters
-            if hasattr(sys.modules[self.prgms[idx]], 'default_settings'):
-                default_settings = getattr(sys.modules[self.prgms[idx]], 'default_settings')
-                for key, value in default_settings.iteritems():
-                    options[program][key] = value
-
-            # check config file (would possibly default preset parameters)
-            if config.has_section(program.upper()):
-               config_d = dict(config.items(program.upper()))
-               for key, value in config_d.iteritems():
-                   options[program][key] = value
-
-        self.options = options
-
-    def set_site_options(self, config):
-        """set options for the binding site"""
-
-        section = 'SITE'
-        self.site = {}
-        required_options = ['center', 'boxsize']
-        if config.has_section(section):
-            for option in required_options:
-                if config.has_option(section, option):
-                    value = config.get(section, option)
-                    self.site[option] = value
-                else:
-                    raise DockingConfigError("Option %s in section %s is required in config file for local docking!"%(option,section))
-        else:
-            raise DockingConfigError("Section %s is required in config file for local docking!"%section)
-
-        for idx, program in enumerate(self.programs):
-            # check if all required options have been set
-            if hasattr(sys.modules[self.prgms[idx]], 'set_site_options'):
-                set_site_options_prgm = getattr(sys.modules[self.prgms[idx]], 'set_site_options', program)
-                set_site_options_prgm(self, self.options[program])
-
-    def set_consensus_options(self, config):
-        """set consensus options"""
-
-        section = 'CONSENSUS'
-        if self.consensus['consensus']:
-            # load default parameters
-            if hasattr(sys.modules['consensus'], 'default_settings'):
-                default_settings = getattr(sys.modules['consensus'], 'default_settings')
-                for key, value in default_settings.iteritems():
-                    self.consensus[key] = value
-            # check config file (would possibly overwrite preset parameters)
-            if config.has_section(section):
-                config_c = dict(config.items(section))
-                for key, value in config_c.iteritems():
-                    self.consensus[key] = value  
-
-class DockingWorker(object):
+            return default
 
     def create_arg_parser(self):
 
@@ -202,64 +82,48 @@ class DockingWorker(object):
 
         return parser
 
-    def run_docking(self, config):
+    def run(self):
         """Running docking simulations using each program specified..."""
 
         curdir = os.getcwd()
 
-        for idx, program in enumerate(config.programs):
+        tcpu1 = time.time()
+        for instance, program, options in self.docking.instances:
 
-            prgm = config.prgms[idx]
-            print "Starting docking with %s..."%prgm.capitalize()
+            print "Starting docking with %s..."%program.capitalize()
             print "The following options will be used:"
-            print config.options[program]
+            print options
 
-            prgdir = program
-            if os.path.isdir(prgdir):
-                shutil.rmtree(prgdir)
-            os.mkdir(prgdir)
-            os.chdir(prgdir)
+            if os.path.isdir(instance):
+                shutil.rmtree(instance)
+            os.mkdir(instance)
+            os.chdir(instance)
 
             # (A) write docking script
-            script_name = "run_" + prgm + ".sh"
-            write_docking_script = getattr(sys.modules[prgm], 'write_docking_script')
-            write_docking_script(script_name, config.input_file_r, config.input_file_l, config, config.options[program])
+            script_name = "run_" + program + ".sh"
+            write_docking_script = getattr(sys.modules[program], 'write_docking_script')
+            write_docking_script(script_name, self.input_file_r, self.input_file_l, options)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
             # (B) execute docking procedure
-            subprocess.check_call("./" + script_name + " &> " + prgm + ".log", shell=True, executable='/bin/bash')
+            subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash')
 
             # (C) extract docking results
-            extract_docking_results = getattr(sys.modules[prgm], 'extract_docking_results')
-            extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', config)
+            extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
+            extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', self.input_file_r, self.docking.extract)
 
             # (D) remove intermediate files if required
-            if config.cleanup:
+            if self.cleanup:
                 cleanup = getattr(sys.modules[program], 'cleanup')
-                cleanup(config)
+                cleanup(self)
  
             os.chdir(curdir)
-            print "Docking with %s done."%prgm.capitalize()
-
-    def run(self):
-
-        parser = self.create_arg_parser()
-        args = parser.parse_args()    
-
-        tcpu1 = time.time()
-
-        print "Setting up parameters..."
-        config = DockingConfig(args)
-
-        # run docking
-        #self.run_docking(config)
-
-        if config.consensus['consensus']:
-            consensus.find_consensus(config)
-
+            print "Docking with %s done."%program.capitalize()
 
         tcpu2 = time.time()
-        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
+        print "Full docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
+        self.consensus.find_consensus(self.docking.instances)
+ 
 if __name__ == '__main__':
-    DockingWorker().run()
+    Worker().run()

@@ -13,14 +13,14 @@ default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placem
 
 default_sitefind_settings = {'minplb': '1.0'}
 
-def set_site_options(config, options):
+def set_site_options(site, options):
 
     # set box center
-    center = config.site['center']
+    center = site['center']
     options['binding_site'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
 
     # set box size
-    boxsize = config.site['boxsize']
+    boxsize = site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
     options['binding_radius'] = max(boxsize)
 
@@ -90,9 +90,9 @@ endfunction;""" %config.site.items()
         file.write(script)
 
 
-def write_docking_script(filename, input_file_r, input_file_l, config, options):
+def write_docking_script(filename, input_file_r, input_file_l, options):
 
-    write_moe_docking_script('moe_dock.svl', config, options)
+    write_moe_docking_script('moe_dock.svl', options)
 
     convertsdf_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
         db_ImportSD ['lig.mdb','%(input_file_l)s','mol']\""%locals(), 'moe') # create mdb for ligand 
@@ -111,7 +111,7 @@ set -e
 """% locals()
         file.write(script)
 
-def write_moe_docking_script(filename, config, options):
+def write_moe_docking_script(filename, options):
 
     # write vina script
     with open(filename, 'w') as file:
@@ -283,10 +283,10 @@ ArgvReset ArgvExpand argv;
 endfunction;"""%options
         file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, config):
+def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
     # copy receptor structure
-    shutil.copyfile(config.input_file_r, file_r)
+    shutil.copyfile(input_file_r, file_r)
 
     sdffile = os.path.splitext(file_l)[0] + '.sdf'
     subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True)
