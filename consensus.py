@@ -5,14 +5,15 @@ import numpy as np
 import fileinput
 import subprocess
 import glob
+import time
 
 import stat
 import multi
-import util.pdbtools as pdbt
+import tools.PDB as pdbt
 
 class ConsensusDocking(object):
 
-    def __init__(self, config):
+    def __init__(self, config, args):
 
         section = 'DOCKING'
         known_options = ['none', 'clustering', 'rescoring']
@@ -39,24 +40,37 @@ class ConsensusDocking(object):
         elif self.type == 'rescoring':
             self.rescoring = multi.MultiProgramScoring(config)
 
+        if args.consensus_only:
+            self.only = True
+        else:
+            self.only = False
+
     def find_consensus(self, instances):
     
-        curdir = os.getcwd()
-        workdir = 'consensus'
+        if self.type in ['clustering', 'rescoring']:
+
+            tcpu1 = time.time()
+            print "Starting consensus..."
+
+            curdir = os.getcwd()
+            workdir = 'consensus'
     
-        if os.path.isdir(workdir):
-            shutil.rmtree(workdir)
-        os.mkdir(workdir)
-        os.chdir(workdir)
+            if os.path.isdir(workdir):
+                shutil.rmtree(workdir)
+            os.mkdir(workdir)
+            os.chdir(workdir)
     
-        self.prepare_files_for_consensus(instances)
-        if self.type == 'clustering':
-            self.run_tleap(instances)
-            self.run_cpptraj()
-            self.extract_results()
-        elif self.type == 'rescoring':
-            self.run_rescoring()
-        os.chdir(curdir)
+            self.prepare_files_for_consensus(instances)
+            if self.type == 'clustering':
+                self.run_tleap(instances)
+                self.run_cpptraj()
+                self.extract_results()
+            elif self.type == 'rescoring':
+                self.run_rescoring()
+            os.chdir(curdir)
+
+            tcpu2 = time.time()
+            print "Consensus procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
    
     def prepare_files_for_consensus(self, instances):
     
@@ -146,6 +160,7 @@ class ConsensusDocking(object):
                     extract_rescoring_results('score.out')
                     
                     is_protein = True
+            os.chdir(curdir)
 
     def run_tleap(self, instances):
     

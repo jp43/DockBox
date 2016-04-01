@@ -29,51 +29,44 @@ class PrepVSConfig(object):
         config.read(args.config_file)
 
         self.input_file_l = []
-        for file_l in args.input_file_l:
-            # check if ligand file exists
-            if not os.path.exists(file_l):
-                raise PrepVSConfigError("File %s not found!"%(self.input_file_l))
-            self.input_file_l.append(os.path.abspath(file_l))
+        if args.input_file_l:
+            for file_l in args.input_file_l:
+                # check if ligand file exists
+                if not os.path.exists(file_l):
+                    raise PrepVSConfigError("File %s not found!"%(self.input_file_l))
+                self.input_file_l.append(os.path.abspath(file_l))
         self.nfiles_l = len(self.input_file_l)
 
         self.input_file_r = []
-        for file_r in args.input_file_r:
-            # check if ligand file exists
-            if not os.path.exists(file_r):
-                raise PrepVSConfigError("File %s not found!"%(self.input_file_r))
-            self.input_file_r.append(os.path.abspath(file_r))
+        if args.input_file_r:
+            for file_r in args.input_file_r:
+                # check if ligand file exists
+                if not os.path.exists(file_r):
+                    raise PrepVSConfigError("File %s not found!"%(self.input_file_r))
+                self.input_file_r.append(os.path.abspath(file_r))
         self.nfiles_r = len(self.input_file_r)
 
-        self.set_general_options(config)
+        self.make = args.make
+
+        self.single = args.single
+        if self.single and not self.make:
+            raise ValueError("option single should be used together with option make")
+
         self.set_ligprep_options(config)
         self.set_sitefind_options(config, args)
-
-    def set_general_options(self, config):
-
-        section = 'PREPVS'
-        self.namesingle = False
-        if config.has_section(section):
-            prepvs = dict(config.items(section))
-            if config.has_option(section, 'namesingle'):
-                yesno = config.get(section, 'namesingle').lower()
-                if yesno == 'yes':
-                    self.namesingle = True
-                elif yesno == 'no':
-                    self.namesingle = False
-                else:
-                    raise PrepVSConfigError("option namesingle should be yes or no!")
 
     def set_ligprep_options(self, config):
         """set ligprep options"""
 
         section = 'LIGPREP'
         self.ligprep = {}
-        if config.has_section(section):
-            self.ligprep = dict(config.items(section))
         # set ligprep defaults options if they are not mentionned in the config file
         for key, value in ligprep.ligprep_default_options.items():
             if key not in self.ligprep:
                 self.ligprep[key] = value
+        # check config file (would possibly default preset parameters)
+        if config.has_section(section):
+            self.ligprep = dict(config.items(section))
 
     def set_sitefind_options(self, config, args):
         """set options for the binding site"""
@@ -81,21 +74,23 @@ class PrepVSConfig(object):
         known_sitefind_programs = ['moe']
 
         self.site = {}
-        if args.sitefind:
+        if args.blind:
             section = 'SITEFINDER'
             if config.has_section(section):
                 if not config.has_option(section, 'program'):
                     raise PrepVSConfigError("Option program in section %s is required in config file for local docking!"%section)
                 if config.get(section, 'program').lower() not in known_sitefind_programs:
                     raise PrepVSConfigError("Option program in section %s should be one of "%section + ", ".join(known_sitefind_programs))
-                config_c = dict(config.items(section))
-                for key, value in config_c.iteritems():
-                    self.site[key] = value
+                self.site['program'] = config.get(section, 'program')
                 # set site finder default options if they are not mentionned in the config file
                 program = self.site['program']
                 __import__(program)
                 default_settings = getattr(sys.modules[program], 'default_sitefind_settings')
                 for key, value in default_settings.iteritems():
+                    self.site[key] = value
+                # check config file (would possibly default preset parameters)
+                config_c = dict(config.items(section))
+                for key, value in config_c.iteritems():
                     self.site[key] = value
             else:
                 raise PrepVSConfigError("Section %s is required in config file for blind docking!"%section)
@@ -116,7 +111,7 @@ class PrepVS(object):
         parser.add_argument('-r',
             type=str,
             dest='input_file_r',
-            required=True,
+            required = True,
             nargs='+',
             help = 'Receptor coordinate file(s): .pdb')
 
@@ -125,22 +120,40 @@ class PrepVS(object):
             required=True,
             help='config file: .ini')
 
-        parser.add_argument('--sitefind',
-            dest='sitefind',
+        parser.add_argument('--blind',
+            dest='blind',
             action='store_true',
             default=False,
             help='Find possible binding sites (blind docking)')
+
+        parser.add_argument('--make',
+            dest='make',
+            action='store_true',
+            default=False,
+            help='Create directories for each ligand/target/isomer triplet')
+
+        parser.add_argument('--single',
+            dest='single',
+            action='store_true',
+            default=False,
+            help='Create directory even when single ligands or receptors are involved (should be used together with --make)')
 
         return parser
 
     def prepare_vs(self, config, args):
 
-        # prepare structures
-        self.prepare_structures(config, args)
+        #for ligdir in glob.glob('ligprep*'):
+        #    shutil.rmtree(ligdir)
+
+        #for recdir in glob.glob('recprep*'):
+        #    shutil.rmtree(recdir)
+
+        ## prepare structures
+        #self.prepare_structures(config, args)
 
         # (A) LIGAND level
         for idx in range(config.nfiles_l):
-            if config.nfiles_l == 1 and not config.namesingle:
+            if config.nfiles_l == 1 and not config.single:
                 ligdir = '.'
             else:
                 ligdir = 'lig' + str(idx)
@@ -151,7 +164,7 @@ class PrepVS(object):
             # (B) RECEPTOR level
             for jdx in range(config.nfiles_r):
                 recdir = ligdir
-                if config.nfiles_r == 1 and not config.namesingle:
+                if config.nfiles_r == 1 and not config.single:
                     recdir += '/.'
                 else:
                     recdir += '/rec' + str(jdx)
@@ -159,40 +172,36 @@ class PrepVS(object):
                         shutil.rmtree(recdir)
                     os.mkdir(recdir)
 
-                # (C) ISOMER.SITE level
+                # (C) ISOMER level
                 ligpdir = 'ligprep' + str(idx)
                 recpdir = 'recprep' + str(jdx)
-                for sdffile in sorted(glob.glob(ligpdir+'/*.prep_*.sdf')):
-                    suffix = os.path.splitext(sdffile)[0]
+                recfile = glob.glob(recpdir+'/*.prep.pdb')
+                assert len(recfile) == 1, "length of recfile list different from 1!"
+                recfile = recfile[0]
+
+                for ligfile in sorted(glob.glob(ligpdir+'/*.prep_*.sdf')):
+                    suffix = os.path.splitext(ligfile)[0]
                     kdx = suffix.split('_')[-1]
-                    if args.sitefind:
+                    isodir = recdir + '/isomer' + kdx
+                    if os.path.isdir(isodir):
+                        shutil.rmtree(isodir)
+                    os.mkdir(isodir)
+                    if args.blind:
                         table = np.loadtxt(recpdir+'/sitefinder.log')
+                        if len(table.shape) == 1:
+                            table = table[np.newaxis,:]
                         for line in table:
-                            isodir = recdir
                             ldx = int(line[0])
-                            isodir += '/isomer' + kdx + '.site' + str(ldx)
-                            if os.path.isdir(isodir):
-                                shutil.rmtree(isodir)
-                            os.mkdir(isodir)
-
-                            # maybe include ligand size to compute boxsize
-                            self.update_site_config_file(args.config_file, line[2:5], 2*line[5], isodir)
-
-                            # copy the files for ligand and receptor in the corresponding dir
-                            shutil.copyfile(sdffile, isodir + '/lig.sdf')
-                            shutil.copyfile(recpdir+'/rec.pdb', isodir+'/rec.pdb')
+                            # TODO: include the size of the ligand to compute boxsize
+                            new_config_file = isodir + '/config.' + str(ldx) + '.ini'
+                            self.update_site_config_file(new_config_file, args.config_file, line[2:5], 2*line[5])
                     else:
-                        isodir = recdir
-                        isodir += '/isomer' + kdx
-                        if os.path.isdir(isodir):
-                            shutil.rmtree(isodir)
-                        os.mkdir(isodir)
                         # copy the config file in the directory
                         shutil.copyfile(args.config_file, isodir + '/config.ini')
-  
-                        # copy the files for ligand and receptor in the corresponding dir
-                        shutil.copyfile(sdffile, isodir + '/lig.sdf')
-                        shutil.copyfile(recpdir+'/rec.pdb', isodir+'/rec.pdb')
+
+                    # copy the files for ligand and receptor in the corresponding dir
+                    shutil.copyfile(ligfile, isodir + '/lig.sdf')
+                    shutil.copyfile(recfile, isodir +'/rec.pdb')
 
     def prepare_structures(self, config, args):
 
@@ -214,14 +223,13 @@ class PrepVS(object):
                 shutil.rmtree(recpdir)
             os.mkdir(recpdir)
             os.chdir(recpdir)
-            shutil.copyfile(file_r, 'rec.pdb')
-            if args.sitefind:
-                self.find_binding_sites(config)
+            new_file_r = ligprep.prepare_receptor(file_r, config)
+            if args.blind:
+                self.find_binding_sites(new_file_r, config)
             os.chdir(curdir)
 
-    def update_site_config_file(self, config_file, center, boxsize, ligdir):
+    def update_site_config_file(self, new_config_file, config_file, center, boxsize):
 
-        new_config_file = ligdir + '/' + config_file
         shutil.copyfile(config_file, new_config_file)
 
         tmp_config_file = list(os.path.splitext(new_config_file))
@@ -254,14 +262,14 @@ boxsize = %(boxsize_conf)s"""% locals()
         with open(new_config_file, 'a') as newf:
             newf.write(newsite_section)
 
-    def find_binding_sites(self, config):
+    def find_binding_sites(self, pdbfile, config):
 
         program = config.site['program']
 
         # (A) write script
         script_name = 'find_binding_sites.sh'
         write_sitefinder_script = getattr(sys.modules[program], 'write_sitefinder_script')
-        write_sitefinder_script(script_name, 'rec.pdb', config)
+        write_sitefinder_script(script_name, pdbfile, config)
         os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
         # (B) execute script

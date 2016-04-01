@@ -70,7 +70,7 @@ def give_unique_atom_names(file_l):
                     idx = known_atom_types.index(atom_type)
                     atom_number = str(atom_numbers[idx]+1)
                     atom_numbers[idx] += 1
-                newline = line[:14]+atom_number+line[14+len(atom_number):]
+                newline = line[:14]+atom_number+(3-len(atom_number))*' '+line[17:]
                 # write line
                 newf.write(newline)
             elif line.startswith(('ENDMDL','END')):

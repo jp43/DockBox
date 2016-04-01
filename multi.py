@@ -1,7 +1,7 @@
 import sys
 import subprocess
 
-known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe'], 'rescoring': ['vina']}
+known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe'], 'rescoring': ['vina', 'autodock', 'glide']}
 
 class MultiProgramTask(object):
 
@@ -16,6 +16,7 @@ class MultiProgramTask(object):
             raise ValueError("argument task should be one of " + ", ".join(known_program_names.keys()))
 
         self.setup_instances(task, config)
+        self.set_site_options(config)
 
     def setup_instances(self, task, config):
 
@@ -60,29 +61,6 @@ Make sure the program has been installed!'%(exe,program))
         else:
             raise ValueError("option program in section %s is required in config file!"%self.section)
 
-class MultiProgramScoring(MultiProgramTask):
-
-    def __init__(self, config):
-
-        super(MultiProgramScoring, self).__init__('rescoring', config)
-
-class MultiProgramDocking(MultiProgramTask):
-
-    def __init__(self, config):
-
-        super(MultiProgramDocking, self).__init__('docking', config)
-
-        known_extract_options = ['all', 'lowest', 'none']
-        # get value for extract
-        if config.has_option(self.section, 'extract'):
-            self.extract = config.get(self.section, 'extract').lower()
-            if not self.extract in known_extract_options:
-                raise ValueError("Extract option should be one of " + ", ".join(known_extract_options))
-        else:
-            self.extract = 'lowest'
-
-        self.set_site_options(config)
-
     def set_site_options(self, config):
         """set options for the binding site"""
 
@@ -104,3 +82,26 @@ class MultiProgramDocking(MultiProgramTask):
             if hasattr(sys.modules[program], 'set_site_options'):
                 set_site_options_prgm = getattr(sys.modules[program], 'set_site_options', program)
                 set_site_options_prgm(site, options)
+
+
+class MultiProgramScoring(MultiProgramTask):
+
+    def __init__(self, config):
+
+        super(MultiProgramScoring, self).__init__('rescoring', config)
+
+class MultiProgramDocking(MultiProgramTask):
+
+    def __init__(self, config):
+
+        super(MultiProgramDocking, self).__init__('docking', config)
+
+        known_extract_options = ['all', 'lowest', 'none']
+        # get value for extract
+        if config.has_option(self.section, 'extract'):
+            self.extract = config.get(self.section, 'extract').lower()
+            if not self.extract in known_extract_options:
+                raise ValueError("Extract option should be one of " + ", ".join(known_extract_options))
+        else:
+            self.extract = 'lowest'
+

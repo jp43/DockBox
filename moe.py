@@ -4,12 +4,12 @@ import glob
 import shutil
 import subprocess
 
-import util.check_license as chkl
+import licence.check as chkl
 
 required_programs = ['moebatch']
 
 default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250', 
-'scoring': 'London dG', 'maxpose': '20', 'gtest': '0.01', 'rescoring': 'London dG', 'remaxpose': '20', 'binding_radius': '10000'}
+'scoring': 'London dG', 'maxpose': '10', 'gtest': '0.01', 'rescoring': 'London dG', 'binding_radius': '10000'}
 
 default_sitefind_settings = {'minplb': '1.0'}
 
@@ -17,12 +17,12 @@ def set_site_options(site, options):
 
     # set box center
     center = site['center']
-    options['binding_site'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
+    options['center_bs'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
 
     # set box size
     boxsize = site['boxsize']
     boxsize = map(float, map(str.strip, boxsize.split(',')))
-    options['binding_radius'] = max(boxsize)
+    options['radius_bs'] = max(boxsize)*1./2
 
 def write_sitefinder_script(filename, file_r, config):
     
@@ -64,7 +64,7 @@ local function main []
     for idx = 1, length alpha_sites loop
         plb = alpha_sites(idx)(4)(2);
 
-        if plb > minplb then
+        if plb > minplb or idx == 1 then
             a_sites = alpha_sites(idx)(1)(2);
             nsites = length a_sites(1);
 
@@ -79,14 +79,14 @@ local function main []
             // get distance to the farthest atom
             for x = 1, nsites loop
                 dist = sqrt add pow[sub[[a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)], cog], 2];
-                if dist > maxdist or idx == 1 then
+                if dist > maxdist then
                     maxdist = dist;
                 endif
             endloop
-            write ['{f.0}  {f.2} {f.3} {f.3}\\n', idx, plb, cog, maxdist];
+            write ['{f.0} {f.2} {f.3} {f.3}\\n', idx, plb, cog, maxdist];
         endif
     endloop
-endfunction;""" %config.site.items()
+endfunction;""" %dict(dict(locals()).items()+config.site.items())
         file.write(script)
 
 
@@ -189,27 +189,27 @@ ArgvReset ArgvExpand argv;
     local rec = cat cAtoms chains; // extract atom info from atom
 
     // get residues involved in the binding site
-    local binding_site = %(binding_site)s; // center for the binding site
-    local binding_radius = %(binding_radius)s; // radius of the binding site
-    local binding_res = []; // residues involved in binding site
+    local center_bs = %(center_bs)s; // center for the binding site
+    local radius_bs = %(radius_bs)s; // radius of the binding site
+    local residues_bs = []; // residues involved in binding site
 
     local idx;
     local com, dist;
 
-    local rrec;
-    rrec = cat cResidues chains; // extract residues info
-    for idx = 1, length rrec loop
-        com = oCenterOfMass rrec(idx);
-        dist = sqrt add pow[sub[binding_site, com], 2];
-        if dist < binding_radius then
-            binding_res = append [binding_res, rrec(idx)];
+    local rec_bs = cat cResidues chains; // extract residues info
+    for idx = 1, length rec_bs loop
+        com = oCenterOfMass rec_bs(idx);
+        dist = sqrt add pow[sub[center_bs, com], 2];
+        if dist < radius_bs then
+            residues_bs = append [residues_bs, rec_bs(idx)];
         endif
     endloop
-    rrec = cat rAtoms binding_res;
+
+    rec_bs = cat rAtoms residues_bs;
 
     View (Atoms[]);
 
-    local alpha_sites = run['sitefind.svl', [rrec, []], 'AlphaSites'];
+    local alpha_sites = run['sitefind.svl', [rec_bs, []], 'AlphaSites'];
 
     // Take first/highest scoring pocket alpha_sites(1)
     // Take fpos data alpha_sites(1)(1)
@@ -217,10 +217,17 @@ ArgvReset ArgvExpand argv;
     local a_sites = apt cat alpha_sites(1)(1)(2); // x, y, z coords
 
     // Make dummy He atoms for alpha site
+    // local dummy, x, y, z;
+    // for x = 1, length a_sites(1) loop
+    //    dummy(x) = sm_Build ['[He]'];
+    //    aSetPos [dummy(x), [a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)]];
+    //endloop
+
+    // Make dummy He atoms for alpha site
     local dummy, x, y, z;
-    for x = 1, length a_sites(1) loop
+    for x = 1, length a_sites loop
         dummy(x) = sm_Build ['[He]'];
-        aSetPos [dummy(x), [a_sites(1)(x), a_sites(2)(x), a_sites(3)(x)]];
+        aSetPos [dummy(x), a_sites(x)];
     endloop
 
     // Make a collection of site atoms to send to docking
@@ -262,7 +269,7 @@ ArgvReset ArgvExpand argv;
                 rescoring: '%(rescoring)s',
                 rescoring_opt: [ train : 0 ],
                 dup_refine: 1,
-                remaxpose: %(remaxpose)s,
+                remaxpose: %(maxpose)s,
                 descexpr: '',
                 receptor_mfield: '',
                 ligand_mfield: '',

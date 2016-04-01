@@ -4,8 +4,7 @@ import glob
 import shutil
 import subprocess
 
-import util.check_license as chkl
-import util.pdbtools as pdbt
+import licence.check as chkl
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 
@@ -31,7 +30,7 @@ def set_site_options(site, options):
            options['actyrange'] + ', ' + \
            options['actzrange']
 
-def write_docking_script(filename, input_file_r, input_file_l, options):
+def write_docking_script(filename, input_file_r, input_file_l, options, rescoring=False):
 
     # prepare protein
     prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(input_file_r)s target.mae"%locals(), 'glide') # receptor prepare
@@ -49,9 +48,10 @@ def write_docking_script(filename, input_file_r, input_file_l, options):
     else:
         tmpdirline = ""
 
-    # write vina script
-    with open(filename, 'w') as file:
-        script ="""#!/bin/bash
+    # write glide script
+    if not rescoring:
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
 %(tmpdirline)s
 
 # (A) Prepare receptor
@@ -86,7 +86,47 @@ PRECISION %(precision)s" > dock.in
 %(glide_dock_cmd)s
 
 %(glide_sort_cmd)s"""%dict(dict(locals()).items()+options.items())
-        file.write(script)
+            file.write(script)
+    else:
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+%(tmpdirline)s
+
+if [ ! -f target.mae ]; then
+  # (A) Prepare receptor
+  %(prepwizard_cmd)s
+fi
+
+if [ ! -f grid.zip ]; then
+  # (B) Prepare grid
+  echo "USECOMPMAE YES
+  INNERBOX %(innerbox)s
+  ACTXRANGE %(actxrange)s
+  ACTYRANGE %(actyrange)s
+  ACTZRANGE %(actzrange)s
+  GRID_CENTER %(grid_center)s
+  OUTERBOX %(outerbox)s
+  ENTRYTITLE target
+  GRIDFILE grid.zip
+  RECEP_FILE target.mae" > grid.in
+  %(glide_grid_cmd)s
+fi
+
+# (C) convert ligand to maestro format
+%(structconvert_cmd)s
+
+# (D) perform docking
+echo "WRITEREPT YES
+USECOMPMAE YES
+DOCKING_METHOD inplace
+POSES_PER_LIG %(poses_per_lig)s
+POSE_RMSD %(pose_rmsd)s
+GRIDFILE $PWD/grid.zip
+LIGANDFILE $PWD/lig.mae
+PRECISION SP" > dock.in
+
+%(glide_dock_cmd)s"""%dict(dict(locals()).items()+options.items())
+            file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
@@ -135,6 +175,18 @@ def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
                         break
                 else:
                     break
+
+def write_rescoring_script(filename, file_r, file_l, options):
+
+    write_docking_script(filename, file_r, file_l, options, rescoring=True)
+
+def extract_rescoring_results(filename):
+
+    with open(filename, 'a') as ff:
+        with open('dock.rept', 'r') as outf:
+            for line in outf:
+                if line.startswith('   1'):
+                    print >> ff, line.split()[2]
 
 def cleanup():
     for ff in glob.glob('dock_sorted*.pdb'):

@@ -7,7 +7,8 @@ import shutil
 import fileinput
 import numpy as np
 
-import util.pdbtools as pdbt
+import tools.PDB as pdbt
+import tools.mol2 as mol2t
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
@@ -31,9 +32,10 @@ def set_site_options(site, options):
          npts.append(str(int(size/spacing)))
     options['npts'] =  ','.join(npts)
 
-def write_docking_script(filename, input_file_r, input_file_l, options):
+def write_docking_script(filename, input_file_r, input_file_l, options, rescoring=False):
 
-    prepare_pdbfile(input_file_l, 'lig.pdb')
+    if not rescoring:
+        prepare_file_ligand(input_file_l, 'lig.mol2')
 
     autogrid_options = {}
     for name in autogrid_options_names:
@@ -51,8 +53,9 @@ def write_docking_script(filename, input_file_r, input_file_l, options):
     # create flag with specified options for autodock
     autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in autodock_options.iteritems()])
 
-    if 'ga_num_evals' not in options:
-        ga_num_evals_lines="""prepare_dpf4.py -l lig.pdbqt -r target.pdbqt -o dock.dpf -p move=lig.pdbqt
+    if not rescoring:
+        if 'ga_num_evals' not in options:
+            ga_num_evals_lines="""prepare_dpf4.py -l lig.pdbqt -r target.pdbqt -o dock.dpf -p move=lig.pdbqt
 ga_num_evals_flag=`python -c \"with open('dock.dpf') as ff:
     for line in ff:
         if line.startswith('torsdof'):
@@ -60,27 +63,63 @@ ga_num_evals_flag=`python -c \"with open('dock.dpf') as ff:
             break
 ga_num_evals = min(25000000, 987500 * torsion + 125000)
 print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
-    else:
-        ga_num_evals_lines=""
+        else:
+            ga_num_evals_lines=""
 
-    # write autodock script
-    with open(filename, 'w') as file:
-        script ="""#!/bin/bash
+        # write autodock script
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
 set -e
 
 # generate .pdbqt files
-prepare_ligand4.py -l lig.pdb -o lig.pdbqt
-prepare_receptor4.py -r %(input_file_r)s -o target.pdbqt
+prepare_ligand4.py -l lig.mol2 -U '' -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_receptor4.py -r %(input_file_r)s -U 'waters_nonstdres' -o target.pdbqt
 
 # run autogrid
 prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
 autogrid4 -p grid.gpf -l grid.glg
 
-# run autodock
+# prepare .dpf file
 %(ga_num_evals_lines)s
 prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
+# change unbound_model option to bound
+sed -i s/extended/bound/g dock.dpf 
+
+# run autodock
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
-        file.write(script)
+            file.write(script)
+
+    else:
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+set -e
+
+# generate .pdbqt files
+prepare_ligand4.py -l %(input_file_l)s -o lig.pdbqt
+if [ ! -f target.pdbqt ]; then
+  prepare_receptor4.py -r %(input_file_r)s -U 'waters_nonstdres' -o target.pdbqt
+fi
+
+# run autogrid
+if [ ! -f grid.glg ]; then
+  prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
+  autogrid4 -p grid.gpf -l grid.glg
+fi
+
+# prepare .dpf file
+if [ ! -f dock.dpf ]; then
+  prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
+  # construct new dock.dpf with rescoring options only
+  sed -i "s/extended/bound/g" dock.dpf
+  sed -e "1,/about/w tmp.dpf" dock.dpf > /dev/null
+  mv tmp.dpf dock.dpf
+  echo 'epdb                                 # small molecule to be evaluated' >> dock.dpf
+fi
+
+# run autodock
+autodock4 -p dock.dpf -l dock.dlg"""% locals()
+            file.write(script)
+
 
 def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
 
@@ -141,27 +180,51 @@ def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
     if extract in ['lowest', 'all']:
         cleanup_pose(file_l)
 
-def prepare_pdbfile(file_l, pdbfile):
+def prepare_file_ligand(input_file_l, output_file_l):
 
-    # convert sdffile to PDBfile
-    subprocess.check_call('babel -isdf %s -opdb %s 2>/dev/null'%(file_l,pdbfile), shell=True)
+    path, ext = os.path.splitext(output_file_l)
+
+    # convert sdffile to the right format
+    subprocess.check_call('babel %s %s 2>/dev/null'%(input_file_l, output_file_l), shell=True)
 
     # give unique atom names
-    pdbt.give_unique_atom_names(pdbfile)
+    give_unique_atom_names = getattr(sys.modules['tools.'+ext[1:]], 'give_unique_atom_names')
+    give_unique_atom_names(output_file_l)
+
+def write_rescoring_script(filename, file_r, file_l, options):
+
+    write_docking_script(filename, file_r, file_l, options, rescoring=True)
+
+def extract_rescoring_results(filename):
+
+    with open(filename, 'a') as ff:
+        with open('dock.dlg', 'r') as outf:
+            for line in outf:
+                if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
+                    print >> ff, line.split()[8]
+
+    os.remove('lig.pdbqt')
+    os.remove('target.pdbqt')
 
 def cleanup_pose(file_l):
 
     atom_names = []
-    with open('lig.pdb', 'r') as pdbfile:
+    with open('lig.mol2', 'r') as pdbfile:
+        is_structure = False
         for line in pdbfile:
-            if line.startswith(('ATOM', 'HETATM')):
-                atom_names.append(line[12:17].strip())
+            if line.startswith('@<TRIPOS>ATOM'):
+                is_structure = True
+            elif line.startswith('@<TRIPOS>'):
+                is_structure = False
+            elif is_structure:
+                line_s = line.split()
+                atom_names.append(line_s[1])
 
     # rearrange atoms in case if the original order was modified
     pdbt.rearrange_atom_names(file_l, atom_names)
 
-    # remove/add hydrogens
-    pdbt.format_lig_file('lig.out.pdb')
+    ## remove/add hydrogens
+    #pdbt.format_lig_file('lig.out.pdb')
     #subprocess.check_call('babel -ipdb lig.out.pdb -opdb ligtmp.out.pdb -d -h 2>/dev/null', shell=True)
     #shutil.move('ligtmp.out.pdb','lig.out.pdb')
 

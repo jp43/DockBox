@@ -4,8 +4,6 @@ import subprocess
 import shutil
 import glob
 
-import util.pdbtools as pdbt
-
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \

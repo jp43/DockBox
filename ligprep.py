@@ -7,7 +7,7 @@ import glob
 import shutil
 import fileinput
 import subprocess
-import util.check_license as chkl
+import licence.check as chkl
 
 ligprep_default_options = {'tautomerizer': False, 'ring_conf': False, 'stereoizer': False, 'tarfiles': False, 'ionization': '1'}
 
@@ -67,6 +67,21 @@ def generate_3D_structure(ff, flags, config):
     for logf in glob.glob(suffix +'*.log'):
        os.remove(logf)
 
-    #os.remove('ligprep.sh')
-
     return outputfile
+
+def prepare_receptor(file_r, config):
+
+    # find new file name
+    new_file_r = os.path.basename(file_r)
+    pref, ext = os.path.splitext(new_file_r)
+    new_file_r = pref + '.prep' + ext
+
+    prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(file_r)s %(new_file_r)s"%locals(), 'glide')
+
+    with open('prepwizard.sh', 'w') as file:
+        script ="""#!/bin/bash
+%(prepwizard_cmd)s"""% locals()
+        file.write(script)
+
+    subprocess.check_output('bash prepwizard.sh', shell=True)
+    return new_file_r

@@ -14,7 +14,7 @@ import multi
 import consensus
 import numpy as np
 
-class Worker(object):
+class DockingWorker(object):
 
     def __init__(self):
 
@@ -40,7 +40,7 @@ class Worker(object):
             raise IOError("File %s not found!"%(self.input_file_r))
 
         self.docking = multi.MultiProgramDocking(config)
-        self.consensus = consensus.ConsensusDocking(config)
+        self.consensus = consensus.ConsensusDocking(config, args)
 
         self.cleanup = self.is_yesno_option(config, 'cleanup')
 
@@ -78,52 +78,82 @@ class Worker(object):
         parser.add_argument('-f',
             dest='config_file',
             required=True,
+            nargs='+',
             help='config file containing docking parameters')
+
+        parser.add_argument('--consensus_only',
+            dest='consensus_only',
+            action='store_true',
+            default=False,
+            help='Run consensus only)')
 
         return parser
 
-    def run(self):
+    def run_docking(self, config):
         """Running docking simulations using each program specified..."""
 
         curdir = os.getcwd()
 
-        tcpu1 = time.time()
-        for instance, program, options in self.docking.instances:
+        if not self.consensus.only:
+            tcpu1 = time.time()
+            for instance, program, options in self.docking.instances:
 
-            print "Starting docking with %s..."%program.capitalize()
-            print "The following options will be used:"
-            print options
+                print "Starting docking with %s..."%program.capitalize()
+                print "The following options will be used:"
+                print options
 
-            if os.path.isdir(instance):
-                shutil.rmtree(instance)
-            os.mkdir(instance)
-            os.chdir(instance)
+                if os.path.isdir(instance):
+                    shutil.rmtree(instance)
+                os.mkdir(instance)
+                os.chdir(instance)
 
-            # (A) write docking script
-            script_name = "run_" + program + ".sh"
-            write_docking_script = getattr(sys.modules[program], 'write_docking_script')
-            write_docking_script(script_name, self.input_file_r, self.input_file_l, options)
-            os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+                # (A) write docking script
+                script_name = "run_" + program + ".sh"
+                write_docking_script = getattr(sys.modules[program], 'write_docking_script')
+                write_docking_script(script_name, self.input_file_r, self.input_file_l, options)
+                os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-            # (B) execute docking procedure
-            subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash')
+                # (B) execute docking procedure
+                subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash')
 
-            # (C) extract docking results
-            extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
-            extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', self.input_file_r, self.docking.extract)
+                # (C) extract docking results
+                extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
+                extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', self.input_file_r, self.docking.extract)
 
-            # (D) remove intermediate files if required
-            if self.cleanup:
-                cleanup = getattr(sys.modules[program], 'cleanup')
-                cleanup(self)
+                # (D) remove intermediate files if required
+                if self.cleanup:
+                    cleanup = getattr(sys.modules[program], 'cleanup')
+                    cleanup(self)
  
-            os.chdir(curdir)
-            print "Docking with %s done."%program.capitalize()
+                os.chdir(curdir)
+                print "Docking with %s done."%program.capitalize()
 
-        tcpu2 = time.time()
-        print "Full docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
+            tcpu2 = time.time()
+            print "Full docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
         self.consensus.find_consensus(self.docking.instances)
- 
+
+
+    def run(self):
+
+        parser = self.create_arg_parser()
+        args = parser.parse_args()    
+
+        tcpu1 = time.time()
+
+        print "Setting up parameters..."
+        config = DockingConfig(args)
+
+        # run docking
+        #self.run_docking(config)
+
+        if config.consensus['consensus']:
+            consensus.find_consensus(config)
+
+
+        tcpu2 = time.time()
+        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
+
+
 if __name__ == '__main__':
-    Worker().run()
+    DockingWorker().run()

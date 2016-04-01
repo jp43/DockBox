@@ -4,8 +4,6 @@ import glob
 import autodock
 import shutil
 
-import util.pdbtools as pdbt
-
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
 default_settings = {'cpu': '1'}
