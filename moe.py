@@ -16,11 +16,11 @@ default_sitefind_settings = {'minplb': '1.0'}
 def set_site_options(site, options):
 
     # set box center
-    center = site['center']
+    center = site[1]
     options['center_bs'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
 
     # set box size
-    boxsize = site['boxsize']
+    boxsize = site[2]
     boxsize = map(float, map(str.strip, boxsize.split(',')))
     options['radius_bs'] = max(boxsize)*1./2
 
@@ -90,9 +90,18 @@ endfunction;""" %dict(dict(locals()).items()+config.site.items())
         file.write(script)
 
 
-def write_docking_script(filename, input_file_r, input_file_l, options):
+def write_docking_script(filename, input_file_r, input_file_l, site, options):
 
-    write_moe_docking_script('moe_dock.svl', options)
+    # set box center
+    center = site[1]
+    center_bs = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
+
+    # set box size
+    boxsize = site[2]
+    boxsize = map(float, map(str.strip, boxsize.split(',')))
+    radius_bs = max(boxsize)*1./2
+
+    write_moe_docking_script('moe_dock.svl', options, center_bs, radius_bs)
 
     convertsdf_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
         db_ImportSD ['lig.mdb','%(input_file_l)s','mol']\""%locals(), 'moe') # create mdb for ligand 
@@ -111,7 +120,9 @@ set -e
 """% locals()
         file.write(script)
 
-def write_moe_docking_script(filename, options):
+def write_moe_docking_script(filename, options, center_bs, radius_bs):
+
+    locals().update(options)
 
     # write vina script
     with open(filename, 'w') as file:
@@ -287,7 +298,7 @@ ArgvReset ArgvExpand argv;
     db_Close lmdb;
     write ['Docking finished at {}.\\n', asctime []];
 
-endfunction;"""%options
+endfunction;"""% locals()
         file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):

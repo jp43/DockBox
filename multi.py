@@ -59,29 +59,41 @@ Make sure the program has been installed!'%(exe,program))
                 self.instances.append((instance, program, options))
 
         else:
-            raise ValueError("option program in section %s is required in config file!"%self.section)
+            raise ValueError("option program in section %s is required in config file!"%section)
 
     def set_site_options(self, config):
         """set options for the binding site"""
 
         site = {}
-        section = 'SITE'
         required_options = ['center', 'boxsize']
-        if config.has_section(section):
+        if config.has_option('DOCKING', 'site'):
+            sitenames = config.get('DOCKING', 'site').lower()
+            sitenames = map(str.strip, sitenames.split(','))
+            for idx, name in enumerate(sitenames):
+                site['site'+str(idx+1)] = [name]
+                for option in required_options:
+                    section = name.upper()
+                    if config.has_option(section, option):
+                        value = config.get(section, option)
+                        site['site'+str(idx+1)].append(value)
+                    else:
+                        raise ValueError("Option %s in section %s is required in config file!"%(option,section))
+        else:
+            section = 'SITE'
+            site['site'+str(idx)] = ['']
             for option in required_options:
                 if config.has_option(section, option):
                     value = config.get(section, option)
-                    site[option] = value
+                    site['site1'].append(value)
                 else:
                     raise ValueError("Option %s in section %s is required in config file for local docking!"%(option,section))
-        else:
-            raise ValueError("Section %s is required in config file for local docking!"%section)
-
-        for name, program, options in self.instances:
-            # check if all required options have been set
-            if hasattr(sys.modules[program], 'set_site_options'):
-                set_site_options_prgm = getattr(sys.modules[program], 'set_site_options', program)
-                set_site_options_prgm(site, options)
+        self.site = site
+        self.nsites = len(site)
+        #for name, program, options in self.instances:
+        #    # check if all required options have been set
+        #    if hasattr(sys.modules[program], 'set_site_options'):
+        #        set_site_options_prgm = getattr(sys.modules[program], 'set_site_options', program)
+        #        set_site_options_prgm(site, options)
 
 
 class MultiProgramScoring(MultiProgramTask):

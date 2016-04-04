@@ -1,6 +1,21 @@
 import sys
 import shutil
 
+def get_atoms_names(filename):
+
+    atoms_names = []
+    with open(filename, 'r') as pdbfile:
+        is_structure = False
+        for line in pdbfile:
+            if line.startswith('@<TRIPOS>ATOM'):
+                is_structure = True
+            elif line.startswith('@<TRIPOS>'):
+                is_structure = False
+            elif is_structure:
+                line_s = line.split()
+                atoms_names.append(line_s[1])
+    return atoms_names
+
 def give_unique_atom_names(file_l):
 
     tmpfile = 'tmp.mol2'
@@ -35,3 +50,39 @@ def give_unique_atom_names(file_l):
                 newf.write(line)
 
     shutil.move(tmpfile, file_l)
+
+def pdb2mol2(pdbfile, mol2file, sample=None):
+
+    if not sample:
+        raise NotImplementedError("No sample provided!")
+
+    with open(mol2file, 'w') as mf:
+        with open(pdbfile, 'r') as pdbf:
+            with open(sample, 'r') as sf:
+                # go to first atom line in sample file 
+                line_s = sf.next()
+                mf.write(line_s) # write non-atom lines 
+                while not line_s.startswith('@<TRIPOS>ATOM'):
+                    line_s = sf.next()
+                    mf.write(line_s)
+                line_s = sf.next()
+                # go to first atom line in PDB file
+                line_pdb = pdbf.next()
+                while not line_pdb.startswith(('ATOM','HETATM')):
+                    line_pdb = pdbf.next()
+                # print 
+                while line_pdb.startswith(('ATOM','HETATM')):
+                    if line_s.split()[1] != line_pdb.split()[2]:
+                        raise ValueError('mol2 sample provided does not match with pdbfile')
+                    coords = line_pdb[30:54].split()
+                    # write newline
+                    newline = line_s[:16] + ' '*(10-len(coords[0])) + str(coords[0]) + \
+' '*(10-len(coords[1])) + str(coords[1]) + ' '*(10-len(coords[2])) + str(coords[2]) + line_s[46:]
+                    mf.write(newline)
+                    try:
+                        line_pdb = pdbf.next()
+                        line_s = sf.next()
+                    except StopIteration:
+                        break
+                for line_s in sf:
+                    mf.write(line_s)

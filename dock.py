@@ -7,20 +7,20 @@ import glob
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
-'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
+'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
 
-def set_site_options(site, options):
+def write_docking_script(filename, input_file_r, input_file_l, site, options):
+
+    locals().update(options)
 
     # set box center
-    center = site['center']
-    options['center'] = '\"' + ' '.join(map(str.strip, center.split(','))) + '\"'
+    center = site[1]
+    center = '\"' + ' '.join(map(str.strip, center.split(','))) + '\"'
 
     # set box size
-    boxsize = site['boxsize']
+    boxsize = site[2]
     boxsize = map(float, map(str.strip, boxsize.split(',')))
-    options['sphgen_radius'] = str(max(boxsize)/2)
-
-def write_docking_script(filename, input_file_r, input_file_l, options):
+    sphgen_radius = str(max(boxsize)/2)
 
     write_shift_coordinates_script()
   
@@ -177,7 +177,7 @@ cluster_conformations yes
 cluster_rmsd_threshold 2.0
 rank_ligands no" > dock6.in
 
-dock6 -i dock6.in"""%dict(dict(locals()).items()+options.items())
+dock6 -i dock6.in"""% locals()
         file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):

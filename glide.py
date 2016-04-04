@@ -11,26 +11,24 @@ required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert
 default_settings = {'actxrange': '30.0', 'actyrange': '30.0', 'actzrange': '30.0', \
 'innerbox': '10, 10, 10', 'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'tmpdir': None}
 
-def set_site_options(site, options):
+def write_docking_script(filename, input_file_r, input_file_l, site, options, rescoring=False):
+
+    locals().update(options)
 
     # set box center
-    center = site['center'] # set box
-    options['grid_center'] = ', '.join(map(str.strip, center.split(',')))
+    center = site[1] # set box
+    grid_center = ', '.join(map(str.strip, center.split(',')))
 
     # set box size
-    boxsize = site['boxsize']
+    boxsize = site[2]
     boxsize = map(str.strip, boxsize.split(','))
-    options['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
+    innerbox = ', '.join(map(str,map(int,map(float,boxsize))))
 
-    for idx, axis in enumerate(['x', 'y', 'z']):
-         size = float(boxsize[idx]) + 10.0
-         options['act' + axis + 'range'] = str(size)
+    actxrange = str(float(boxsize[0]) + 10.0)
+    actyrange = str(float(boxsize[1]) + 10.0)
+    actzrange = str(float(boxsize[2]) + 10.0)
 
-    options['outerbox'] = options['actxrange'] + ', ' + \
-           options['actyrange'] + ', ' + \
-           options['actzrange']
-
-def write_docking_script(filename, input_file_r, input_file_l, options, rescoring=False):
+    outerbox = actxrange + ', ' + actyrange + ', ' + actzrange
 
     # prepare protein
     prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(input_file_r)s target.mae"%locals(), 'glide') # receptor prepare
@@ -85,7 +83,7 @@ PRECISION %(precision)s" > dock.in
 
 %(glide_dock_cmd)s
 
-%(glide_sort_cmd)s"""%dict(dict(locals()).items()+options.items())
+%(glide_sort_cmd)s"""% locals()
             file.write(script)
     else:
         with open(filename, 'w') as file:
@@ -125,7 +123,7 @@ GRIDFILE $PWD/grid.zip
 LIGANDFILE $PWD/lig.mae
 PRECISION SP" > dock.in
 
-%(glide_dock_cmd)s"""%dict(dict(locals()).items()+options.items())
+%(glide_dock_cmd)s"""% locals()
             file.write(script)
 
 def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
@@ -176,9 +174,9 @@ def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
                 else:
                     break
 
-def write_rescoring_script(filename, file_r, file_l, options):
+def write_rescoring_script(filename, file_r, file_l, site, options):
 
-    write_docking_script(filename, file_r, file_l, options, rescoring=True)
+    write_docking_script(filename, file_r, file_l, site, options, rescoring=True)
 
 def extract_rescoring_results(filename):
 

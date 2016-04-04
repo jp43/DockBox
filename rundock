@@ -14,13 +14,9 @@ import multi
 import consensus
 import numpy as np
 
-class DockingWorker(object):
+class DockingConfig(object):
 
-    def __init__(self):
-
-        print "Setting up parameters..."
-        parser = self.create_arg_parser()
-        args = parser.parse_args()
+    def __init__(self, args):
 
         # check if config file exist
         if not os.path.exists(args.config_file):
@@ -57,6 +53,8 @@ class DockingWorker(object):
         else:
             return default
 
+class DockingWorker(object):
+
     def create_arg_parser(self):
 
         parser = argparse.ArgumentParser(description="Run Docking")
@@ -78,7 +76,6 @@ class DockingWorker(object):
         parser.add_argument('-f',
             dest='config_file',
             required=True,
-            nargs='+',
             help='config file containing docking parameters')
 
         parser.add_argument('--consensus_only',
@@ -93,24 +90,26 @@ class DockingWorker(object):
         """Running docking simulations using each program specified..."""
 
         curdir = os.getcwd()
+         
+        for kdx in range(len(config.docking.site)):
+            bs = config.docking.site['site'+str(kdx+1)] # current binding site
+            print "Binding site info -- center: %s, boxsize: %s "%(bs[1], bs[2]) 
 
-        if not self.consensus.only:
-            tcpu1 = time.time()
-            for instance, program, options in self.docking.instances:
-
+            for instance, program, options in config.docking.instances:
                 print "Starting docking with %s..."%program.capitalize()
                 print "The following options will be used:"
                 print options
 
-                if os.path.isdir(instance):
-                    shutil.rmtree(instance)
-                os.mkdir(instance)
-                os.chdir(instance)
+                dockdir = instance + '.' + bs[0]
+                if os.path.isdir(dockdir):
+                    shutil.rmtree(dockdir)
+                os.mkdir(dockdir)
+                os.chdir(dockdir)
 
                 # (A) write docking script
                 script_name = "run_" + program + ".sh"
                 write_docking_script = getattr(sys.modules[program], 'write_docking_script')
-                write_docking_script(script_name, self.input_file_r, self.input_file_l, options)
+                write_docking_script(script_name, config.input_file_r, config.input_file_l, bs, options)
                 os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
                 # (B) execute docking procedure
@@ -118,21 +117,15 @@ class DockingWorker(object):
 
                 # (C) extract docking results
                 extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
-                extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', self.input_file_r, self.docking.extract)
+                extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', config.input_file_r, bs, config.docking.extract)
 
                 # (D) remove intermediate files if required
-                if self.cleanup:
+                if config.cleanup:
                     cleanup = getattr(sys.modules[program], 'cleanup')
-                    cleanup(self)
- 
+                    cleanup(config)
+
                 os.chdir(curdir)
                 print "Docking with %s done."%program.capitalize()
-
-            tcpu2 = time.time()
-            print "Full docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
-
-        self.consensus.find_consensus(self.docking.instances)
-
 
     def run(self):
 
@@ -145,11 +138,10 @@ class DockingWorker(object):
         config = DockingConfig(args)
 
         # run docking
-        #self.run_docking(config)
+        if not config.consensus.only:
+            self.run_docking(config)
 
-        if config.consensus['consensus']:
-            consensus.find_consensus(config)
-
+        config.consensus.find_consensus(config.docking.instances, config.docking.site)
 
         tcpu2 = time.time()
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)

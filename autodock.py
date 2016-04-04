@@ -14,28 +14,29 @@ required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4
 
 default_settings = {'ga_run': '100', 'spacing': '0.238'}
 
-autogrid_options_names = ['npts', 'spacing', 'gridcenter']
-autodock_options_names = ['ga_run', 'ga_pop_size', 'ga_num_evals', 'ga_num_generations', 'outlev']
+autogrid_options_names = ['spacing']
+autodock_options_names = ['ga_run', 'ga_pop_size', 'ga_num_evals', 'ga_num_generations', 'outlev', 'seed']
 
-def set_site_options(site, options):
+def write_docking_script(filename, input_file_r, input_file_l, site, options, rescoring=False):
 
     # set box center
-    center = site['center'] # set box
-    options['gridcenter'] = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
+    center = site[1] # set box
+    gridcenter = '\"' + ','.join(map(str.strip, center.split(','))) + '\"'
 
     # set box size
-    boxsize = site['boxsize']
+    boxsize = site[2]
     boxsize = map(float, map(str.strip, boxsize.split(',')))
     spacing = float(options['spacing'])
     npts = []
+
     for size in boxsize:
-         npts.append(str(int(size/spacing)))
-    options['npts'] =  ','.join(npts)
+        #if rescoring:
+        #    sz = int((size*1.0 + 5)/spacing) # add 5A to avoid problems at boundaries
+        sz = int(size*1.0/spacing) + 1
+        npts.append(str(sz)) # round to the integer above
+    npts =  ','.join(npts)
 
-def write_docking_script(filename, input_file_r, input_file_l, options, rescoring=False):
-
-    if not rescoring:
-        prepare_file_ligand(input_file_l, 'lig.mol2')
+    prepare_file_ligand(input_file_l, 'lig.mol2', rescoring)
 
     autogrid_options = {}
     for name in autogrid_options_names:
@@ -43,7 +44,8 @@ def write_docking_script(filename, input_file_r, input_file_l, options, rescorin
             autogrid_options[name] = options[name]
     
     # create flag with specified options for autogrid
-    autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in autogrid_options.iteritems()])
+    autogrid_options_flag = "-p npts=%(npts)s -p gridcenter=%(gridcenter)s "% locals()
+    autogrid_options_flag += ' '.join(['-p ' + key + '=' + value for key, value in autogrid_options.iteritems()])
 
     autodock_options = {}
     for name in autodock_options_names:
@@ -82,20 +84,19 @@ autogrid4 -p grid.gpf -l grid.glg
 # prepare .dpf file
 %(ga_num_evals_lines)s
 prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
-# change unbound_model option to bound
-sed -i s/extended/bound/g dock.dpf 
 
 # run autodock
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
             file.write(script)
 
     else:
+        # write autodock script for rescoring
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
 set -e
 
 # generate .pdbqt files
-prepare_ligand4.py -l %(input_file_l)s -o lig.pdbqt
+prepare_ligand4.py -l lig.mol2 -U '' -C -B 'amide_guadinidium' -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(input_file_r)s -U 'waters_nonstdres' -o target.pdbqt
 fi
@@ -110,7 +111,6 @@ fi
 if [ ! -f dock.dpf ]; then
   prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
   # construct new dock.dpf with rescoring options only
-  sed -i "s/extended/bound/g" dock.dpf
   sed -e "1,/about/w tmp.dpf" dock.dpf > /dev/null
   mv tmp.dpf dock.dpf
   echo 'epdb                                 # small molecule to be evaluated' >> dock.dpf
@@ -180,20 +180,20 @@ def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
     if extract in ['lowest', 'all']:
         cleanup_pose(file_l)
 
-def prepare_file_ligand(input_file_l, output_file_l):
+def prepare_file_ligand(input_file_l, output_file_l, rescoring):
 
-    path, ext = os.path.splitext(output_file_l)
+    if rescoring:
+        mol2t.pdb2mol2(input_file_l, output_file_l, sample='../../autodock.site2/lig.mol2')
+    else:
+        # convert .sdf file to mol2
+        subprocess.check_call('babel -isdf %s -omol2 %s 2>/dev/null'%(input_file_l, output_file_l), shell=True)
 
-    # convert sdffile to the right format
-    subprocess.check_call('babel %s %s 2>/dev/null'%(input_file_l, output_file_l), shell=True)
+        # give unique atom names
+        mol2t.give_unique_atom_names(output_file_l)
 
-    # give unique atom names
-    give_unique_atom_names = getattr(sys.modules['tools.'+ext[1:]], 'give_unique_atom_names')
-    give_unique_atom_names(output_file_l)
+def write_rescoring_script(filename, file_r, file_l, site, options):
 
-def write_rescoring_script(filename, file_r, file_l, options):
-
-    write_docking_script(filename, file_r, file_l, options, rescoring=True)
+    write_docking_script(filename, file_r, file_l, site, options, rescoring=True)
 
 def extract_rescoring_results(filename):
 
@@ -208,22 +208,11 @@ def extract_rescoring_results(filename):
 
 def cleanup_pose(file_l):
 
-    atom_names = []
-    with open('lig.mol2', 'r') as pdbfile:
-        is_structure = False
-        for line in pdbfile:
-            if line.startswith('@<TRIPOS>ATOM'):
-                is_structure = True
-            elif line.startswith('@<TRIPOS>'):
-                is_structure = False
-            elif is_structure:
-                line_s = line.split()
-                atom_names.append(line_s[1])
-
     # rearrange atoms in case if the original order was modified
-    pdbt.rearrange_atom_names(file_l, atom_names)
+    atoms_names = mol2t.get_atoms_names('lig.mol2')
+    pdbt.rearrange_atom_names(file_l, atoms_names)
 
-    ## remove/add hydrogens
+    # remove/add hydrogens
     #pdbt.format_lig_file('lig.out.pdb')
     #subprocess.check_call('babel -ipdb lig.out.pdb -opdb ligtmp.out.pdb -d -h 2>/dev/null', shell=True)
     #shutil.move('ligtmp.out.pdb','lig.out.pdb')
