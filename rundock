@@ -86,53 +86,31 @@ class DockingWorker(object):
 
         return parser
 
+
     def run_docking(self, config):
         """Running docking simulations using each program specified..."""
 
-        curdir = os.getcwd()
-         
+        tcpu1 = time.time()
+
+        # iterate over all the binding sites
         for kdx in range(len(config.docking.site)):
-            bs = config.docking.site['site'+str(kdx+1)] # current binding site
-            print "Binding site info -- center: %s, boxsize: %s "%(bs[1], bs[2]) 
 
-            for instance, program, options in config.docking.instances:
-                print "Starting docking with %s..."%program.capitalize()
-                print "The following options will be used:"
-                print options
+            for instance, program, options in config.docking.instances: # iterate over all the instances
 
-                dockdir = instance + '.' + bs[0]
-                if os.path.isdir(dockdir):
-                    shutil.rmtree(dockdir)
-                os.mkdir(dockdir)
-                os.chdir(dockdir)
+                # get docking class
+                DockingClass = getattr(sys.modules[program], program.capitalize())
 
-                # (A) write docking script
-                script_name = "run_" + program + ".sh"
-                write_docking_script = getattr(sys.modules[program], 'write_docking_script')
-                write_docking_script(script_name, config.input_file_r, config.input_file_l, bs, options)
-                os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+                # create docking instance and run docking
+                DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.docking.extract, config.cleanup)
 
-                # (B) execute docking procedure
-                subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash')
-
-                # (C) extract docking results
-                extract_docking_results = getattr(sys.modules[program], 'extract_docking_results')
-                extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', config.input_file_r, bs, config.docking.extract)
-
-                # (D) remove intermediate files if required
-                if config.cleanup:
-                    cleanup = getattr(sys.modules[program], 'cleanup')
-                    cleanup(config)
-
-                os.chdir(curdir)
-                print "Docking with %s done."%program.capitalize()
+        tcpu2 = time.time()
+        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run(self):
 
         parser = self.create_arg_parser()
         args = parser.parse_args()    
-
-        tcpu1 = time.time()
 
         print "Setting up parameters..."
         config = DockingConfig(args)
@@ -142,10 +120,6 @@ class DockingWorker(object):
             self.run_docking(config)
 
         config.consensus.find_consensus(config.docking.instances, config.docking.site)
-
-        tcpu2 = time.time()
-        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
-
 
 if __name__ == '__main__':
     DockingWorker().run()

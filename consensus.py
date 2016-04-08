@@ -92,17 +92,6 @@ class ConsensusDocking(object):
                 prgdir = '../%s'%name + '.'+bs[0]
                 os.chdir(prgdir)
 
-                # prepare ligand structure
-                shutil.copyfile('lig.out.pdb', 'lig-c.out.pdb')
-                pdbt.format_lig_file('lig-c.out.pdb')
-                pdbt.give_unique_atom_names('lig-c.out.pdb') # give unique atom names
-    
-                if self.type == 'clustering':
-                    # remove hydrogens to leave tleap add them
-                    pdbt.remove_hydrogens('rec.out.pdb', 'rec-c.out.pdb')
-                elif self.type == 'rescoring':
-                    shutil.copyfile('rec.out.pdb', 'rec-c.out.pdb')
-
                 # create the corresponding file both the receptors and ligands
                 pdbt.create_reclig_file('rec-c.out.pdb', 'lig-c.out.pdb', 'rec-lig.out.pdb')
                
@@ -110,7 +99,7 @@ class ConsensusDocking(object):
                 os.remove('rec-c.out.pdb')
                 os.chdir(curdir)
     
-                with open(prgdir+'/rec-lig.out.pdb') as pdbfi:
+                with open(prgdir+'/rec-lig.out.pdb','r') as pdbfi:
                     for line in pdbfi:
                         if line.startswith('MODEL'):
                             try:
@@ -128,50 +117,17 @@ class ConsensusDocking(object):
 
     def run_rescoring(self, site):
 
-        curdir = os.getcwd()
-
         for kdx in range(len(site)):
-            bs = site['site'+str(kdx+1)] # current binding site
-            
-            for name, program, options in self.rescoring.instances:
-                # create directory
-                dirname = name + '.' + bs[0]
-                os.mkdir(dirname)
+            # iterate over rescoring instances
+            for instance, program, options in self.rescoring.instances:
+                # get complex filenames 
+                input_file_rl = ['PDB/rec-lig.%s.pdb'%idx for idx in range(self.nposes[kdx], self.nposes[kdx+1]+1)]
 
-                # change directory
-                os.chdir(dirname)
-    
-                # iterate over all the poses
-                for idx in range(self.nposes[kdx], self.nposes[kdx+1]+1):
-                    with open('../PDB/rec-lig.%s.pdb'%idx, 'r') as frl:
-                        is_protein = True
-                        ff = open('rec.pdb', 'w')
-                        for line in frl:
-                            if line.startswith(('ATOM', 'HETATM')) and line[17:20] == 'LIG' and is_protein:
-                                ff.close()
-                                ff = open('lig.pdb', 'w')
-                                is_protein = False
-                            if line.startswith(('ATOM', 'HETATM', 'TER')):
-                                ff.write(line)
-                        ff.close()
+                # get docking class
+                DockingClass = getattr(sys.modules[program], program.capitalize())
 
-                        # (A) write script
-                        script_name = "run_scoring_" + program + ".sh"
-                        write_rescoring_script = getattr(sys.modules[program], 'write_rescoring_script')
-                        write_rescoring_script(script_name, 'rec.pdb', 'lig.pdb', bs, options)
-                        os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
-
-                        # (B) run scoring method
-                        subprocess.check_call("./" + script_name + " &> " + program + ".log", shell=True, executable='/bin/bash') 
-    
-                        # (C) extract docking results
-                        extract_rescoring_results = getattr(sys.modules[program], 'extract_rescoring_results')
-                        extract_rescoring_results('score.out')
-                        shutil.copyfile('lig.mol2', 'lig%s.mol2'%idx)
-                        shutil.copyfile('lig.pdb', 'lig%s.pdb'%idx)
-                        shutil.copyfile('dock.dlg', 'dock%s.dlg'%idx)
-                        is_protein = True
-                os.chdir(curdir)
+                DockingInstance = DockingClass(instance, site['site'+str(kdx+1)], options)
+                DockingInstance.run_rescoring(input_file_rl)
 
     def run_tleap(self, instances):
     

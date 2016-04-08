@@ -6,48 +6,37 @@ def rearrange_atom_names(file_l, order):
 
     tmpfile = 'tmp.pdb'
 
-    nends = 0
-    # (A) check the number of ligand in PDB file
-    is_atom_on_last_line = False
-    with open(file_l, 'r') as ff:
-       for line in ff:
-           if line.startswith(('ATOM', 'HETATM')):
-               if not is_atom_on_last_line:
-                   nends += 1
-                   is_atom_on_last_line = True
-           else:
-                   is_atom_on_last_line = False
-
     with open(file_l, 'r') as oldf:
         with open(tmpfile, 'w') as newf:
             line = oldf.next()
-            for idx in range(nends):
-                atom_lines = []
-                while not line.startswith(('ATOM', 'HETATM')):
+            atom_lines = []
+            while not line.startswith(('ATOM', 'HETATM')):
+                line = oldf.next()
+            while line.startswith(('ATOM', 'HETATM')):
+                atom_lines.append(line)
+                try:
                     line = oldf.next()
-                while line.startswith(('ATOM', 'HETATM')):
-                    atom_lines.append(line)
-                    line = oldf.next()
-                new_idxs = []
-                for line in atom_lines:
-                    atom_name = str(line[12:17]).strip()
-                    new_idxs.append(order.index(atom_name))
+                except StopIteration:
+                    break
+            new_idxs = []
+            for line in atom_lines:
+                atom_name = str(line[12:17]).strip()
+                new_idxs.append(order.index(atom_name))
 
-                new_atom_lines = []
-                for idx in range(len(order)):
-                    new_atom_lines.append(None)
+            new_atom_lines = []
+            for idx in range(len(order)):
+                new_atom_lines.append(None)
 
-                for idx, line in enumerate(atom_lines):
-                    new_atom_lines[new_idxs[idx]] = line
+            for idx, line in enumerate(atom_lines):
+                new_atom_lines[new_idxs[idx]] = line
 
-                new_atom_lines = filter(lambda a: a, new_atom_lines)
+            new_atom_lines = filter(lambda a: a, new_atom_lines)
 
-                idx = 0
-                for line in new_atom_lines:
-                    idx += 1
-                    newline = line[:6] + ' '*(5-len(str(idx))) + str(idx) + line[11:]
-                    newf.write(newline)
-                newf.write('ENDMDL\n')
+            idx = 0
+            for line in new_atom_lines:
+                idx += 1
+                newline = line[:6] + ' '*(5-len(str(idx))) + str(idx) + line[11:]
+                newf.write(newline)
 
     shutil.move(tmpfile, file_l)
 
@@ -104,14 +93,12 @@ def remove_hydrogens(infile, outfile):
 
 def format_lig_file(file_l):
 
-    give_unique_atom_names(file_l)
-
     tmpfile = 'tmp.pdb'
     is_atom_on_last_line = False
     with open(file_l, 'r') as oldf:
         newf = open(tmpfile, 'w')
         for line in oldf:
-            if line.startswith(('ATOM','HETATM')):
+            if line.startswith(('ATOM','HETATM','CONECT')):
                 newline = line.replace('\n','')
                 for resname in ['UNK','UNL']:
                     newline = newline.replace(resname,'LIG')

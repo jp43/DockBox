@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import method
 import autodock
 import shutil
 
@@ -8,105 +9,110 @@ required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babe
 
 default_settings = {'cpu': '1'}
 
-def write_docking_script(filename, input_file_r, input_file_l, site, options, rescoring=False):
+class Vina(autodock.ADBased):
 
-    center = site[1]
-    center = map(str.strip, center.split(','))
+    def __init__(self, name, site, options):
 
-    boxsize = site[2]
-    boxsize = map(str.strip, boxsize.split(','))
+        super(Vina, self).__init__(name, site, options)
 
-    autodock.prepare_file_ligand(input_file_l, 'lig.mol2', rescoring)
+        center = map(str.strip, site[1].split(','))
+        boxsize = map(str.strip, site[2].split(','))
 
-    # write vina config file
-    with open('vina.config', 'w') as config_file:
-        print >> config_file, 'receptor = target.pdbqt'
-        print >> config_file, 'ligand = lig.pdbqt'
-        print >> config_file, 'center_x = ' + center[0]
-        print >> config_file, 'center_y = ' + center[1]
-        print >> config_file, 'center_z = ' + center[2]
-        print >> config_file, 'size_x = ' + float(boxsize[0])
-        print >> config_file, 'size_y = ' + float(boxsize[1])
-        print >> config_file, 'size_z = ' + float(boxsize[2])
-        for key, value in options.iteritems():
-            print >> config_file, key + ' = ' + value
+        for idx, xyz in enumerate(['x', 'y', 'z']):
+            self.options['center_'+xyz] = center[idx]
+            self.options['size_'+xyz] = boxsize[idx]
 
-    # write vina script
-    if not rescoring:
-        with open(filename, 'w') as file:
-            script ="""#!/bin/bash
+    def write_docking_script(self, filename, file_r, file_l, rescoring=False):
+
+        # prepare ligand
+        self.prepare_ligand(file_l, 'lig.mol2', False)
+
+        # write vina config file
+        with open('vina.config', 'w') as cf:
+            # write mandatory options
+            print >> cf, 'receptor = target.pdbqt'
+            print >> cf, 'ligand = lig.pdbqt'
+            # write other options
+            for key, value in self.options.iteritems():
+                print >> cf, key + ' = ' + value
+    
+        # write vina script
+        if not rescoring:
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l lig.mol2 -C -B 'amide_guadinidium' -o lig.pdbqt
-prepare_receptor4.py -r %(input_file_r)s -U 'waters_nonstdres' -o target.pdbqt
+prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
 vina --config vina.config > vina.out"""% locals()
-            file.write(script)
-    else:
-        with open(filename, 'w') as file:
-            script ="""#!/bin/bash
+                file.write(script)
+        else:
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l lig.pdb -o lig.pdbqt
-prepare_receptor4.py -r %(input_file_r)s -o target.pdbqt
+prepare_ligand4.py -l lig.mol2 -o lig.pdbqt
+prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
 vina --score_only --config vina.config > vina.out"""% locals()
-            file.write(script)
+                file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, input_file_r, site, extract):
-
-    shutil.copyfile(input_file_r, file_r)
-
-    # get center and box size to remove those poses that are out of the box
-    center = map(float, site[1].split(',')) 
-    boxsize = map(float, site[2].split(','))
-
-    if extract in ['lowest', 'all']:
-        with open('lig_out.pdbqt','r') as pdbqtfile:
-            with open(file_l, 'w') as lf:
+    def extract_docking_results(self, file_r, file_l, file_s, input_file_r, extract):
+        """Extract output structures in .mol2 formats"""
+    
+        shutil.copyfile(input_file_r, file_r)
+    
+        idx = 0
+        new_pose = True
+        output_pdbfiles_l = []
+        # exctract structures from .pdbqt file 
+        if extract in ['lowest', 'all']:
+            with open('lig_out.pdbqt','r') as pdbqtf:
                 with open(file_s, 'w') as sf:
-                    coords = []
-                    for line in pdbqtfile:
+                    for line in pdbqtf:
                         if line.startswith(('ATOM', 'HETATM')):
+                            if new_pose:
+                                coords = [] # reinitialize the coordinates
+                                pdbfile = 'lig-%s.out.pdb'%idx
+                                lf = open(pdbfile, 'w')
+                                new_pose = False
                             coords.append('ATOM  ' + line[6:66])
                         elif line.startswith('REMARK VINA RESULT:'):
                             score = float(line[19:].split()[0])
                         elif line.startswith('ENDMDL'):
-                            # check if the pose is out of the box
-                            isout = False # first suppose that it is not out
+                            idx += 1
                             for coord in coords:
-                                for idx, xyz in enumerate([coord[30:38], coord[38:46], coord[46:54]):
-                                    if abs(float(xyz)-center[idx]) > boxsize[idx]*1./2: # the pose is out of the box
-                                        isout = True
-                                        break
-                            if not isout:
-                                for coord in coords:
-                                    print >> lf, coord
-                                print >> lf, 'ENDMDL'
-                                print >> sf, score
-                                if extract == 'lowest':
-                                    break
-                            coords = [] # reinitialize the coordinates
-    autodock.cleanup_pose(file_l)
+                                print >> lf, coord
+                            lf.close()
+                            output_pdbfiles_l.append(pdbfile)
+                            new_pose = True
+                            print >> sf, score
+                            if extract == 'lowest':
+                                break
 
-def write_rescoring_script(filename, file_r, file_l, site, options):
-
-    write_docking_script(filename, file_r, file_l, site, options, rescoring=True)
-
-def extract_rescoring_results(filename):
-
-    with open(filename, 'a') as ff:
-        with open('vina.out', 'r') as outf:
-            for line in outf:
-                if line.startswith('Affinity:'):
-                    print >> ff, line.split()[1]
-
-    os.remove('lig.pdbqt')
-    os.remove('target.pdbqt')
+        # fix poses and remove poses that are out of range
+        output_mol2files = self.fix_poses(input_file_r, output_pdbfiles_l)
+        self.remove_out_of_range_poses(output_mol2files, file_s) 
     
-def cleanup():
-
-    for ff in glob.glob('*pdbqt'):
-        os.remove(ff)
+    def write_rescoring_script(self, filename, file_r, file_l):
+    
+        write_docking_script(filename, file_r, file_l, rescoring=True)
+    
+    def extract_rescoring_results(self, filename):
+    
+        with open(filename, 'a') as ff:
+            with open('vina.out', 'r') as outf:
+                for line in outf:
+                    if line.startswith('Affinity:'):
+                        print >> ff, line.split()[1]
+    
+        os.remove('lig.pdbqt')
+        os.remove('target.pdbqt')
+        
+    def cleanup(self):
+    
+        for ff in glob.glob('*pdbqt'):
+            os.remove(ff)
