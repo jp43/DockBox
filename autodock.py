@@ -48,7 +48,7 @@ class ADBased(method.DockingMethod):
             mol2files.append(mol2file)
 
         # do energy minimization on ligand hydrogens
-        mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
+        mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG & @H=", keep_hydrogens=True)
 
         # extract results from minimization and purge out
         new_poses = []
@@ -201,7 +201,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 cluster_idxs =  cluster_idxs[::-1]
 
         output_pdbfiles_l = []
-        for idx, cluster_idx in enumerate(cluster_idxs):
+        for kdx, cluster_idx in enumerate(cluster_idxs):
             with open('dock.dlg', 'r') as dlgfile:
                 # (B) get the lowest binding free energy
                 while "Cluster Rank = %i"%cluster_idx not in line:
@@ -222,7 +222,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 while "ATOM" not in line:
                     line = dlgfile.next()
 
-                pdbfile = 'lig-%s.out.pdb'%idx
+                pdbfile = 'lig-%s.out.pdb'%kdx
                 with open(pdbfile, 'w') as lf:
                     while "TER" not in line:
                         print >> lf, 'ATOM  ' + line[6:66]

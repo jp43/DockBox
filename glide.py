@@ -39,10 +39,10 @@ class Glide(method.DockingMethod):
         locals().update(self.options)
     
         # prepare protein cmd
-        if not rescoring:
-            prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(file_r)s target.mae"%locals(), 'glide')
-        else:
-            prepwizard_cmd = chkl.eval("structconvert -ipdb %(file_r)s -omae target.mae"%locals(), 'glide')
+        #if not rescoring:
+        #    prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(file_r)s target.mae"%locals(), 'glide')
+        #else:
+        prepwizard_cmd = chkl.eval("structconvert -ipdb %(file_r)s -omae target.mae"%locals(), 'glide')
     
         # prepare grid cmd
         glide_grid_cmd = chkl.eval("glide -WAIT grid.in", 'glide') # grid prepare

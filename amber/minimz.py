@@ -222,12 +222,13 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
     with open(script_name, 'w') as minf:
         script ="""Minimization with Cartesian restraints
 &cntrl
- imin=1, maxcyc=500,
+ imin=1, maxcyc=2000,
  igb=0,
- ntmin=2,
+ ncyc=1000,
+ ntmin=1,
  ntpr=5,
+ cut=12,
  ntb=0,
- cut=12.0,
  %(restraints_lines)s
 &end\n"""%locals()
         minf.write(script)

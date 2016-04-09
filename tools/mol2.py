@@ -22,8 +22,10 @@ def give_unique_atom_names(file_l):
 
     with open(file_l, 'r') as oldf:
         newf = open(tmpfile, 'w')
+
         known_atom_types = []
         atom_numbers = []
+
         for line in oldf:
             if line.startswith('@<TRIPOS>ATOM'):
                 is_structure = True

@@ -39,6 +39,7 @@ class DockingConfig(object):
         self.consensus = consensus.ConsensusDocking(config, args)
 
         self.cleanup = self.is_yesno_option(config, 'cleanup')
+        self.extract_only = args.extract_only
 
     def is_yesno_option(self, config, option, default=False):
 
@@ -82,7 +83,13 @@ class DockingWorker(object):
             dest='consensus_only',
             action='store_true',
             default=False,
-            help='Run consensus only)')
+            help='Run consensus only')
+
+        parser.add_argument('--extract_only',
+            dest='extract_only',
+            action='store_true',
+            default=False,
+            help='Extract structures only (used for debugging)')
 
         return parser
 
@@ -102,7 +109,8 @@ class DockingWorker(object):
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.docking.extract, config.cleanup)
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.docking.extract, \
+config.cleanup, extract_only=config.extract_only)
 
         tcpu2 = time.time()
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
@@ -119,7 +127,5 @@ class DockingWorker(object):
         if not config.consensus.only:
             self.run_docking(config)
 
-        config.consensus.find_consensus(config.docking.instances, config.docking.site)
+        config.consensus.find_consensus(config.docking.instances, config.input_file_r, config.docking.site)
 
-if __name__ == '__main__':
-    DockingWorker().run()

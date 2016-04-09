@@ -1,0 +1,4 @@
+import main as 
+
+if __name__ == '__main__':
+    DockingWorker().run()
