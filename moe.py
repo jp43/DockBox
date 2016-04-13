@@ -276,8 +276,11 @@ def write_sitefinder_script(filename, file_r, args):
 
 def write_moe_sitefinder_script(filename, file_r, args):
 
+    if args.nsitesmax == 0:
+        nsitesmax = 'length alpha_sites'
+    else:
+        nsitesmax = str(args.nsitesmax)
     minplb = args.minplb
-    nsitesmax = args.nsitesmax
 
     # write vina script
     with open(filename, 'w') as file:
@@ -297,12 +300,12 @@ local function main []
     local nsites;
     local cog; // center of geometry
 
-    write ['#ID    PLB     x     y    z   radius\\n'];
+    write ['#ID PLB  x  y  z  radius\\n'];
 
     for idx = 1, length alpha_sites loop
         plb = alpha_sites(idx)(4)(2);
 
-        if plb > minplb or idx == 1 then
+        if (plb > minplb or idx == 1) and idx <= %(nsitesmax)s then
             a_sites = alpha_sites(idx)(1)(2);
             nsites = length a_sites(1);
 

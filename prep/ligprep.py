@@ -36,6 +36,7 @@ def generate_3D_structure(file_l, flags):
     script_name = 'run_ligprep.sh'
     with open(script_name, 'w') as file:
         script ="""#!/bin/bash
+set -e
 %(cmd)s"""% locals()
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
@@ -60,6 +61,7 @@ def prepare_receptor(file_r, flags):
     script_name = 'run_prepwizard.sh'
     with open(script_name, 'w') as file:
         script ="""#!/bin/bash
+set -e
 %(cmd)s"""% locals()
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)

@@ -9,10 +9,10 @@ import argparse
 import ConfigParser
 import stat
 import time
-import ligprep
 import glob
-
 import numpy as np
+
+from prep import ligprep
 import moe
 
 class PrepDocking(object):
@@ -47,7 +47,7 @@ class PrepDocking(object):
             help='Find possible binding sites (use MOE\'s site finder)')
 
         parser.add_argument('--minplb',
-            type=int,
+            type=float,
             dest='minplb',
             default=1.0,
             help='Minimum PLB value (MOE) to select the binding sites (requires findsites option). Default: 1.0 ')
@@ -64,13 +64,13 @@ class PrepDocking(object):
             default=False,
             help='Do not create new directories when single input files are specified')
 
-        parser.add_argument('--lpflags',
+        parser.add_argument('--ligpflags',
             type=str,
             default="-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14",
             dest='ligprep_flags',
             help='Ligprep (Schrodinger) flags for ligand preparation. Default: "-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14"')
 
-        parser.add_argument('--nolp',
+        parser.add_argument('--noligp',
             dest='no_ligprep',
             action='store_true',
             default=False,
@@ -124,8 +124,16 @@ class PrepDocking(object):
                 self.input_file_r.append(os.path.abspath(file_r))
         self.nfiles_r = len(self.input_file_r)
 
-    def prepare_vs(self, args):
+    def cleanup(self):
+        """Cleanup directories used for preparation"""
+        # remove existing directories
+        for ligdir in glob.glob('lig-prep*'):
+            shutil.rmtree(ligdir)
+        for recdir in glob.glob('rec-prep*'):
+            shutil.rmtree(recdir)
 
+    def prepare_vs(self, args):
+        """Prepare files and directories for Virtual Screening"""
         if args.skip:
             # get ligand file names
             self.files_prep_l = []
@@ -142,11 +150,7 @@ class PrepDocking(object):
                 recpdir = 'rec-prep' + str(idx+1)
                 self.files_prep_r.append(glob.glob(recpdir+'/*.pdb')[0])
         else:
-            # remove existing directories
-            for ligdir in glob.glob('lig-prep*'):
-                shutil.rmtree(ligdir)
-            for recdir in glob.glob('rec-prep*'):
-                shutil.rmtree(recdir)
+            self.cleanup()
             # prepare structures
             self.prepare_structures(args)
 
@@ -193,6 +197,11 @@ class PrepDocking(object):
                     # copy the files for ligand and receptor in the corresponding dir
                     shutil.copyfile(file_l, isodir + '/lig.mol2')
                     shutil.copyfile(file_r, isodir +'/rec.pdb')
+                    # save locations of original files
+                    with open(isodir + '/vs.info', 'w') as ff:
+                        print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
+                        print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
+        #self.cleanup()
 
     def generate_mol2_files(self, file_l, args):
 
@@ -228,7 +237,8 @@ class PrepDocking(object):
             if not args.no_ligprep:
                 new_file_l = ligprep.prepare_ligand(file_l, args.ligprep_flags)
             else:
-                new_file_l = file_l
+                new_file_l = os.path.basename(file_l)
+                shutil.copyfile(file_l, new_file_l)
             # (B) Generate mol2files using babel
             mol2files = self.generate_mol2_files(new_file_l, args)
             self.files_prep_l.append(mol2files)
@@ -250,10 +260,11 @@ class PrepDocking(object):
             # (B) Run MOE's site finder
             if args.findsites:
                 self.find_binding_sites(new_file_r, args)
-            self.files_prep_r.append(new_file_r)
+            self.files_prep_r.append(os.path.abspath(new_file_r))
             os.chdir(curdir)
 
     def update_site_config_file(self, new_config_file, config_file, table):
+        """Update the config file provided to """
 
         shutil.copyfile(config_file, new_config_file)
 
@@ -310,6 +321,7 @@ boxsize = %(boxsize_conf)s"""% locals()
         shutil.move(tmp_config_file, new_config_file)
 
     def find_binding_sites(self, pdbfile, args):
+        """Write and execute MOE script to locate the possible binding sites"""
 
         # (A) write script
         script_name = 'find_binding_sites.sh'
@@ -320,7 +332,7 @@ boxsize = %(boxsize_conf)s"""% locals()
         subprocess.check_call("./" + script_name + " &> sitefinder.log", shell=True, executable='/bin/bash')
 
     def run(self):
-
+        """Run Virtual Screening preparation"""
         parser = self.create_arg_parser()
         args = parser.parse_args()
 
