@@ -272,7 +272,7 @@ def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
             is_ligand = False
             # get ligand atom positions from complex file
             with open('complex_out.pdb', 'r') as cf:
-                with open('rec-%s.out.pdb'%idx, 'w') as recf:
+                with open('rec-%s.out.pdb'%(idx+1), 'w') as recf:
                     with open('lig.out.pdb', 'w') as tmpf:
                         for line in cf:
                             if line.startswith(('ATOM', 'HETATM')):

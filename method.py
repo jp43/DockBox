@@ -1,6 +1,7 @@
 import os
 import sys
 import stat
+import glob
 import shutil
 import subprocess
 
@@ -45,9 +46,9 @@ class DockingMethod(object):
             # running this script will run the docking procedure
             subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
 
-        # (B) extract docking results
-        #after extract_docking_results all the extracted poses are saved in .mol2 files
-        self.extract_docking_results('rec.out.pdb', 'lig.out.pdb', 'score.out', file_r, extract)
+        # (B) extract docking results (all extracted poses are saved in .mol2 files)
+        self.extract_docking_results('score.out', file_r, extract)
+        self.remove_out_of_range_poses('score.out')
 
         # (C) remove intermediate files if required
         if cleanup:
@@ -72,7 +73,6 @@ class DockingMethod(object):
 
         # iterate over all the poses
         for file_l in files_l:
-
             # (A) write script
             script_name = "run_scoring_" + self.program + ".sh"
             self.write_rescoring_script(script_name, file_r, file_l)
@@ -86,13 +86,18 @@ class DockingMethod(object):
 
         os.chdir(curdir)
 
-    def remove_out_of_range_poses(self, files_l, file_s):
+    def remove_out_of_range_poses(self, file_s):
+
+        files_l = []
+        n_files_l = len(glob.glob('lig-*.mol2'))
+        for idx in range(n_files_l):
+            mol2file = 'lig-%s.mol2'%(idx+1)
+            files_l.append(mol2file)
 
         center = map(float, self.site[1].split(','))
         boxsize = map(float, self.site[2].split(','))
 
         out_of_range_idxs = []
-
         for jdx, file_l in enumerate(files_l):
             isout = False
             coords = mol2t.get_coordinates(file_l)

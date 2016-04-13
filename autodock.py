@@ -18,39 +18,14 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 
 class ADBased(method.DockingMethod):
 
-    def prepare_ligand(self, input_file_l, mol2file, rescoring):
-        """Prepare ligand structure for Autodock based docking methods, i.e. convert initial file to mol2 format"""
-
-        #if rescoring:
-        #    mol2t.pdb2mol2(input_file_l, output_file_l, sample='../../autodock.site3/lig.mol2')
-        if not rescoring:
-            # convert .sdf file to mol2
-            subprocess.check_call('babel -isdf %s -omol2 %s 2>/dev/null'%(input_file_l, mol2file), shell=True)
-
-            # give unique atom names
-            mol2t.give_unique_atom_names(mol2file)
-
     def extract_poses(self, input_file_r, prgm):
         """Convert output PDB files to mol2 and perform energy minimization on non-polar hydrogens"""
 
-        # rearrange atoms in case the original order was modified
-        #atoms_names = mol2t.get_atoms_names(input_mol2file)
-
-        #n_output_files = len(output_pdbfiles_l)
-
-        #mol2files = []
-        #for idx, file_l in enumerate(output_pdbfiles_l):
-        #    pdbt.rearrange_atom_names(file_l, atoms_names)
-        #    mol2file = 'lig-%s.out.mol2'%idx
-        #    mol2t.update_mol2_from_pdb(file_l, mol2file, sample_mol2file=input_mol2file) 
-        #    #os.remove(file_l)
-        #    mol2files.append(mol2file)
-
+        # use babel to convert pdbqt to mol2
         if prgm == 'autodock':
-            pass
+            subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
         elif prgm == 'vina':
-            # use babel to convert pdbqt to mol2
-            subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h',shell=True)
+            subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
         n_mol2files = len(glob.glob('lig-*.mol2')) # number of mol2 files generated
 
         mol2files = []
@@ -60,17 +35,13 @@ class ADBased(method.DockingMethod):
             mol2files.append(file_l)
 
         # do energy minimization on ligand hydrogens
-        #mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG & @H=", keep_hydrogens=True)
         mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
 
         # extract results from minimization and purge out
-        new_poses = []
         for idx in range(n_mol2files):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
-            shutil.copyfile('minimz/' + mol2file,  'lig-full-%s.out.mol2'%(idx+1))
-            new_poses.append(mol2file)
+            shutil.copyfile('minimz/' + mol2file, 'lig-%s.mol2'%(idx+1))
         #shutil.rmtree('minimz')
-        return new_poses
 
     def write_docking_script(filename, file_r, file_l, rescoring=True):
         pass
@@ -111,8 +82,6 @@ class Autodock(ADBased):
 
     def write_docking_script(self, filename, file_r, file_l, rescoring=False):
 
-        self.prepare_ligand(file_l, 'lig.mol2', rescoring)
-
         # create flags with specified options for autogrid and autodock
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
         autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autodock_options.iteritems()])
@@ -134,9 +103,8 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
-
 # generate .pdbqt files
-prepare_ligand4.py -l lig.mol2 -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run autogrid
@@ -156,9 +124,8 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
-
 # generate .pdbqt files
-prepare_ligand4.py -l lig.mol2 -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi
@@ -182,67 +149,19 @@ fi
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 file.write(script)
 
-    def extract_docking_results(self, file_r, file_l, file_s, input_file_r, extract):
-    
-        for ff in [file_s, file_l]:
-            if os.path.isfile(ff):
-                os.remove(ff)
-    
-        shutil.copyfile(input_file_r, file_r)
-    
-        hist = []
-        with open('dock.dlg', 'r') as dlgfile:
-            # (A) get the index of the most populated cluster
-            line = dlgfile.next()
-            while "CLUSTERING HISTOGRAM" not in line:
-                line = dlgfile.next()
-            nlines_to_skip = 8
-            for idx in range(nlines_to_skip):
-                dlgfile.next()
-            while True:
+    def extract_docking_results(self, file_s, input_file_r, extract):
 
-                line = dlgfile.next()
-                if line[0] == '_':
-                    break
-                hist.append(int(line.split('|')[4].strip()))
-    
-            if extract == 'lowest':
-                cluster_idxs = [np.argmax(np.array(hist))+1]
-            elif extract == 'all': 
-                cluster_idxs = (np.argsort(np.array(hist))+1).tolist()
-                cluster_idxs =  cluster_idxs[::-1]
+        # extract structures from .pdbqt file 
+        with open('dock.dlg','r') as pdbqtf:
+            with open(file_s, 'w') as sf: 
+                line = '' # initialize line
+                while 'CLUSTERING HISTOGRAM' not in line:
+                    line = pdbqtf.next()
+                    if 'Estimated Free Energy of Binding' in line:
+                        score = float(line.split()[8])
+                        print >> sf, score
 
-        output_pdbfiles_l = []
-        for kdx, cluster_idx in enumerate(cluster_idxs):
-            with open('dock.dlg', 'r') as dlgfile:
-                # (B) get the lowest binding free energy
-                while "Cluster Rank = %i"%cluster_idx not in line:
-                    oldline = line # do backup 
-                    line = dlgfile.next()
-                run_idx = int(oldline.split('=')[1])
-                nlines_to_skip = 4
-                for idx in range(nlines_to_skip):
-                    dlgfile.next()
-                line = dlgfile.next()
-                score = float(line[47:53])
-    
-                # save the binding free energy
-                with open(file_s, 'a') as sf:
-                    print >> sf, score
-    
-                # (C) save the correct pose
-                while "ATOM" not in line:
-                    line = dlgfile.next()
-
-                pdbfile = 'lig-%s.out.pdb'%kdx
-                with open(pdbfile, 'w') as lf:
-                    while "TER" not in line:
-                        print >> lf, 'ATOM  ' + line[6:66]
-                        line = dlgfile.next()
-                output_pdbfiles_l.append(pdbfile)
- 
-        if extract in ['lowest', 'all']:
-            self.fix_poses(input_file_r, output_pdbfiles_l)
+        self.extract_poses(input_file_r, 'autodock')
 
     def extract_rescoring_results(self, filename):
     
@@ -252,8 +171,8 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                     if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
                         print >> ff, line.split()[8]
     
-        os.remove('lig.pdbqt')
-        os.remove('target.pdbqt')
+        #os.remove('lig.pdbqt')
+        #os.remove('target.pdbqt')
     
     def cleanup(self):
         # remove map files

@@ -48,7 +48,6 @@ class ConsensusDocking(object):
     def find_consensus(self, instances, input_file_r, site):
     
         if self.type in ['clustering', 'rescoring']:
-
             tcpu1 = time.time()
             print "Starting consensus..."
 
@@ -93,13 +92,13 @@ class ConsensusDocking(object):
             for name, program, options in instances:
                 instdir = '../%s'%name + '.'+bs[0]
                 poses_idxs = []
-                for filename in glob.glob(instdir+'/lig-*.out.mol2'):
-                    poses_idxs.append(int((filename.split('.')[-3]).split('-')[-1]))
+                for filename in glob.glob(instdir+'/lig-*.mol2'):
+                    poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
                 poses_idxs = sorted(poses_idxs)
                 for idx, pose_idx in enumerate(poses_idxs):
-                    shutil.copyfile(instdir+'/lig-%s.out.mol2'%pose_idx, posedir+'/lig-%s.mol2'%(idx+sh))
-                ff.write('%10s        %s           %s\n'%(program, idx + 1, kdx+1))
-                sh += idx + 1
+                    shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, posedir+'/lig-%s.mol2'%(idx+1+sh))
+                ff.write('%10s        %s           %s\n'%(program, idx+1, kdx+1))
+                sh += idx+1
             self.nposes.append(sh)
 
     def run_rescoring(self, input_file_r, site):
@@ -109,7 +108,7 @@ class ConsensusDocking(object):
             for instance, program, options in self.rescoring.instances:
                 # get complex filenames 
                 files_l = [os.path.abspath('poses/lig-%s.mol2'%idx) for idx in range(self.nposes[kdx], self.nposes[kdx+1]+1)]
-                
+
                 # get docking class
                 DockingClass = getattr(sys.modules[program], program.capitalize())
 

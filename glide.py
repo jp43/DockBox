@@ -35,7 +35,7 @@ class Glide(method.DockingMethod):
 
         self.tmpdirline = ""
         if 'tmpdir' in self.options:
-            self.tmpdirline = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%self.options['tmpdir']
+            self.tmpdirline = "export SCHRODINGER_TMPDIR=%s"%self.options['tmpdir']
 
     def write_docking_script(self, filename, file_r, file_l):
         """ Write docking script for glide """
@@ -89,39 +89,20 @@ PRECISION %(precision)s" > dock.in
 %(glide_dock_cmd)s"""% locals()
             file.write(script)
  
-    def extract_docking_results(self, file_r, file_l, file_s, input_file_r, extract):
-    
-        #glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'schrodinger') # cmd to extract results
-        subprocess.call(chkl.eval("pdbconvert -brief -imae dock_sorted.mae -opdb dock_sorted.pdb", 'schrodinger', redirect='/dev/null'), shell=True)
-        shutil.copyfile(input_file_r, file_r)
-    
-        if extract == 'lowest':
-            # write file with ligand
-            with open(file_l, 'w') as ffout:
-                with open('dock_sorted-2.pdb', 'r') as ffin:
-                    line = ffin.next()
-                    while not line.startswith('MODEL'):
-                        line = ffin.next()
-                    ffout.write(line)
-                    for line in ffin:
-                        ffout.write(line)
-        elif extract == 'all':
-            # write file with ligand
-            with open(file_l, 'w') as ffout:
-                idxs = []
-                for pdbfile in glob.glob('dock_sorted-*.pdb'):
-                    idxs.append(int((pdbfile.split('-')[1]).split('.')[0]))
-                maxidx = max(idxs)
-                for idx in range(1,maxidx):
-                    with open('dock_sorted-%s.pdb'%(idx+1), 'r') as ffin:
-                        line = ffin.next()
-                        while not line.startswith('MODEL'):
-                            line = ffin.next()
-                        ffout.write('MODEL     %s\n'%idx)
-                        for line in ffin:
-                            if line.startswith('ENDMDL') or not line.startswith('END'):
-                                ffout.write(line)
-    
+    def extract_docking_results(self, file_s, input_file_r, extract):
+        """Extract Glide docking results""" 
+
+        # cmd to extract results
+        glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'schrodinger', redirect='/dev/null')
+        subprocess.call(glide_sort_cmd, shell=True)
+
+        # convert to .mol2
+        convert_cmd = chkl.eval("mol2convert -n 2: -imae dock_sorted.mae -omol2 dock_sorted.mol2", 'schrodinger', redirect='/dev/null')
+        subprocess.call(convert_cmd, shell=True)
+
+        # create multiple files with babel
+        subprocess.check_call('babel -imol2 dock_sorted.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True)
+
         # extract scores
         with open('dock.rept', 'r') as ffin:
             with open(file_s, 'w') as ffout:
@@ -131,9 +112,7 @@ PRECISION %(precision)s" > dock.in
                 while True:
                     line = ffin.next()
                     if line.strip():
-                        print >> ffout, line.split()[2]
-                        if extract == 'lowest':
-                            break
+                        print >> ffout, line.split()[3]
                     else:
                         break
 
@@ -145,6 +124,7 @@ PRECISION %(precision)s" > dock.in
 
     def write_rescoring_script(self, filename, file_r, file_l):
         """Rescore using Glide SP scoring function"""
+        locals().update(self.options)
 
         # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
         prepwizard_cmd = chkl.eval("prepwizard -WAIT -noprotassign -nohtreat -noimpref %(file_r)s target.mae"%locals(), 'schrodinger')
@@ -185,7 +165,7 @@ fi
 %(structconvert_cmd)s
 
 # (D) perform rescoring
-echo "WRITEREPT NO
+echo "WRITEREPT YES
 USECOMPMAE YES
 DOCKING_METHOD inplace
 GRIDFILE $PWD/grid.zip
@@ -193,7 +173,7 @@ LIGANDFILE $PWD/lig.mae
 PRECISION SP" > dock.in
 
 %(glide_dock_cmd)s"""% locals()
-        file.write(script)
+            file.write(script)
     
     def extract_rescoring_results(self, filename):
     
@@ -201,7 +181,7 @@ PRECISION SP" > dock.in
             with open('dock.scor', 'r') as outf:
                 for line in outf:
                     if line.startswith('   1'):
-                        print >> ff, line.split()[2]
+                        print >> ff, line.split()[3]
     
     def cleanup(self):
         pass
