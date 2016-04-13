@@ -51,7 +51,7 @@ vina --config vina.config > vina.out"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l lig.mol2 -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
@@ -62,7 +62,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
         """Extract output structures in .mol2 formats"""
     
         # exctract structures from .pdbqt file 
-        with open('dock.dlg','r') as pdbqtf:
+        with open('lig_out.pdbqt','r') as pdbqtf:
             with open(file_s, 'w') as sf:
                 for line in pdbqtf:
                     if line.startswith('REMARK VINA RESULT:'):
@@ -72,7 +72,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
         self.extract_poses(input_file_r, 'vina')
 
     def write_rescoring_script(self, filename, file_r, file_l):
-        write_docking_script(filename, file_r, file_l, rescoring=True)
+        self.write_docking_script(filename, file_r, file_l, rescoring=True)
     
     def extract_rescoring_results(self, filename):
         with open(filename, 'a') as ff:

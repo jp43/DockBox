@@ -19,7 +19,6 @@ def get_atoms_names(filename):
 def give_unique_atom_names(file_l):
 
     tmpfile = 'tmp.mol2'
-
     with open(file_l, 'r') as oldf:
         newf = open(tmpfile, 'w')
 
@@ -59,7 +58,7 @@ def get_coordinates(filename):
     coords = []
     with open(filename, 'r') as mol2f:
         is_structure = False
-        for line in filename:
+        for line in mol2f:
             if line.startswith('@<TRIPOS>ATOM'):
                 is_structure = True
             elif line.startswith('@<TRIPOS>'):
