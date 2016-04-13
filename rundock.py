@@ -57,7 +57,6 @@ class DockingConfig(object):
 class DockingWorker(object):
 
     def create_arg_parser(self):
-
         parser = argparse.ArgumentParser(description="Run Docking")
 
         parser.add_argument('-l',
@@ -65,7 +64,7 @@ class DockingWorker(object):
             dest='input_file_l',
             required=True,
             nargs=1,
-            help = 'Ligand coordinate file(s): .pdb, .sdf, .smi')
+            help = 'Ligand coordinate file(s): .mol2')
 
         parser.add_argument('-r',
             type=str,
@@ -93,15 +92,11 @@ class DockingWorker(object):
 
         return parser
 
-
     def run_docking(self, config):
         """Running docking simulations using each program specified..."""
-
         tcpu1 = time.time()
-
         # iterate over all the binding sites
         for kdx in range(len(config.docking.site)):
-
             for instance, program, options in config.docking.instances: # iterate over all the instances
 
                 # get docking class
@@ -116,7 +111,6 @@ config.cleanup, extract_only=config.extract_only)
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run(self):
-
         parser = self.create_arg_parser()
         args = parser.parse_args()    
 
@@ -128,4 +122,3 @@ config.cleanup, extract_only=config.extract_only)
             self.run_docking(config)
 
         config.consensus.find_consensus(config.docking.instances, config.input_file_r, config.docking.site)
-

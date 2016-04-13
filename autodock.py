@@ -30,34 +30,46 @@ class ADBased(method.DockingMethod):
             # give unique atom names
             mol2t.give_unique_atom_names(mol2file)
 
-    def fix_poses(self, input_file_r, output_pdbfiles_l):
+    def extract_poses(self, input_file_r, prgm):
         """Convert output PDB files to mol2 and perform energy minimization on non-polar hydrogens"""
 
-        input_mol2file = 'lig.mol2'
         # rearrange atoms in case the original order was modified
-        atoms_names = mol2t.get_atoms_names(input_mol2file)
+        #atoms_names = mol2t.get_atoms_names(input_mol2file)
 
-        n_output_files = len(output_pdbfiles_l)
+        #n_output_files = len(output_pdbfiles_l)
+
+        #mol2files = []
+        #for idx, file_l in enumerate(output_pdbfiles_l):
+        #    pdbt.rearrange_atom_names(file_l, atoms_names)
+        #    mol2file = 'lig-%s.out.mol2'%idx
+        #    mol2t.update_mol2_from_pdb(file_l, mol2file, sample_mol2file=input_mol2file) 
+        #    #os.remove(file_l)
+        #    mol2files.append(mol2file)
+
+        if prgm == 'autodock':
+            pass
+        elif prgm == 'vina':
+            # use babel to convert pdbqt to mol2
+            subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h',shell=True)
+        n_mol2files = len(glob.glob('lig-*.mol2')) # number of mol2 files generated
 
         mol2files = []
-        for idx, file_l in enumerate(output_pdbfiles_l):
-            pdbt.rearrange_atom_names(file_l, atoms_names)
-            mol2file = 'lig-%s.out.mol2'%idx
-            mol2t.update_mol2_from_pdb(file_l, mol2file, sample_mol2file=input_mol2file) 
-            #os.remove(file_l)
-            mol2files.append(mol2file)
+        for idx in range(n_mol2files):
+            file_l = 'lig-%s.mol2'%(idx+1)
+            mol2t.give_unique_atom_names(file_l)
+            mol2files.append(file_l)
 
         # do energy minimization on ligand hydrogens
-        mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG & @H=", keep_hydrogens=True)
+        #mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG & @H=", keep_hydrogens=True)
+        mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
 
         # extract results from minimization and purge out
         new_poses = []
-        for idx in range(n_output_files):
-            mol2file = 'lig-%s.out.mol2'%idx
-            #shutil.move('minimz/' + mol2file,  mol2file)
+        for idx in range(n_mol2files):
+            mol2file = 'lig-%s.out.mol2'%(idx+1)
+            shutil.copyfile('minimz/' + mol2file,  'lig-full-%s.out.mol2'%(idx+1))
             new_poses.append(mol2file)
         #shutil.rmtree('minimz')
-
         return new_poses
 
     def write_docking_script(filename, file_r, file_l, rescoring=True):

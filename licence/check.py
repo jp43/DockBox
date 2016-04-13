@@ -24,13 +24,11 @@ done"""% locals()
     return newcmd
 
 def run(args):
-
     prgm = args[1]
-
     with open('tmp.out') as logf:
         status = 0
         for line in logf:
-            if prgm == 'glide':
+            if prgm == 'schrodinger':
                 if 'FATAL' in line and 'license key' in line:
                     status = 1
                     break
@@ -39,7 +37,7 @@ def run(args):
                     status = 1
                     break
             else:
-                ValueError('program %s has no license to check'%program)
+                ValueError('program %s has no license to check'%prgm)
     print status
 
 if __name__ == '__main__':

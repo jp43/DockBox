@@ -13,223 +13,251 @@ import ligprep
 import glob
 
 import numpy as np
+import moe
 
-class PrepVSConfigError(Exception):
-    pass
-
-class PrepVSConfig(object):
-
-    def __init__(self, args):
-
-        # check if config file exist
-        if not os.path.exists(args.config_file):
-            raise PrepVSConfigError("Config file %s not found!"%(args.config_file))
-
-        config = ConfigParser.SafeConfigParser()
-        config.read(args.config_file)
-
-        self.input_file_l = []
-        if args.input_file_l:
-            for file_l in args.input_file_l:
-                # check if ligand file exists
-                if not os.path.exists(file_l):
-                    raise PrepVSConfigError("File %s not found!"%(self.input_file_l))
-                self.input_file_l.append(os.path.abspath(file_l))
-        self.nfiles_l = len(self.input_file_l)
-
-        self.input_file_r = []
-        if args.input_file_r:
-            for file_r in args.input_file_r:
-                # check if ligand file exists
-                if not os.path.exists(file_r):
-                    raise PrepVSConfigError("File %s not found!"%(self.input_file_r))
-                self.input_file_r.append(os.path.abspath(file_r))
-        self.nfiles_r = len(self.input_file_r)
-
-        self.make = args.make
-
-        self.single = args.single
-        if self.single and not self.make:
-            raise ValueError("option single should be used together with option make")
-
-        self.set_ligprep_options(config)
-        self.set_sitefind_options(config, args)
-
-    def set_ligprep_options(self, config):
-        """set ligprep options"""
-
-        section = 'LIGPREP'
-        self.ligprep = {}
-        # set ligprep defaults options if they are not mentionned in the config file
-        for key, value in ligprep.ligprep_default_options.items():
-            if key not in self.ligprep:
-                self.ligprep[key] = value
-        # check config file (would possibly default preset parameters)
-        if config.has_section(section):
-            self.ligprep = dict(config.items(section))
-
-    def set_sitefind_options(self, config, args):
-        """set options for the binding site"""
-
-        known_sitefind_programs = ['moe']
-
-        self.site = {}
-        if args.blind:
-            section = 'SITEFINDER'
-            if config.has_section(section):
-                if not config.has_option(section, 'program'):
-                    raise PrepVSConfigError("Option program in section %s is required in config file for local docking!"%section)
-                if config.get(section, 'program').lower() not in known_sitefind_programs:
-                    raise PrepVSConfigError("Option program in section %s should be one of "%section + ", ".join(known_sitefind_programs))
-                self.site['program'] = config.get(section, 'program')
-                # set site finder default options if they are not mentionned in the config file
-                program = self.site['program']
-                __import__(program)
-                default_settings = getattr(sys.modules[program], 'default_sitefind_settings')
-                for key, value in default_settings.iteritems():
-                    self.site[key] = value
-                # check config file (would possibly default preset parameters)
-                config_c = dict(config.items(section))
-                for key, value in config_c.iteritems():
-                    self.site[key] = value
-            else:
-                raise PrepVSConfigError("Section %s is required in config file for blind docking!"%section)
-
-class PrepVS(object):
+class PrepDocking(object):
 
     def create_arg_parser(self):
 
-        parser = argparse.ArgumentParser(description="Prepare files for virtual screening")
+        parser = argparse.ArgumentParser(description="Prepare files for Docking or Virtual Screening")
 
         parser.add_argument('-l',
             type=str,
             dest='input_file_l',
             required=True,
             nargs='+',
-            help = 'Ligand coordinate file(s): .pdb, .sdf, .smi')
+            help = 'Ligand coordinate file(s): .sdf, .smi')
 
         parser.add_argument('-r',
             type=str,
             dest='input_file_r',
-            required = True,
+            required=True,
             nargs='+',
             help = 'Receptor coordinate file(s): .pdb')
 
         parser.add_argument('-f',
+            type=str,
             dest='config_file',
-            required=True,
             help='config file: .ini')
 
-        parser.add_argument('--blind',
-            dest='blind',
+        parser.add_argument('--findsites',
+            dest='findsites',
             action='store_true',
             default=False,
-            help='Find possible binding sites (blind docking)')
+            help='Find possible binding sites (use MOE\'s site finder)')
 
-        parser.add_argument('--make',
-            dest='make',
-            action='store_true',
-            default=False,
-            help='Create directories for each ligand/target/isomer triplet')
+        parser.add_argument('--minplb',
+            type=int,
+            dest='minplb',
+            default=1.0,
+            help='Minimum PLB value (MOE) to select the binding sites (requires findsites option). Default: 1.0 ')
 
-        parser.add_argument('--single',
-            dest='single',
+        parser.add_argument('--nsitesmax',
+            type=int,
+            dest='nsitesmax',
+            default=0,
+            help='Maximum number of binding sites kept (when 0 all the binding sites are retained, requires findsites option). Default: 0')
+
+        parser.add_argument('--inplace',
+            dest='inplace',
             action='store_true',
             default=False,
-            help='Create directory even when single ligands or receptors are involved (should be used together with --make)')
+            help='Do not create new directories when single input files are specified')
+
+        parser.add_argument('--lpflags',
+            type=str,
+            default="-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14",
+            dest='ligprep_flags',
+            help='Ligprep (Schrodinger) flags for ligand preparation. Default: "-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14"')
+
+        parser.add_argument('--nolp',
+            dest='no_ligprep',
+            action='store_true',
+            default=False,
+            help='No ligand preparation with ligprep')
+
+        parser.add_argument('--pwzdflags',
+            type=str,
+            default="-fix -fillsidechains -pH \'neutral\'",
+            dest='prepwizard_flags',
+            help='Prepwizard (Schrodinger) flags for protein preparation. Default: "-fix -fillsidechains -pH \'neutral\'"')
+
+        parser.add_argument('--nopwzd',
+            dest='no_prepwizard',
+            action='store_true',
+            default=False,
+            help='No protein preparation with prepwizard')
+
+        parser.add_argument('--skip',
+            dest='skip',
+            action='store_true',
+            default=False,
+            help='Skip protein and ligand preparation (used for debugging)')
 
         return parser
 
-    def prepare_vs(self, config, args):
+    def initialize(self, args):
+        # check if config file exist
+        if args.config_file:
+            if not os.path.exists(args.config_file):
+                raise ValueError("Config file %s not found!"%(args.config_file))
+        else:
+            print "Warning: no config file provided! Please provide config file if you want it to be updated!"
 
-        #for ligdir in glob.glob('ligprep*'):
-        #    shutil.rmtree(ligdir)
+        # get full names of ligand input files
+        self.input_file_l = []
+        if args.input_file_l:
+            for file_l in args.input_file_l:
+                # check if ligand file exists
+                if not os.path.exists(file_l):
+                    raise ValueError("File %s not found!"%(self.input_file_l))
+                self.input_file_l.append(os.path.abspath(file_l))
+        self.nfiles_l = len(self.input_file_l)
+            
+        # get full names of receptor input files
+        self.input_file_r = []
+        if args.input_file_r:
+            for file_r in args.input_file_r:
+                # check if ligand file exists
+                if not os.path.exists(file_r):
+                    raise ValueError("File %s not found!"%(self.input_file_r))
+                self.input_file_r.append(os.path.abspath(file_r))
+        self.nfiles_r = len(self.input_file_r)
 
-        #for recdir in glob.glob('recprep*'):
-        #    shutil.rmtree(recdir)
+    def prepare_vs(self, args):
 
-        ## prepare structures
-        #self.prepare_structures(config, args)
+        if args.skip:
+            # get ligand file names
+            self.files_prep_l = []
+            for idx in range(self.nfiles_l):
+                output_mol2files = []
+                ligpdir = 'lig-prep' + str(idx+1)
+                suffix, ext = os.path.splitext(glob.glob(ligpdir+'/*.mol2')[0])
+                for idx in range(len(glob.glob(suffix[:-1] + '*.mol2'))):
+                    output_mol2files.append(os.path.abspath(suffix[:-1] + '%s.mol2'%(idx+1))) 
+                self.files_prep_l.append(output_mol2files)
+            # get receptor file names
+            self.files_prep_r = []
+            for idx in range(self.nfiles_r):
+                recpdir = 'rec-prep' + str(idx+1)
+                self.files_prep_r.append(glob.glob(recpdir+'/*.pdb')[0])
+        else:
+            # remove existing directories
+            for ligdir in glob.glob('lig-prep*'):
+                shutil.rmtree(ligdir)
+            for recdir in glob.glob('rec-prep*'):
+                shutil.rmtree(recdir)
+            # prepare structures
+            self.prepare_structures(args)
 
         # (A) LIGAND level
-        for idx in range(config.nfiles_l):
-            if config.nfiles_l == 1 and not config.single:
+        for idx in range(self.nfiles_l):
+            if self.nfiles_l == 1 and not args.inplace:
                 ligdir = '.'
             else:
-                ligdir = 'lig' + str(idx)
+                ligdir = 'lig' + str(idx+1)
                 if os.path.isdir(ligdir):
                     shutil.rmtree(ligdir)
                 os.mkdir(ligdir)
 
             # (B) RECEPTOR level
-            for jdx in range(config.nfiles_r):
+            for jdx in range(self.nfiles_r):
                 recdir = ligdir
-                if config.nfiles_r == 1 and not config.single:
+                if self.nfiles_r == 1 and not args.inplace:
                     recdir += '/.'
                 else:
-                    recdir += '/rec' + str(jdx)
+                    recdir += '/rec' + str(jdx+1)
                     if os.path.isdir(recdir):
                         shutil.rmtree(recdir)
                     os.mkdir(recdir)
 
                 # (C) ISOMER level
-                ligpdir = 'ligprep' + str(idx)
-                recpdir = 'recprep' + str(jdx)
-                recfile = glob.glob(recpdir+'/*.prep.pdb')
-                assert len(recfile) == 1, "length of recfile list different from 1!"
-                recfile = recfile[0]
-
-                for ligfile in sorted(glob.glob(ligpdir+'/*.prep_*.sdf')):
-                    suffix = os.path.splitext(ligfile)[0]
-                    kdx = suffix.split('_')[-1]
-                    isodir = recdir + '/isomer' + kdx
-                    if os.path.isdir(isodir):
-                        shutil.rmtree(isodir)
+                file_r = self.files_prep_r[jdx]
+                recpdir = 'rec-prep%s'%(jdx+1)
+                for kdx, file_l in enumerate(self.files_prep_l[idx]):
+                    suffix = os.path.splitext(file_l)[0]
+                    isodir = recdir + '/isomer' + str(kdx+1)
+                    shutil.rmtree(isodir, ignore_errors=True)
                     os.mkdir(isodir)
-                    if args.blind:
-                        table = np.loadtxt(recpdir+'/sitefinder.log')
-                        if len(table.shape) == 1:
-                            table = table[np.newaxis,:]
-                        # TODO: include the size of the ligand to compute boxsize
-                        new_config_file = isodir + '/config.ini'
-                        self.update_site_config_file(new_config_file, args.config_file, table)
-                    else:
-                        # copy the config file in the directory
-                        shutil.copyfile(args.config_file, isodir + '/config.ini')
-
+                    if args.config_file:
+                        if args.findsites:
+                            table = np.loadtxt(recpdir+'/sitefinder.log')
+                            if len(table.shape) == 1:
+                                table = table[np.newaxis,:]
+                            # TODO: include the size of the ligand to compute boxsize
+                            new_config_file = isodir + '/config.ini'
+                            self.update_site_config_file(new_config_file, args.config_file, table)
+                        else:
+                            # copy the config file in the directory
+                            shutil.copyfile(args.config_file, isodir + '/config.ini')
                     # copy the files for ligand and receptor in the corresponding dir
-                    shutil.copyfile(ligfile, isodir + '/lig.sdf')
-                    shutil.copyfile(recfile, isodir +'/rec.pdb')
+                    shutil.copyfile(file_l, isodir + '/lig.mol2')
+                    shutil.copyfile(file_r, isodir +'/rec.pdb')
 
-    def prepare_structures(self, config, args):
+    def generate_mol2_files(self, file_l, args):
+
+        suffix, ext = os.path.splitext(file_l)
+        if ext == '.sdf':
+            input_format_flag = '-isdf'
+        elif ext in ['.smi', '.txt']:
+            input_format_flag = '-ismi'
+        else:
+            raise IOError("Format %s not recognized!"%(ext[1:]))
+
+        # generate multiple .mol2 files using babel
+        output_mol2file_model = suffix + '_.mol2'
+        subprocess.check_call('babel %s %s -omol2 %s -m 2>/dev/null'%(input_format_flag,file_l,output_mol2file_model),shell=True)
+
+        output_mol2files = []
+        for idx in range(len(glob.glob('*.mol2'))):
+            output_mol2files.append(os.path.abspath(suffix + '_%s.mol2'%(idx+1)))
+        return output_mol2files
+
+    def prepare_structures(self, args):
 
         curdir = os.getcwd()
         print "Preparing ligands..."
-        for idx, file_l in enumerate(config.input_file_l):
-            ligpdir = 'ligprep' + str(idx)
-            if os.path.isdir(ligpdir):
-                shutil.rmtree(ligpdir)
+        self.files_prep_l = []
+        for idx, file_l in enumerate(self.input_file_l):
+            # create new directory
+            ligpdir = 'lig-prep' + str(idx+1)
+            shutil.rmtree(ligpdir, ignore_errors=True)
             os.mkdir(ligpdir)
-            os.chdir(ligpdir)
-            ligprep.prepare_ligand(file_l, config)
+            os.chdir(ligpdir) # change directory
+            # (A) Run Schrodinger's ligprep
+            if not args.no_ligprep:
+                new_file_l = ligprep.prepare_ligand(file_l, args.ligprep_flags)
+            else:
+                new_file_l = file_l
+            # (B) Generate mol2files using babel
+            mol2files = self.generate_mol2_files(new_file_l, args)
+            self.files_prep_l.append(mol2files)
             os.chdir(curdir)
 
         print "Preparing receptors..."
-        for idx, file_r in enumerate(config.input_file_r):
-            recpdir = 'recprep' + str(idx)
-            if os.path.isdir(recpdir):
-                shutil.rmtree(recpdir)
+        self.files_prep_r = []
+        for idx, file_r in enumerate(self.input_file_r):
+            recpdir = 'rec-prep' + str(idx+1)
+            shutil.rmtree(recpdir, ignore_errors=True)
             os.mkdir(recpdir)
             os.chdir(recpdir)
-            new_file_r = ligprep.prepare_receptor(file_r, config)
-            if args.blind:
-                self.find_binding_sites(new_file_r, config)
+            # (A) Run Schrodinger's Prepwizard
+            if not args.no_prepwizard:
+                new_file_r = ligprep.prepare_receptor(file_r, args.prepwizard_flags)
+            else:
+                new_file_r = os.path.basename(file_r)
+                shutil.copyfile(file_r, new_file_r)
+            # (B) Run MOE's site finder
+            if args.findsites:
+                self.find_binding_sites(new_file_r, args)
+            self.files_prep_r.append(new_file_r)
             os.chdir(curdir)
 
     def update_site_config_file(self, new_config_file, config_file, table):
 
         shutil.copyfile(config_file, new_config_file)
 
+        # create tmp config file name from original config file
         tmp_config_file = list(os.path.splitext(new_config_file))
         tmp_config_file.insert(1,'_tmp')
         tmp_config_file = ''.join(tmp_config_file)
@@ -259,10 +287,9 @@ class PrepVS(object):
                         siteline = False
                     if not sitesection and not siteline:
                         tmpf.write(line)
-
         shutil.move(tmp_config_file, new_config_file)
 
-        # add new section 'SITE' and option site
+        # add new sections 'SITE' and option site
         with open(tmp_config_file, 'w') as tmpf:
             with open(new_config_file, 'r') as newf:
                 for line in newf:
@@ -282,14 +309,11 @@ boxsize = %(boxsize_conf)s"""% locals()
 
         shutil.move(tmp_config_file, new_config_file)
 
-    def find_binding_sites(self, pdbfile, config):
-
-        program = config.site['program']
+    def find_binding_sites(self, pdbfile, args):
 
         # (A) write script
         script_name = 'find_binding_sites.sh'
-        write_sitefinder_script = getattr(sys.modules[program], 'write_sitefinder_script')
-        write_sitefinder_script(script_name, pdbfile, config)
+        moe.write_sitefinder_script(script_name, pdbfile, args)
         os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
         # (B) execute script
@@ -301,11 +325,11 @@ boxsize = %(boxsize_conf)s"""% locals()
         args = parser.parse_args()
 
         tcpu1 = time.time()
-        config = PrepVSConfig(args)
+        self.initialize(args)
 
         # prepare virtual screening
-        self.prepare_vs(config, args)
+        self.prepare_vs(args)
         tcpu2 = time.time()
 
 if __name__ == '__main__':
-    PrepVS().run()
+    PrepDocking().run()

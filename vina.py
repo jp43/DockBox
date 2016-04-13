@@ -23,6 +23,7 @@ class Vina(autodock.ADBased):
             self.options['size_'+xyz] = boxsize[idx]
 
     def write_docking_script(self, filename, file_r, file_l, rescoring=False):
+        """write docking script for Vina"""
 
         # prepare ligand
         self.prepare_ligand(file_l, 'lig.mol2', False)
@@ -65,44 +66,26 @@ vina --score_only --config vina.config > vina.out"""% locals()
     
         shutil.copyfile(input_file_r, file_r)
     
-        idx = 0
-        new_pose = True
-        output_pdbfiles_l = []
         # exctract structures from .pdbqt file 
         if extract in ['lowest', 'all']:
             with open('lig_out.pdbqt','r') as pdbqtf:
                 with open(file_s, 'w') as sf:
                     for line in pdbqtf:
-                        if line.startswith(('ATOM', 'HETATM')):
-                            if new_pose:
-                                coords = [] # reinitialize the coordinates
-                                pdbfile = 'lig-%s.out.pdb'%idx
-                                lf = open(pdbfile, 'w')
-                                new_pose = False
-                            coords.append('ATOM  ' + line[6:66])
-                        elif line.startswith('REMARK VINA RESULT:'):
+                        if line.startswith('REMARK VINA RESULT:'):
                             score = float(line[19:].split()[0])
-                        elif line.startswith('ENDMDL'):
-                            idx += 1
-                            for coord in coords:
-                                print >> lf, coord
-                            lf.close()
-                            output_pdbfiles_l.append(pdbfile)
-                            new_pose = True
                             print >> sf, score
                             if extract == 'lowest':
                                 break
 
-        # fix poses and remove poses that are out of range
-        output_mol2files = self.fix_poses(input_file_r, output_pdbfiles_l)
+        output_mol2files = self.extract_poses(input_file_r, 'vina')
+
+        # fix poses and remove poses which are out of range
         self.remove_out_of_range_poses(output_mol2files, file_s) 
     
     def write_rescoring_script(self, filename, file_r, file_l):
-    
         write_docking_script(filename, file_r, file_l, rescoring=True)
     
     def extract_rescoring_results(self, filename):
-    
         with open(filename, 'a') as ff:
             with open('vina.out', 'r') as outf:
                 for line in outf:
@@ -113,6 +96,4 @@ vina --score_only --config vina.config > vina.out"""% locals()
         os.remove('target.pdbqt')
         
     def cleanup(self):
-    
-        for ff in glob.glob('*pdbqt'):
-            os.remove(ff)
+        pass

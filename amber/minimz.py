@@ -80,7 +80,7 @@ def prepare_receptor(file_r, keep_hydrogens):
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
-    hydrogens_info = load_PROTON_INFO(os.path.dirname(os.path.abspath(__file__))+'/PROTON_INFO')
+    atoms_info = load_PROTON_INFO(os.path.dirname(os.path.abspath(__file__))+'/PROTON_INFO')
 
     nremoved = 0
     removed_lines = []
@@ -94,7 +94,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                     if atom_name[0].isdigit():
                         atom_name = atom_name[1:] + atom_name[0]
                     if atom_name[0] == 'H':
-                        is_hydrogen_known = (atom_name in hydrogens_info[resname]) or (atom_name == 'H')
+                        is_hydrogen_known = (atom_name in atoms_info[resname]) or (atom_name == 'H')
                         if keep_hydrogens and not is_hydrogen_known:
                             remove_line = True
                             removed_lines.append(line)
@@ -103,28 +103,39 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                         elif not keep_hydrogens:
                             remove_line = True
                             nremoved += 1
+                    else:
+                        is_atom_known = atom_name in atoms_info[resname]
+                        if not is_atom_known:
+                            remove_line = True
+                            removed_lines.append(line)
+                            nremoved += 1
                 if not remove_line:
                     wf.write(line)
     #print '\n'.join(removed_lines)
     shutil.move('tmp.pdb', file_r)
-    print "Correct hydrogens: Number of hydrogens removed: %s" %nremoved
+    print "Number of atom lines removed: %s" %nremoved
 
 def load_PROTON_INFO(filename):
 
     info = {}
 
     with open(filename) as ff:
+        ff.next() # skip first line
         for line in ff:
             line_s = line.split()
             is_residue_line = len(line_s) == 2 and line_s[1].isdigit()
             is_hydrogen_line = len(line_s) >= 4 and \
                 all([c.isdigit() for c in line_s[:4]])
+            is_heavy_atom_line = not is_residue_line and \
+                not line_s[0].isdigit()
 
             if is_residue_line:
                 resname = line_s[0]
                 info[resname] = []
             elif is_hydrogen_line:
                 info[resname].extend(line[15:].split())
+            elif is_heavy_atom_line:
+                info[resname].extend(line_s)
     return info
 
 def prepare_ligand(file_r, file_l, file_rl):
@@ -272,7 +283,7 @@ def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
                             else:
                                 recf.write(line)
 
-            mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%idx, sample_mol2file=file_l)
+            mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
     else:
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')

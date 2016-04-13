@@ -4,6 +4,7 @@ import glob
 import shutil
 import subprocess
 
+import method
 import licence.check as chkl
 
 required_programs = ['moebatch']
@@ -18,6 +19,15 @@ class Moe(method.DockingMethod):
     def __init__(self, name, site, options):
 
         super(Moe, self).__init__(name, site, options)
+        ## set box center
+        #center = site[1]
+        #options['center_bs'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
+
+        ## set box size
+        #boxsize = site[2]
+        #boxsize = map(float, map(str.strip, boxsize.split(',')))
+        #options['radius_bs'] = max(boxsize)*1./2
+
 
     def write_docking_script(filename, input_file_r, input_file_l, site, options):
     
@@ -251,33 +261,23 @@ endfunction;"""% locals()
     def cleanup(config):
         pass
 
-def set_site_options(site, options):
-
-    # set box center
-    center = site[1]
-    options['center_bs'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
-
-    # set box size
-    boxsize = site[2]
-    boxsize = map(float, map(str.strip, boxsize.split(',')))
-    options['radius_bs'] = max(boxsize)*1./2
-
-def write_sitefinder_script(filename, file_r, config):
+def write_sitefinder_script(filename, file_r, args):
     
-    write_moe_sitefinder_script('sitefinder.svl', file_r, config)
-
-    sitefinder_cmd = chkl.eval("moebatch -run sitefinder.svl"%locals(), 'moe') # cmd for docking
+    write_moe_sitefinder_script('sitefinder.svl', file_r, args)
+    sitefinder_cmd = chkl.eval("moebatch -run sitefinder.svl", 'moe') # cmd for docking
 
     # write script
     with open(filename, 'w') as file:
         script ="""#!/bin/bash
-
 # run docking
 %(sitefinder_cmd)s
 """% locals()
         file.write(script)
 
-def write_moe_sitefinder_script(filename, file_r, config):
+def write_moe_sitefinder_script(filename, file_r, args):
+
+    minplb = args.minplb
+    nsitesmax = args.nsitesmax
 
     # write vina script
     with open(filename, 'w') as file:
@@ -324,8 +324,5 @@ local function main []
             write ['{f.0} {f.2} {f.3} {f.3}\\n', idx, plb, cog, maxdist];
         endif
     endloop
-endfunction;""" %dict(dict(locals()).items()+config.site.items())
+endfunction;""" %locals()
         file.write(script)
-
-
-

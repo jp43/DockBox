@@ -45,7 +45,7 @@ def give_unique_atom_names(file_l):
                     idx = known_atom_types.index(atom_type)
                     atom_number = str(atom_numbers[idx]+1)
                     atom_numbers[idx] += 1
-                new_atom_type = line_s[1]+atom_number
+                new_atom_type = atom_type+atom_number
                 newline = ' '*(7-len(line_s[0])) + line_s[0] + 2 * ' ' + new_atom_type + \
 ' '*(10-len(new_atom_type)) + line[19:]
                 newf.write(newline)

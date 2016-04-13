@@ -1,6 +1,6 @@
 #!/global/software/python-2.7.2/bin/python
 
-import run_docking as rd
+import prepvs as pv
 
 if __name__ == '__main__':
-    rd.DockingWorker().run()
+    pv.PrepDocking().run()

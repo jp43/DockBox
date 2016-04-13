@@ -9,8 +9,7 @@ import licence.check as chkl
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 
-default_settings = {'actxrange': '30.0', 'actyrange': '30.0', 'actzrange': '30.0', \
-'innerbox': '10, 10, 10', 'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'tmpdir': None}
+default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP'}
 
 class Glide(method.DockingMethod):
 
@@ -34,33 +33,29 @@ class Glide(method.DockingMethod):
 
         self.options['outerbox'] = ', '.join(outerbox)
 
-    def write_docking_script(self, filename, file_r, file_l, rescoring=False):
-    
+        self.tmpdirline = ""
+        if 'tmpdir' in self.options:
+            self.tmpdirline = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%self.options['tmpdir']
+
+    def write_docking_script(self, filename, file_r, file_l):
+        """ Write docking script for glide """
         locals().update(self.options)
-    
-        # prepare protein cmd
-        #if not rescoring:
-        #    prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(file_r)s target.mae"%locals(), 'glide')
-        #else:
-        prepwizard_cmd = chkl.eval("structconvert -ipdb %(file_r)s -omae target.mae"%locals(), 'glide')
-    
+
+        # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
+        prepwizard_cmd = chkl.eval("prepwizard -WAIT -noprotassign -nohtreat -noimpref %(file_r)s target.mae"%locals(), 'schrodinger')    
+
         # prepare grid cmd
-        glide_grid_cmd = chkl.eval("glide -WAIT grid.in", 'glide') # grid prepare
-        structconvert_cmd = chkl.eval("structconvert %(file_l)s lig.mae"%locals(), 'glide')
+        glide_grid_cmd = chkl.eval("glide -WAIT grid.in", 'schrodinger') # grid prepare
+        structconvert_cmd = chkl.eval("structconvert -imol2 %(file_l)s -omae lig.mae"%locals(), 'schrodinger')
     
         # docking cmd
-        glide_dock_cmd = chkl.eval("glide -WAIT dock.in", 'glide') # docking command
-        glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'glide') # cmd to extract results
-    
-        if self.options['tmpdir']:
-            tmpdirline = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%locals()
-        else:
-            tmpdirline = ""
+        glide_dock_cmd = chkl.eval("glide -WAIT dock.in", 'schrodinger') # docking command
+
+        tmpdirline = self.tmpdirline
     
         # write glide script
-        if not rescoring:
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
 %(tmpdirline)s
 
 # (A) Prepare receptor
@@ -91,55 +86,13 @@ POSE_RMSD %(pose_rmsd)s
 GRIDFILE $PWD/grid.zip
 LIGANDFILE $PWD/lig.mae
 PRECISION %(precision)s" > dock.in
-
-%(glide_dock_cmd)s
-
-%(glide_sort_cmd)s"""% locals()
-                file.write(script)
-        else:
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
-%(tmpdirline)s
-
-if [ ! -f target.mae ]; then
-  # (A) Prepare receptor
-  %(prepwizard_cmd)s
-fi
-
-if [ ! -f grid.zip ]; then
-  # (B) Prepare grid
-  echo "USECOMPMAE YES
-  INNERBOX %(innerbox)s
-  ACTXRANGE %(actxrange)s
-  ACTYRANGE %(actyrange)s
-  ACTZRANGE %(actzrange)s
-  GRID_CENTER %(grid_center)s
-  OUTERBOX %(outerbox)s
-  ENTRYTITLE target
-  GRIDFILE grid.zip
-  RECEP_FILE target.mae" > grid.in
-  %(glide_grid_cmd)s
-fi
-
-# (C) convert ligand to maestro format
-%(structconvert_cmd)s
-
-# (D) perform docking
-echo "WRITEREPT YES
-USECOMPMAE YES
-DOCKING_METHOD inplace
-POSES_PER_LIG %(poses_per_lig)s
-POSE_RMSD %(pose_rmsd)s
-GRIDFILE $PWD/grid.zip
-LIGANDFILE $PWD/lig.mae
-PRECISION SP" > dock.in
-
 %(glide_dock_cmd)s"""% locals()
-                file.write(script)
-    
+            file.write(script)
+ 
     def extract_docking_results(self, file_r, file_l, file_s, input_file_r, extract):
     
-        subprocess.call(chkl.eval("pdbconvert -brief -imae dock_sorted.mae -opdb dock_sorted.pdb", 'glide', redirect='/dev/null'), shell=True)
+        #glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'schrodinger') # cmd to extract results
+        subprocess.call(chkl.eval("pdbconvert -brief -imae dock_sorted.mae -opdb dock_sorted.pdb", 'schrodinger', redirect='/dev/null'), shell=True)
         shutil.copyfile(input_file_r, file_r)
     
         if extract == 'lowest':
@@ -183,19 +136,74 @@ PRECISION SP" > dock.in
                             break
                     else:
                         break
-    
+
+    def get_tmpdir_line(self):
+        if self.options['tmpdir']:
+            line = "export SCHRODINGER_TMPDIR=%(tmpdir)s"%locals()
+        else:
+            line = ""
+
     def write_rescoring_script(self, filename, file_r, file_l):
-    
-        self.write_docking_script(filename, file_r, file_l, rescoring=True)
+        """Rescore using Glide SP scoring function"""
+
+        # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
+        prepwizard_cmd = chkl.eval("prepwizard -WAIT -noprotassign -nohtreat -noimpref %(file_r)s target.mae"%locals(), 'schrodinger')
+
+        # prepare grid cmd
+        glide_grid_cmd = chkl.eval("glide -WAIT grid.in", 'schrodinger') # grid prepare
+        structconvert_cmd = chkl.eval("structconvert -imol2 %(file_l)s -omae lig.mae"%locals(), 'schrodinger')
+
+        # scoring cmd
+        glide_dock_cmd = chkl.eval("glide -WAIT dock.in", 'schrodinger') # docking command
+        tmpdirline = self.tmpdirline
+
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+%(tmpdirline)s
+
+if [ ! -f target.mae ]; then
+  # (A) Prepare receptor
+  %(prepwizard_cmd)s
+fi
+
+if [ ! -f grid.zip ]; then
+  # (B) Prepare grid
+  echo "USECOMPMAE YES
+INNERBOX %(innerbox)s
+ACTXRANGE %(actxrange)s
+ACTYRANGE %(actyrange)s
+ACTZRANGE %(actzrange)s
+GRID_CENTER %(grid_center)s
+OUTERBOX %(outerbox)s
+ENTRYTITLE target
+GRIDFILE grid.zip
+RECEP_FILE target.mae" > grid.in
+  %(glide_grid_cmd)s
+fi
+
+# (C) convert ligand to maestro format
+%(structconvert_cmd)s
+
+# (D) perform rescoring
+echo "WRITEREPT NO
+USECOMPMAE YES
+DOCKING_METHOD inplace
+GRIDFILE $PWD/grid.zip
+LIGANDFILE $PWD/lig.mae
+PRECISION SP" > dock.in
+
+%(glide_dock_cmd)s"""% locals()
+        file.write(script)
     
     def extract_rescoring_results(self, filename):
     
         with open(filename, 'a') as ff:
-            with open('dock.rept', 'r') as outf:
+            with open('dock.scor', 'r') as outf:
                 for line in outf:
                     if line.startswith('   1'):
                         print >> ff, line.split()[2]
     
     def cleanup(self):
-        for ff in glob.glob('dock_sorted*.pdb'):
-            os.remove(ff)
+        pass
+        #for ff in glob.glob('dock_sorted*.pdb'):
+        #    os.remove(ff)
