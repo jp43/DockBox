@@ -68,6 +68,7 @@ def get_coordinates(filename):
                 coords.append(map(float,line_s[2:5]))
     return coords
 
+
 def update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None):
     """update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None)
 

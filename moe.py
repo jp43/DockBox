@@ -12,61 +12,47 @@ required_programs = ['moebatch']
 default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250', 
 'scoring': 'London dG', 'maxpose': '10', 'gtest': '0.01', 'rescoring': 'London dG', 'binding_radius': '10000'}
 
-default_sitefind_settings = {'minplb': '1.0'}
-
 class Moe(method.DockingMethod):
 
     def __init__(self, name, site, options):
 
         super(Moe, self).__init__(name, site, options)
-        ## set box center
-        #center = site[1]
-        #options['center_bs'] = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
 
-        ## set box size
-        #boxsize = site[2]
-        #boxsize = map(float, map(str.strip, boxsize.split(',')))
-        #options['radius_bs'] = max(boxsize)*1./2
-
-
-    def write_docking_script(filename, input_file_r, input_file_l, site, options):
-    
         # set box center
-        center = site[1]
-        center_bs = '[' + ', '.join(map(str.strip, center.split(','))) + ']'
-    
+        self.options['center_bs'] = '[' + ', '.join(map(str.strip, site[1].split(','))) + ']'
+
         # set box size
-        boxsize = site[2]
-        boxsize = map(float, map(str.strip, boxsize.split(',')))
-        radius_bs = max(boxsize)*1./2
+        self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
+        self.options['radius_bs'] = max(self.options['boxsize'])*1./2
+
+    def write_docking_script(self, filename, file_r, file_l):
+   
+        self.write_moe_docking_script('moe_dock.svl')
     
-        write_moe_docking_script('moe_dock.svl', options, center_bs, radius_bs)
+        convertmol2_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
+db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand 
     
-        convertsdf_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
-            db_ImportSD ['lig.mdb','%(input_file_l)s','mol']\""%locals(), 'moe') # create mdb for ligand 
-    
-        dock_cmd = chkl.eval("moebatch -run moe_dock.svl -rec %(input_file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
+        dock_cmd = chkl.eval("moebatch -run moe_dock.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
     
         # write script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
 set -e
-# convert sdf file to mdb
-%(convertsdf_cmd)s
+# convert .mol2 file to mdb
+%(convertmol2_cmd)s
 
 # run docking
 %(dock_cmd)s
 """% locals()
             file.write(script)
     
-    def write_moe_docking_script(filename, options, center_bs, radius_bs):
+    def write_moe_docking_script(self, filename):
     
-        locals().update(options)
+        locals().update(self.options)
     
         # write vina script
         with open(filename, 'w') as file:
             script ="""#svl
-    
 function DockAtoms, DockFile;
 function DockMDBwAtoms, DockMDBwFile;
 
@@ -240,25 +226,24 @@ ArgvReset ArgvExpand argv;
 endfunction;"""% locals()
             file.write(script)
     
-    def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
+    def extract_docking_results(self, file_s, input_file_r):
     
-        # copy receptor structure
-        shutil.copyfile(input_file_r, file_r)
-    
-        sdffile = os.path.splitext(file_l)[0] + '.sdf'
+        subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True)
+
+        # create multiple files with babel
+        subprocess.check_call('babel -imol2 lig.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True) 
+        os.remove('lig.mol2')
+
+        # get SDF to extract scores
+        sdffile = 'lig.sdf'
         subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True)
-    
-        # save ligand structures in PDB file
-        subprocess.check_call("babel %s %s &>/dev/null"%(sdffile, file_l), shell=True)
-    
-        # save scores
         with open(sdffile, 'r') as sdff:
             with open(file_s, 'w') as sf:
                 for line in sdff:
                     if line.startswith("> <S>"):
                         print  >> sf, sdff.next().strip()
     
-    def cleanup(config):
+    def cleanup(self):
         pass
 
 def write_sitefinder_script(filename, file_r, args):

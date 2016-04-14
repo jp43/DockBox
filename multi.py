@@ -6,7 +6,6 @@ known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe'], 
 class MultiProgramTask(object):
 
     def __init__(self, task, config):
-
         self.task = task
         self.section = task.upper()
 
@@ -19,7 +18,6 @@ class MultiProgramTask(object):
         self.set_site_options(config)
 
     def setup_instances(self, task, config):
-
         self.instances = []
 
         if config.has_option(self.section, 'program'):
@@ -91,24 +89,28 @@ Make sure the program has been installed!'%(exe,program))
         self.site = site
         self.nsites = len(site)
 
+    def is_yesno_option(self, config, section, option, default=False):
+        if config.has_option(section, option):
+            yesno = config.get(section, option).lower()
+            if yesno == 'yes':
+                return True
+            elif yesno == 'no':
+                return False
+            else:
+                raise ValueError("option %s should be yes or no!"%option)
+        else:
+            return default
+
+
 class MultiProgramScoring(MultiProgramTask):
 
     def __init__(self, config):
-
         super(MultiProgramScoring, self).__init__('rescoring', config)
 
 class MultiProgramDocking(MultiProgramTask):
 
     def __init__(self, config):
-
         super(MultiProgramDocking, self).__init__('docking', config)
 
-        known_extract_options = ['all', 'lowest', 'none']
-        # get value for extract
-        if config.has_option(self.section, 'extract'):
-            self.extract = config.get(self.section, 'extract').lower()
-            if not self.extract in known_extract_options:
-                raise ValueError("Extract option should be one of " + ", ".join(known_extract_options))
-        else:
-            self.extract = 'lowest'
-
+        self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
+        self.minimize = self.is_yesno_option(config, 'DOCKING', 'minimize')

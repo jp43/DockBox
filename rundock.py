@@ -38,7 +38,6 @@ class DockingConfig(object):
         self.docking = multi.MultiProgramDocking(config)
         self.consensus = consensus.ConsensusDocking(config, args)
 
-        self.cleanup = self.is_yesno_option(config, 'cleanup')
         self.extract_only = args.extract_only
 
     def is_yesno_option(self, config, option, default=False):
@@ -95,17 +94,18 @@ class DockingWorker(object):
     def run_docking(self, config):
         """Running docking simulations using each program specified..."""
         tcpu1 = time.time()
+
+        config_d = config.docking
         # iterate over all the binding sites
         for kdx in range(len(config.docking.site)):
             for instance, program, options in config.docking.instances: # iterate over all the instances
-
                 # get docking class
                 DockingClass = getattr(sys.modules[program], program.capitalize())
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.docking.extract, \
-config.cleanup, extract_only=config.extract_only)
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
+cleanup=config_d.cleanup, extract_only=config.extract_only)
 
         tcpu2 = time.time()
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)

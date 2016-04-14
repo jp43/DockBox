@@ -144,7 +144,7 @@ def prepare_ligand(file_r, file_l, file_rl):
     with open(script_name, 'w') as ff:
         script ="""#!/bin/bash
 # prepare mol2 file with antechamber
-antechamber -fi mol2 -i %(file_l)s -fo mol2 -o lig.mol2 > antchmb.log
+antechamber -fi mol2 -i %(file_l)s -fo mol2 -o lig.mol2 -c gas > antchmb.log
 parmchk -i lig.mol2 -f mol2 -o lig.frcmod # run parmchk
 
 # prepare complex.pdb

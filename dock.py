@@ -3,44 +3,43 @@ import sys
 import subprocess
 import shutil
 import glob
+import method
 
-required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
+required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
 'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
 
-def write_docking_script(filename, input_file_r, input_file_l, site, options):
+class Dock(method.DockingMethod):
 
-    locals().update(options)
+    def __init__(self, name, site, options):
 
-    # set box center
-    center = site[1]
-    center = '\"' + ' '.join(map(str.strip, center.split(','))) + '\"'
+        super(Dock, self).__init__(name, site, options)
+        self.options['center'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"' # set box center
 
-    # set box size
-    boxsize = site[2]
-    boxsize = map(float, map(str.strip, boxsize.split(',')))
-    sphgen_radius = str(max(boxsize)/2)
+        # set box size
+        self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
+        self.options['sphgen_radius'] = str(max(self.options['boxsize'])/2)
 
-    write_shift_coordinates_script()
-  
-    # convert sdffile to PDBfile
-    subprocess.check_call('babel %s %s 2>/dev/null'%(input_file_l,'lig.pdb'), shell=True)
+    def write_docking_script(self, filename, file_r, file_l):
 
-    # write autodock script
-    with open(filename, 'w') as file:
-        script ="""#!/bin/bash
+        locals().update(self.options)
+        self.write_shift_coordinates_script()
+      
+        # write autodock script
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
 set -e
 
 # remove hydrogens from target
 echo "delete element.H
 write format pdb #0 target_noH.pdb" > removeH.cmd
-chimera --nogui --silent %(input_file_r)s removeH.cmd
+chimera --nogui --silent %(file_r)s removeH.cmd
 rm -rf removeH.cmd
 
 # convert pdb to mol2
 echo "write format mol2 #0 target.mol2" > pdb2mol.cmd
-chimera --nogui --silent %(input_file_r)s pdb2mol.cmd
+chimera --nogui --silent %(file_r)s pdb2mol.cmd
 rm -rf pdb2mol.cmd
 
 # generating receptor surface
@@ -57,12 +56,9 @@ target_noH_site.sph" > INSPH
 sphgen_cpp
 
 # shift ligand coordintates
-python shift_lig_coords.py lig.pdb lig_s.pdb %(center)s
+python shift_lig_coords.py %(file_l)s lig_s.mol2 %(center)s
+mv lig_s.mol2 lig.mol2
 
-# convert pdb to mol2
-echo "write format mol2 #0 lig.mol2" > pdb2mol.cmd
-chimera --nogui --silent lig_s.pdb pdb2mol.cmd
-rm -rf pdb2mol.cmd
 # selecting spheres within a user-defined radius (sphgen_radius)
 sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
 
@@ -178,62 +174,41 @@ cluster_rmsd_threshold 2.0
 rank_ligands no" > dock6.in
 
 dock6 -i dock6.in"""% locals()
-        file.write(script)
+            file.write(script)
 
-def extract_docking_results(file_r, file_l, file_s, input_file_r, extract):
+    def extract_docking_results(self, file_s, input_file_r):
+    
+        # save scores
+        with open('lig_out_scored.mol2', 'r') as ffin:
+            with open(file_s, 'w') as ffout:
+                for line in ffin:
+                    if line.startswith('##########    Grid Score:'):
+                        print >> ffout, line.split()[3]
 
-    shutil.copyfile(input_file_r, file_r)
+        # create multiple files with babel
+        subprocess.check_call('babel -imol2 lig_out_scored.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True)
 
-    # convert mol2 to pdb
-    if extract == 'lowest':
-        with open('pdb2mol.cmd', 'w') as ff:
-            script = "write format pdb #0.1 %s" %file_l
-            ff.write(script)
-    elif extract == 'all':
-        with open('pdb2mol.cmd', 'w') as ff:
-            script = "write format pdb #0 %s" %file_l
-            ff.write(script)
-
-    subprocess.call('chimera --nogui --silent lig_out_scored.mol2 pdb2mol.cmd', shell=True)
-    os.remove('pdb2mol.cmd')
-
-    # save scores
-    with open('lig_out_scored.mol2', 'r') as ffin:
-        with open(file_s, 'w') as ffout:
-            for line in ffin:
-                if line.startswith('##########    Grid Score:'):
-                    print >> ffout, line.split()[3]
-                    if extract == 'lowest':
-                        break
-
-def cleanup():
-
-    # remove map files
-    for ff in glob.glob('grid*'):
-        os.remove(ff)
-
-    os.remove('selected_spheres.sph') 
-    os.remove('target_noH.ms')
-
-def write_shift_coordinates_script():
-
-    with open('shift_lig_coords.py', 'w') as file:
-        script ="""import sys
+    def cleanup(self):
+        # remove map files
+        for ff in glob.glob('grid*'):
+            os.remove(ff)
+    
+        os.remove('selected_spheres.sph') 
+        os.remove('target_noH.ms')
+    
+    def write_shift_coordinates_script(self):
+    
+        with open('shift_lig_coords.py', 'w') as file:
+            script ="""import sys
 import numpy as np
+import tools.mol2 as mol2t
 
-# read PDB file
-
-pdb = sys.argv[1]
-newpdb = sys.argv[2]
+# read mol2 file
+mol2 = sys.argv[1]
+newmol2 = sys.argv[2]
 center = map(float,(sys.argv[3]).split())
 
-coords = []
-with open(pdb, 'r') as pdbf:
-    for line in pdbf:
-        if line.startswith(('ATOM  ','HETATM')):
-            coords.append(map(float,[line[30:38],line[38:46],line[46:54]]))
-
-coords = np.array(coords)
+coords = np.array(mol2t.get_coordinates(mol2))
 
 def center_of_geometry(coords):
     cog = np.array([0.0, 0.0, 0.0])
@@ -247,19 +222,22 @@ cog = center_of_geometry(coords)
 coords = coords - (cog - center)
 
 idx = 0
-with open(newpdb, 'w') as pdbn:
-    with open(pdb, 'r') as pdbf:
-        for line in pdbf:
-            if line.startswith(('ATOM  ','HETATM')):
-                #coords_str = map(str, coords[idx]
-                newline = line[:30]
-                for jdx in range(3):
-                    coord = ("%.3f"%coords[idx,jdx]).strip()
-                    newline += ' '*(8-len(coord)) + coord
-                if len(line) >= 54:
-                    newline += line[54:-1]
+with open(newmol2, 'w') as nmol2f:
+    with open(mol2, 'r') as mol2f:
+        is_structure = False
+        for line in mol2f:
+            if line.startswith('@<TRIPOS>ATOM'):
+                is_structure = True
+                nmol2f.write(line)
+            elif line.startswith('@<TRIPOS>'):
+                is_structure = False
+                nmol2f.write(line)
+            elif is_structure:
+                new_coords = [format(coord, '.4f') for coord in coords[idx]]
+                newline = line[:16] + ' '*(10-len(new_coords[0])) + str(new_coords[0]) + \
+' '*(10-len(new_coords[1])) + str(new_coords[1]) + ' '*(10-len(new_coords[2])) + str(new_coords[2]) + line[46:]
+                nmol2f.write(newline)
                 idx += 1
-                print >> pdbn, newline
             else:
-                pdbn.write(line)"""
-        file.write(script)
+                nmol2f.write(line)"""
+            file.write(script)

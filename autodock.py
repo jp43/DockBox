@@ -8,7 +8,6 @@ import fileinput
 import method
 import numpy as np
 
-import amber.minimz as mn
 import tools.PDB as pdbt
 import tools.mol2 as mol2t
 
@@ -18,35 +17,8 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 
 class ADBased(method.DockingMethod):
 
-    def extract_poses(self, input_file_r, prgm):
-        """Convert output PDB files to mol2 and perform energy minimization on non-polar hydrogens"""
-
-        # use babel to convert pdbqt to mol2
-        if prgm == 'autodock':
-            subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
-        elif prgm == 'vina':
-            subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
-        n_mol2files = len(glob.glob('lig-*.mol2')) # number of mol2 files generated
-
-        mol2files = []
-        for idx in range(n_mol2files):
-            file_l = 'lig-%s.mol2'%(idx+1)
-            mol2t.give_unique_atom_names(file_l)
-            mol2files.append(file_l)
-
-        # do energy minimization on ligand hydrogens
-        mn.do_minimization(input_file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
-
-        # extract results from minimization and purge out
-        for idx in range(n_mol2files):
-            mol2file = 'lig-%s.out.mol2'%(idx+1)
-            shutil.copyfile('minimz/' + mol2file, 'lig-%s.mol2'%(idx+1))
-        #shutil.rmtree('minimz')
-
-    def write_docking_script(filename, file_r, file_l, rescoring=True):
-        pass
-
     def write_rescoring_script(self, filename, file_r, file_l):
+
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
 
 class Autodock(ADBased):
@@ -149,9 +121,8 @@ fi
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 file.write(script)
 
-    def extract_docking_results(self, file_s, input_file_r, extract):
-
-        # extract structures from .pdbqt file 
+    def extract_docking_results(self, file_s, input_file_r):
+        """extract poses and scores from .dlg file"""
         with open('dock.dlg','r') as pdbqtf:
             with open(file_s, 'w') as sf: 
                 line = '' # initialize line
@@ -161,23 +132,20 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         score = float(line.split()[8])
                         print >> sf, score
 
-        self.extract_poses(input_file_r, 'autodock')
+        subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
 
     def extract_rescoring_results(self, filename):
-    
+        """extract scores from .dlg file"""
         with open(filename, 'a') as ff:
             with open('dock.dlg', 'r') as outf:
                 for line in outf:
                     if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
                         print >> ff, line.split()[8]
-    
-        #os.remove('lig.pdbqt')
-        #os.remove('target.pdbqt')
-    
+
     def cleanup(self):
         # remove map files
         for ff in glob.glob('*map*'):
             os.remove(ff)
-    
+
         for ff in glob.glob('*pdbqt'):
             os.remove(ff)

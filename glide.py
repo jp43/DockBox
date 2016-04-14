@@ -89,7 +89,7 @@ PRECISION %(precision)s" > dock.in
 %(glide_dock_cmd)s"""% locals()
             file.write(script)
  
-    def extract_docking_results(self, file_s, input_file_r, extract):
+    def extract_docking_results(self, file_s, input_file_r):
         """Extract Glide docking results""" 
 
         # cmd to extract results

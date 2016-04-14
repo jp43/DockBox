@@ -5,21 +5,21 @@ import glob
 import shutil
 import subprocess
 
+import amber.minimz as mn
 import tools.PDB as pdbt
 import tools.mol2 as mol2t
 
 class DockingMethod(object):
 
     def __init__(self, name, site, options):
-
         self.name = name
         self.site = site
         self.options = options
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, extract, cleanup, extract_only=False):
-        """Run docking and cleanup poses on one receptor (file_r) and one ligand (file_l)"""
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False):
+        """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
         # find name for docking directory
@@ -33,8 +33,8 @@ class DockingMethod(object):
             os.mkdir(dockdir)
         os.chdir(dockdir)
 
+        print "Starting docking with %s..."%self.program.capitalize()
         if not extract_only:
-            print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
             print self.options
 
@@ -46,11 +46,16 @@ class DockingMethod(object):
             # running this script will run the docking procedure
             subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
 
-        # (B) extract docking results (all extracted poses are saved in .mol2 files)
-        self.extract_docking_results('score.out', file_r, extract)
+        # (B) extract docking results
+        self.extract_docking_results('score.out', file_r)
+
+        # (C) cleanup poses (minimization, remove out-of-box poses)
+        # poses extracted from AD or ADV are always minimized
+        if self.program in ['vina', 'autodock'] or minimize:
+            self.minimize_extracted_poses(file_r)
         self.remove_out_of_range_poses('score.out')
 
-        # (C) remove intermediate files if required
+        # (D) remove intermediate files if required
         if cleanup:
             self.cleanup()
 
@@ -77,16 +82,17 @@ class DockingMethod(object):
             script_name = "run_scoring_" + self.program + ".sh"
             self.write_rescoring_script(script_name, file_r, file_l)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
-       
+      
             # (B) run scoring method
-            subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True)
-       
+            subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True)       
+
             # (C) extract docking results
             self.extract_rescoring_results('score.out')
 
         os.chdir(curdir)
 
     def remove_out_of_range_poses(self, file_s):
+        """Get rid off poses which were predicted outside the box"""
 
         files_l = []
         n_files_l = len(glob.glob('lig-*.mol2'))
@@ -119,6 +125,27 @@ class DockingMethod(object):
 
         shutil.move('score.tmp.out', file_s)
 
+    def minimize_extracted_poses(self, file_r):
+        """Perform AMBER minimization on extracted poses"""
+
+        # number of mol2 files generated
+        n_mol2files = len(glob.glob('lig-*.mol2'))
+
+        mol2files = []
+        for idx in range(n_mol2files):
+            file_l = 'lig-%s.mol2'%(idx+1)
+            mol2t.give_unique_atom_names(file_l)
+            mol2files.append(file_l)
+
+        # do energy minimization on ligand hydrogens
+        mn.do_minimization(file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
+
+        # extract results from minimization and purge out
+        for idx in range(n_mol2files):
+            mol2file = 'lig-%s.out.mol2'%(idx+1)
+            shutil.copyfile('minimz/' + mol2file, 'lig-%s.mol2'%(idx+1))
+        #shutil.rmtree('minimz')
+
     def write_rescoring_script(self, script_name, file_r, file_l):
         pass
 
@@ -128,7 +155,7 @@ class DockingMethod(object):
     def write_docking_script(self, script_name, file_r, file_l):
         pass
 
-    def extract_docking_results(self, file_r, file_l, file_s, input_file_r, extract):
+    def extract_docking_results(self, file_r, file_l, file_s, input_file_r):
         pass
 
     def cleanup(self):

@@ -97,7 +97,7 @@ class ConsensusDocking(object):
                 poses_idxs = sorted(poses_idxs)
                 for idx, pose_idx in enumerate(poses_idxs):
                     shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, posedir+'/lig-%s.mol2'%(idx+1+sh))
-                ff.write('%10s        %s           %s\n'%(program, idx+1, kdx+1))
+                ff.write('%s      %s       %s\n'%(program, idx+1, kdx+1))
                 sh += idx+1
             self.nposes.append(sh)
 

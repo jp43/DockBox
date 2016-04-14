@@ -1,9 +1,9 @@
 import os
 import sys
 import glob
-import method
 import autodock
 import shutil
+import subprocess
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
@@ -58,7 +58,7 @@ prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 vina --score_only --config vina.config > vina.out"""% locals()
                 file.write(script)
 
-    def extract_docking_results(self, file_s, input_file_r, extract):
+    def extract_docking_results(self, file_s, input_file_r):
         """Extract output structures in .mol2 formats"""
     
         # exctract structures from .pdbqt file 
@@ -69,7 +69,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
                         score = float(line[19:].split()[0])
                         print >> sf, score
 
-        self.extract_poses(input_file_r, 'vina')
+        subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
