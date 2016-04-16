@@ -77,13 +77,13 @@ class DockingWorker(object):
             required=True,
             help='config file containing docking parameters')
 
-        parser.add_argument('--consensus_only',
+        parser.add_argument('-consensus_only',
             dest='consensus_only',
             action='store_true',
             default=False,
             help='Run consensus only')
 
-        parser.add_argument('--extract_only',
+        parser.add_argument('-extract_only',
             dest='extract_only',
             action='store_true',
             default=False,

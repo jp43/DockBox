@@ -40,55 +40,55 @@ class PrepDocking(object):
             dest='config_file',
             help='config file: .ini')
 
-        parser.add_argument('--findsites',
+        parser.add_argument('-findsites',
             dest='findsites',
             action='store_true',
             default=False,
             help='Find possible binding sites (use MOE\'s site finder)')
 
-        parser.add_argument('--minplb',
+        parser.add_argument('-minplb',
             type=float,
             dest='minplb',
             default=1.0,
             help='Minimum PLB value (MOE) to select the binding sites (requires findsites option). Default: 1.0 ')
 
-        parser.add_argument('--nsitesmax',
+        parser.add_argument('-nsitesmax',
             type=int,
             dest='nsitesmax',
             default=0,
             help='Maximum number of binding sites kept (when 0 all the binding sites are retained, requires findsites option). Default: 0')
 
-        parser.add_argument('--inplace',
+        parser.add_argument('-inplace',
             dest='inplace',
             action='store_true',
             default=False,
             help='Do not create new directories when single input files are specified')
 
-        parser.add_argument('--ligpflags',
+        parser.add_argument('-ligpflags',
             type=str,
             default="-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14",
             dest='ligprep_flags',
             help='Ligprep (Schrodinger) flags for ligand preparation. Default: "-W e,-ph,7.0,-pht,2.0 -epik -r 1 -bff 14"')
 
-        parser.add_argument('--noligp',
+        parser.add_argument('-noligp',
             dest='no_ligprep',
             action='store_true',
             default=False,
             help='No ligand preparation with ligprep')
 
-        parser.add_argument('--pwzdflags',
+        parser.add_argument('-pwzdflags',
             type=str,
             default="-fix -fillsidechains -pH \'neutral\'",
             dest='prepwizard_flags',
             help='Prepwizard (Schrodinger) flags for protein preparation. Default: "-fix -fillsidechains -pH \'neutral\'"')
 
-        parser.add_argument('--nopwzd',
+        parser.add_argument('-nopwzd',
             dest='no_prepwizard',
             action='store_true',
             default=False,
             help='No protein preparation with prepwizard')
 
-        parser.add_argument('--skip',
+        parser.add_argument('-skip',
             dest='skip',
             action='store_true',
             default=False,

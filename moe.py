@@ -129,14 +129,21 @@ ArgvReset ArgvExpand argv;
     local radius_bs = %(radius_bs)s; // radius of the binding site
     local residues_bs = []; // residues involved in binding site
 
-    local idx;
+    local idx, jdx;
     local com, dist;
+    local isinbox;
 
     local rec_bs = cat cResidues chains; // extract residues info
     for idx = 1, length rec_bs loop
         com = oCenterOfMass rec_bs(idx);
         dist = sqrt add pow[sub[center_bs, com], 2];
-        if dist < radius_bs then
+        isinbox = 1;
+        for jdx = 1, 3 loop
+            if abs(center_bs(jdx)-com(jdx)) > radius_bs then
+                isinbox = 0;
+            endif
+        endloop
+        if isinbox == 1 then
             residues_bs = append [residues_bs, rec_bs(idx)];
         endif
     endloop
