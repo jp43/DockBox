@@ -7,7 +7,7 @@ import subprocess
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
-default_settings = {'cpu': '1'}
+default_settings = {'cpu': '1', 'num_modes': '9'}
 
 class Vina(autodock.ADBased):
 
@@ -44,7 +44,7 @@ prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
-vina --config vina.config > vina.out"""% locals()
+vina --config --num_modes %(num_modes)s vina.config > vina.out"""% locals()
                 file.write(script)
         else:
             with open(filename, 'w') as file:
