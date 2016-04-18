@@ -3,7 +3,6 @@ from __future__ import with_statement
 
 import sys
 import os
-import subprocess
 import shutil
 import argparse
 import ConfigParser

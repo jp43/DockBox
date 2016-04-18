@@ -44,7 +44,7 @@ class DockingMethod(object):
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
             # running this script will run the docking procedure
-            subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
+            subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
 
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r)
@@ -84,7 +84,7 @@ class DockingMethod(object):
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
       
             # (B) run scoring method
-            subprocess.check_call("./" + script_name + " &> " + self.program + ".log", shell=True)       
+            subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
 
             # (C) extract docking results
             self.extract_rescoring_results('score.out')
@@ -145,9 +145,11 @@ class DockingMethod(object):
         for idx in range(n_mol2files):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
             if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
-                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+                #shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+                shutil.copyfile('minimz/'+mol2file, 'lig-%s.out.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
+        sys.exit()
         #shutil.rmtree('minimz')
 
     def write_rescoring_script(self, script_name, file_r, file_l):

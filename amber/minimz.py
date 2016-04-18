@@ -154,7 +154,7 @@ cat lig.pdb >> %(file_rl)s\n"""%locals()
         ff.write(script)
 
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
-    subprocess.check_call('./' + script_name, shell = True)
+    subprocess.check_output('./' + script_name, shell=True, executable='/bin/bash')
 
     os.remove(script_name)
 
@@ -247,18 +247,19 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
 def prepare_and_minimize(restraints, keep_hydrogens):
 
     # run tleap
-    subprocess.check_call('tleap -f leap.in > /dev/null',  shell=True)
+    subprocess.check_output('tleap -f leap.in > /dev/null', shell=True, executable='/bin/bash')
     shutil.copyfile('start.inpcrd', 'start.rst')
 
     prepare_minimization_config_file('min.in', restraints, keep_hydrogens)
 
     try:
         # run minimization
-        subprocess.check_call('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True)
+        subprocess.check_output('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True, executable='/bin/bash')
         # get output configuration
-        subprocess.check_call('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True)
-        status = 0
+        subprocess.check_output('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True, executable='/bin/bash')
+        status = 0 # minimization finished normaly
     except subprocess.CalledProcessError as e:
+        # the minimization failed
         status = e.returncode
 
     return status

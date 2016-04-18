@@ -94,14 +94,14 @@ PRECISION %(precision)s" > dock.in
 
         # cmd to extract results
         glide_sort_cmd = chkl.eval("glide_sort -r sort.rept dock_pv.maegz -o dock_sorted.mae", 'schrodinger', redirect='/dev/null')
-        subprocess.call(glide_sort_cmd, shell=True)
+        subprocess.check_output(glide_sort_cmd, shell=True, executable='/bin/bash')
 
         # convert to .mol2
         convert_cmd = chkl.eval("mol2convert -n 2: -imae dock_sorted.mae -omol2 dock_sorted.mol2", 'schrodinger', redirect='/dev/null')
-        subprocess.call(convert_cmd, shell=True)
+        subprocess.check_output(convert_cmd, shell=True, executable='/bin/bash')
 
         # create multiple files with babel
-        subprocess.check_call('babel -imol2 dock_sorted.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True)
+        subprocess.check_output('babel -imol2 dock_sorted.mol2 -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
 
         # extract scores
         with open('dock.rept', 'r') as ffin:

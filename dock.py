@@ -186,7 +186,7 @@ dock6 -i dock6.in"""% locals()
                         print >> ffout, line.split()[3]
 
         # create multiple files with babel
-        subprocess.check_call('babel -imol2 lig_out_scored.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True)
+        subprocess.check_call('babel -imol2 lig_out_scored.mol2 -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
 
     def cleanup(self):
         # remove map files

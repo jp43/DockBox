@@ -41,7 +41,7 @@ set -e
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
     # execute ligprep
-    subprocess.check_call('./' + script_name +" &> ligprep.log", shell=True)
+    subprocess.check_output('./' + script_name +" &> ligprep.log", shell=True, executable='/bin/bash')
 
     # cleanup directory
     for logf in glob.glob(suffix +'*.log'):
@@ -66,5 +66,5 @@ set -e
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-    subprocess.check_call('./' + script_name + " &> recprep.log", shell=True)
+    subprocess.check_output('./' + script_name + " &> recprep.log", shell=True, executable='/bin/bash')
     return os.path.abspath(new_file_r)

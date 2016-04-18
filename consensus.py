@@ -132,8 +132,8 @@ class ConsensusDocking(object):
                     pdbfout.write(line)
                     if line.startswith('ENDMDL'):
                         break
-        subprocess.call('antechamber -i lig.pdb -fi pdb -o lig.mol2 -fo mol2 -at gaff -du y -pf y > antchmb.log', shell=True)
-        subprocess.check_call('parmchk -i lig.mol2 -f mol2 -o lig.frcmod', shell=True)
+        subprocess.check_output('antechamber -i lig.pdb -fi pdb -o lig.mol2 -fo mol2 -at gaff -du y -pf y > antchmb.log', shell=True, executable='/bin/bash')
+        subprocess.check_output('parmchk -i lig.mol2 -f mol2 -o lig.frcmod', shell=True, executable='/bin/bash')
         os.chdir(curdir)
 
         # purge the rest of files 
@@ -170,7 +170,7 @@ class ConsensusDocking(object):
             file.write(script)
     
         # run tleap
-        subprocess.check_call('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
+        subprocess.check_output('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
         os.chdir(curdir)
     
     def run_cpptraj(self):
@@ -199,7 +199,7 @@ class ConsensusDocking(object):
     """% locals()
             file.write(script)
     
-        subprocess.check_call('cpptraj -i cpptraj.in > cpptraj.log', shell=True)
+        subprocess.check_output('cpptraj -i cpptraj.in > cpptraj.log', shell=True, executable='/bin/bash')
         os.chdir(curdir)
     
     def extract_results(self):

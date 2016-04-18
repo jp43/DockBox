@@ -30,7 +30,7 @@ class Moe(method.DockingMethod):
         self.write_moe_docking_script('moe_dock.svl')
     
         convertmol2_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
-db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand 
+db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
     
         dock_cmd = chkl.eval("moebatch -run moe_dock.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
     
@@ -235,15 +235,15 @@ endfunction;"""% locals()
     
     def extract_docking_results(self, file_s, input_file_r):
     
-        subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True)
+        subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
 
         # create multiple files with babel
-        subprocess.check_call('babel -imol2 lig.mol2 -omol2 lig-.mol2 -m &>/dev/null',shell=True) 
+        subprocess.check_output('babel -imol2 lig.mol2 -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
         os.remove('lig.mol2')
 
         # get SDF to extract scores
         sdffile = 'lig.sdf'
-        subprocess.check_call(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True)
+        subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
         with open(sdffile, 'r') as sdff:
             with open(file_s, 'w') as sf:
                 for line in sdff:

@@ -215,7 +215,7 @@ class PrepDocking(object):
 
         # generate multiple .mol2 files using babel
         output_mol2file_model = suffix + '_.mol2'
-        subprocess.check_call('babel %s %s -omol2 %s -m 2>/dev/null'%(input_format_flag,file_l,output_mol2file_model),shell=True)
+        subprocess.check_output('babel %s %s -omol2 %s -m 2>/dev/null'%(input_format_flag,file_l,output_mol2file_model), shell=True, executable='/bin/bash')
 
         output_mol2files = []
         for idx in range(len(glob.glob('*.mol2'))):
@@ -329,7 +329,7 @@ boxsize = %(boxsize_conf)s"""% locals()
         os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
         # (B) execute script
-        subprocess.check_call("./" + script_name + " &> sitefinder.log", shell=True, executable='/bin/bash')
+        subprocess.check_output("./" + script_name + " &> sitefinder.log", shell=True, executable='/bin/bash')
 
     def run(self):
         """Run Virtual Screening preparation"""

@@ -42,7 +42,7 @@ class Vina(autodock.ADBased):
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -C -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
@@ -71,7 +71,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
                         score = float(line[19:].split()[0])
                         print >> sf, score
 
-        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
+        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True, executable='/bin/bash')
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

@@ -28,7 +28,7 @@ class Autodock(ADBased):
         super(Autodock, self).__init__(name, site, options)
 
         # set box center
-        self.options['gridcenter'] = '\"' + ','.join(map(str.strip, site[1].split(','))) + '\"'
+        self.options['gridcenter'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"'
  
         # set box size
         boxsize = map(float, map(str.strip, site[2].split(',')))
@@ -76,7 +76,7 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run autogrid
@@ -97,7 +97,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi
@@ -132,7 +132,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         score = float(line.split()[8])
                         print >> sf, score
 
-        subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
+        subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null', shell=True, executable='/bin/bash')
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""
