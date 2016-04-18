@@ -7,7 +7,7 @@ import subprocess
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
-default_settings = {'cpu': '1', 'num_modes': '9'}
+default_settings = {'cpu': '1', 'num_modes': '9', 'energy_range': '3'}
 
 class Vina(autodock.ADBased):
 
@@ -25,6 +25,8 @@ class Vina(autodock.ADBased):
     def write_docking_script(self, filename, file_r, file_l, rescoring=False):
         """write docking script for Vina"""
 
+        locals().update(self.options)
+
         # write vina config file
         with open('vina.config', 'w') as cf:
             # write mandatory options
@@ -40,11 +42,11 @@ class Vina(autodock.ADBased):
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -C -B 'amide_guadinidium' -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -C -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
-vina --config --num_modes %(num_modes)s vina.config > vina.out"""% locals()
+vina --config vina.config > vina.out"""% locals()
                 file.write(script)
         else:
             with open(filename, 'w') as file:
@@ -69,7 +71,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
                         score = float(line[19:].split()[0])
                         print >> sf, score
 
-        subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
+        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True)
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

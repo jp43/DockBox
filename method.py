@@ -98,7 +98,8 @@ class DockingMethod(object):
         n_files_l = len(glob.glob('lig-*.mol2'))
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
-            files_l.append(mol2file)
+            if os.path.isfile(mol2file):
+                files_l.append(mol2file)
 
         center = map(float, self.site[1].split(','))
         boxsize = map(float, self.site[2].split(','))
@@ -143,7 +144,10 @@ class DockingMethod(object):
         # extract results from minimization and purge out
         for idx in range(n_mol2files):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
-            shutil.copyfile('minimz/' + mol2file, 'lig-%s.mol2'%(idx+1))
+            if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
+                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+            else: # the minimization failed
+                os.remove('lig-%s.mol2'%(idx+1))
         #shutil.rmtree('minimz')
 
     def write_rescoring_script(self, script_name, file_r, file_l):

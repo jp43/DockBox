@@ -1,4 +1,4 @@
-#!/global/software/python-2.7.2/bin/python
+#!/usr/bin/python
 
 import prepvs as pv
 

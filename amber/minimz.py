@@ -252,11 +252,16 @@ def prepare_and_minimize(restraints, keep_hydrogens):
 
     prepare_minimization_config_file('min.in', restraints, keep_hydrogens)
 
-    # run minimization
-    subprocess.check_call('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True)
+    try:
+        # run minimization
+        subprocess.check_call('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True)
+        # get output configuration
+        subprocess.check_call('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True)
+        status = 0
+    except subprocess.CalledProcessError as e:
+        status = e.returncode
 
-    # get output configuration
-    subprocess.check_call('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True)
+    return status
 
 def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
 
@@ -267,23 +272,24 @@ def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
         for idx, file_l in enumerate(files_l):
             # prepare ligand
             prepare_ligand(file_r, file_l, file_rl)
-            prepare_and_minimize(restraints, keep_hydrogens)
+            status = prepare_and_minimize(restraints, keep_hydrogens)
 
-            is_ligand = False
-            # get ligand atom positions from complex file
-            with open('complex_out.pdb', 'r') as cf:
-                with open('rec-%s.out.pdb'%(idx+1), 'w') as recf:
-                    with open('lig.out.pdb', 'w') as tmpf:
-                        for line in cf:
-                            if line.startswith(('ATOM', 'HETATM')):
-                                if line[17:20] in ['UNK', 'UNL', 'LIG']:
-                                    is_ligand = True
-                            if is_ligand:
-                                tmpf.write(line)
-                            else:
-                                recf.write(line)
+            if status == 0:
+                is_ligand = False
+                # get ligand atom positions from complex file
+                with open('complex_out.pdb', 'r') as cf:
+                    with open('rec-%s.out.pdb'%(idx+1), 'w') as recf:
+                        with open('lig.out.pdb', 'w') as tmpf:
+                            for line in cf:
+                                if line.startswith(('ATOM', 'HETATM')):
+                                    if line[17:20] in ['UNK', 'UNL', 'LIG']:
+                                        is_ligand = True
+                                if is_ligand:
+                                    tmpf.write(line)
+                                else:
+                                    recf.write(line)
 
-            mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
+                mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
     else:
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')

@@ -24,6 +24,7 @@ def give_unique_atom_names(file_l):
 
         known_atom_types = []
         atom_numbers = []
+        is_first_atom = True
 
         for line in oldf:
             if line.startswith('@<TRIPOS>ATOM'):
@@ -33,7 +34,11 @@ def give_unique_atom_names(file_l):
                 is_structure = False
                 newf.write(line)
             elif is_structure:
-                line_s = line.split()
+                line_s = line.split(None, 2)
+                if is_first_atom:
+                    n_end_of_line = len(line_s[2])
+                    is_first_atom = False
+                n_extra_white_spaces = max(0,len(line_s[2])-n_end_of_line)
                 atom = line_s[1]
                 atom_type = ''.join([ch for ch in atom if not ch.isdigit()])
                 if atom_type not in known_atom_types:
@@ -46,7 +51,7 @@ def give_unique_atom_names(file_l):
                     atom_numbers[idx] += 1
                 new_atom_type = atom_type+atom_number
                 newline = ' '*(7-len(line_s[0])) + line_s[0] + 2 * ' ' + new_atom_type + \
-' '*(10-len(new_atom_type)) + line[19:]
+' '*(10-len(new_atom_type)-n_extra_white_spaces) + line_s[2]
                 newf.write(newline)
             else:
                 newf.write(line)
@@ -102,13 +107,15 @@ from the pdbfile whose atom names match with the ones in the sample
     new_atom_lines_mol2 = []
     for line_mol2 in atom_lines_mol2:
         newline = line_mol2
-        atom_name_mol2 = line_mol2.split()[1]        
+        line_mol2_start = line_mol2.rsplit(None, 7)[0]
+        line_mol2_end = line_mol2.split(None, 5)[5]
+        atom_name_mol2 = line_mol2.split()[1].lower()
         for line_pdb in atom_lines_pdb:
-            atom_name_pdb = line_pdb[12:16].strip()
+            atom_name_pdb = line_pdb[12:16].strip().lower()
             if atom_name_pdb == atom_name_mol2:
                 coords = [coord + '0' for coord in line_pdb[30:54].split()]
-                newline = line_mol2[:16] + ' '*(10-len(coords[0])) + str(coords[0]) + \
-' '*(10-len(coords[1])) + str(coords[1]) + ' '*(10-len(coords[2])) + str(coords[2]) + line_mol2[46:] 
+                newline = line_mol2_start + ' '*(10-len(atom_name_mol2)) + ' '*(10-len(coords[0])) + str(coords[0]) + \
+' '*(10-len(coords[1])) + str(coords[1]) + ' '*(10-len(coords[2])) + str(coords[2]) + ' ' + line_mol2_end
         new_atom_lines_mol2.append(newline)
 
     idx = 0
