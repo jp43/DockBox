@@ -145,11 +145,10 @@ class DockingMethod(object):
         for idx in range(n_mol2files):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
             if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
-                #shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
-                shutil.copyfile('minimz/'+mol2file, 'lig-%s.out.mol2'%(idx+1))
+                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+                #shutil.copyfile('minimz/'+mol2file, 'lig-%s.out.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
-        sys.exit()
         #shutil.rmtree('minimz')
 
     def write_rescoring_script(self, script_name, file_r, file_l):
