@@ -55,7 +55,6 @@ Make sure the program has been installed!'%(exe,program))
                        options[key] = value
 
                 self.instances.append((instance, program, options))
-
         else:
             raise ValueError("option program in section %s is required in config file!"%self.section)
 
@@ -100,7 +99,6 @@ Make sure the program has been installed!'%(exe,program))
                 raise ValueError("option %s should be yes or no!"%option)
         else:
             return default
-
 
 class MultiProgramScoring(MultiProgramTask):
 

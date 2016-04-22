@@ -54,7 +54,9 @@ vina --config vina.config > vina.out"""% locals()
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-prepare_receptor4.py -r %(file_r)s -o target.pdbqt
+if [ ! -f target.pdbqt ]; then
+  prepare_receptor4.py -r %(file_r)s -o target.pdbqt
+fi
 
 # run vina
 vina --score_only --config vina.config > vina.out"""% locals()

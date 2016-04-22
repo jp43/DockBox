@@ -4,7 +4,6 @@ import stat
 import shutil
 import subprocess
 
-import tools.PDB as pdbt
 import tools.mol2 as mol2t
 
 def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
@@ -55,18 +54,18 @@ def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False)
                 recf.write('TER\n')
 
     # prepare receptor
-    prepare_receptor(file_r, keep_hydrogens)
+    prepare_receptor('rec.pdb', file_r, keep_hydrogens)
 
     # amber minimization
     do_amber_minimization('rec.pdb', files_l, restraints, keep_hydrogens)
 
     os.chdir(curdir)
 
-def prepare_receptor(file_r, keep_hydrogens):
+def prepare_receptor(file_r_out, file_r, keep_hydrogens):
 
     # only keep atom lines
     with open(file_r, 'r') as tmpf:
-        with open('rec.pdb', 'w') as recf:
+        with open(file_r_out, 'w') as recf:
             for line in tmpf:
                 # check if non-hydrogen atom line
                 if line.startswith(('ATOM','TER')):
@@ -76,7 +75,8 @@ def prepare_receptor(file_r, keep_hydrogens):
                 recf.write('TER\n')
 
     # remove hydrogen with no name recognized by AMBER
-    correct_hydrogen_names('rec.pdb', keep_hydrogens)
+    correct_hydrogen_names(file_r_out, keep_hydrogens)
+
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
@@ -113,7 +113,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                     wf.write(line)
     #print '\n'.join(removed_lines)
     shutil.move('tmp.pdb', file_r)
-    print "Number of atom lines removed: %s" %nremoved
+    #print "Number of atom lines removed: %s" %nremoved
 
 def load_PROTON_INFO(filename):
 

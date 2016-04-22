@@ -18,7 +18,7 @@ def eval(cmd, prgm, redirect=None):
   %(cmd)s &> %(tmpfile)s
   status=`python %(exe)s %(prgm)s`
   if [ "$status" == "0" ]; then cat %(tmpfile)s %(redstr)s; rm -rf %(tmpfile)s; break; fi
-  sleep 120s
+  sleep 10s
 done"""% locals()
 
     return newcmd

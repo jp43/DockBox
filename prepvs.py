@@ -88,11 +88,17 @@ class PrepDocking(object):
             default=False,
             help='No protein preparation with prepwizard')
 
-        parser.add_argument('-skip',
-            dest='skip',
+        parser.add_argument('-create_folders',
+            dest='create_folders',
             action='store_true',
             default=False,
-            help='Skip protein and ligand preparation (used for debugging)')
+            help='Create folders with files only (used for debugging)')
+
+        parser.add_argument('-update_config_file',
+            dest='update_config_file',
+            action='store_true',
+            default=False,
+            help='Update config file only (used for debugging)')
 
         return parser
 
@@ -134,7 +140,7 @@ class PrepDocking(object):
 
     def prepare_vs(self, args):
         """Prepare files and directories for Virtual Screening"""
-        if args.skip:
+        if args.create_folders or args.update_config_file:
             # get ligand file names
             self.files_prep_l = []
             for idx in range(self.nfiles_l):
@@ -160,9 +166,9 @@ class PrepDocking(object):
                 ligdir = '.'
             else:
                 ligdir = 'lig' + str(idx+1)
-                if os.path.isdir(ligdir):
-                    shutil.rmtree(ligdir)
-                os.mkdir(ligdir)
+                if not args.update_config_file:
+                    shutil.rmtree(ligdir, ignore_errors=True)
+                    os.mkdir(ligdir)
 
             # (B) RECEPTOR level
             for jdx in range(self.nfiles_r):
@@ -171,9 +177,8 @@ class PrepDocking(object):
                     recdir += '/.'
                 else:
                     recdir += '/rec' + str(jdx+1)
-                    if os.path.isdir(recdir):
-                        shutil.rmtree(recdir)
-                    os.mkdir(recdir)
+                    if not args.update_config_file:
+                        os.mkdir(recdir)
 
                 # (C) ISOMER level
                 file_r = self.files_prep_r[jdx]
@@ -181,8 +186,8 @@ class PrepDocking(object):
                 for kdx, file_l in enumerate(self.files_prep_l[idx]):
                     suffix = os.path.splitext(file_l)[0]
                     isodir = recdir + '/isomer' + str(kdx+1)
-                    shutil.rmtree(isodir, ignore_errors=True)
-                    os.mkdir(isodir)
+                    if not args.update_config_file:
+                        os.mkdir(isodir)
                     if args.config_file:
                         if args.findsites:
                             table = np.loadtxt(recpdir+'/sitefinder.log')
@@ -194,13 +199,14 @@ class PrepDocking(object):
                         else:
                             # copy the config file in the directory
                             shutil.copyfile(args.config_file, isodir + '/config.ini')
-                    # copy the files for ligand and receptor in the corresponding dir
-                    shutil.copyfile(file_l, isodir + '/lig.mol2')
-                    shutil.copyfile(file_r, isodir +'/rec.pdb')
-                    # save locations of original files
-                    with open(isodir + '/vs.info', 'w') as ff:
-                        print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
-                        print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
+                    if not args.update_config_file:
+                        # copy the files for ligand and receptor in the corresponding dir
+                        shutil.copyfile(file_l, isodir + '/lig.mol2')
+                        shutil.copyfile(file_r, isodir +'/rec.pdb')
+                        # save locations of original files
+                        with open(isodir + '/vs.info', 'w') as ff:
+                            print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
+                            print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
         #self.cleanup()
 
     def generate_mol2_files(self, file_l, args):
@@ -291,7 +297,7 @@ class PrepDocking(object):
                         isdock = True
                     if docksection and line.startswith('[') and not line.startswith('[DOCKING]'): # new section has been reached
                         docksection = False
-                     # check if option line in section DOCKING
+                    # check if option line in section DOCKING
                     if line.strip().startswith('site') and docksection:
                         siteline = True
                     else:

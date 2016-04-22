@@ -3,4 +3,4 @@
 import rundock as rd
 
 if __name__ == '__main__':
-    rd.DockingWorker().run()
+    rd.Docking().run()

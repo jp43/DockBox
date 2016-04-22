@@ -37,7 +37,6 @@ db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create 
         # write script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
-set -e
 # convert .mol2 file to mdb
 %(convertmol2_cmd)s
 

@@ -90,6 +90,7 @@ class DockingMethod(object):
             self.extract_rescoring_results('score.out')
 
         os.chdir(curdir)
+        return scordir + '/score.out'
 
     def remove_out_of_range_poses(self, file_s):
         """Get rid off poses which were predicted outside the box"""
