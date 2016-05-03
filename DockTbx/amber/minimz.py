@@ -4,7 +4,7 @@ import stat
 import shutil
 import subprocess
 
-import tools.mol2 as mol2t
+from DockTbx.tools import mol2 as mol2t
 
 def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
     """

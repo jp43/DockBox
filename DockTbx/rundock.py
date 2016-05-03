@@ -9,8 +9,8 @@ import argparse
 import ConfigParser
 import time
 
-import multi
-import rescoring
+from DockTbx import multi
+from DockTbx import rescoring
 
 class DockingConfig(object):
 

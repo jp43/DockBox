@@ -5,7 +5,8 @@ import shutil
 import subprocess
 
 import method
-import licence.check as chkl
+
+from DockTbx.licence import check as chkl
 
 required_programs = ['moebatch']
 

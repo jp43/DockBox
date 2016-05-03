@@ -12,8 +12,8 @@ import time
 import glob
 import numpy as np
 
-from prep import ligprep
-import moe
+from DockTbx import moe
+from DockTbx.prep import ligprep
 
 class PrepDocking(object):
 

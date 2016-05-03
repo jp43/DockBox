@@ -29,7 +29,8 @@ class MultiProgramTask(object):
                 program = ''.join([c for c in instance if not c.isdigit()]) # get program's exact name
                 if program not in self.known_program_names:
                     raise ValueError("%s programs should be one of "%task.capitalize() + ", ".join(self.known_program_names))
-                __import__(program)
+                sys.modules[program] = __import__('DockTbx.'+program, fromlist=['a'])
+                #print '\n'.join(sys.modules.keys())
 
                 options = {}
                 # check if all needed executables are available

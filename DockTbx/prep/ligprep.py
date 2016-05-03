@@ -4,7 +4,8 @@ import shutil
 import stat
 import glob
 import subprocess
-import licence.check as chkl
+
+from DockTbx.licence import check as chkl
 
 def prepare_ligand(file_l, flags):
 

@@ -6,7 +6,8 @@ import numpy as np
 import subprocess
 import glob
 import time
-from amber import clustr
+
+from DockTbx.amber import clustr
 
 class DockAnalysis(object):
 

@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-import analysis as anl
+from DockTbx import analysis as anl
 
 if __name__ == '__main__':
     anl.DockAnalysis().run()

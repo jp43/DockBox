@@ -6,10 +6,10 @@ import glob
 import shutil
 import fileinput
 import method
+
 import numpy as np
 
-import tools.PDB as pdbt
-import tools.mol2 as mol2t
+from DockTbx.tools import mol2 as mol2t
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 

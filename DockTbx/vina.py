@@ -1,7 +1,7 @@
 import os
 import sys
 import glob
-import autodock
+from DockTbx import autodock
 import shutil
 import subprocess
 

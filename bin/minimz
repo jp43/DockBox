@@ -1,5 +1,4 @@
-import amber.minimz as mn
+#!/usr/bin/env python
 
-
-
+from DockTbx.amber import minimz as mn
 

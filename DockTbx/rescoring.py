@@ -2,8 +2,9 @@ import sys
 import os
 import shutil
 import time
-import multi
 import subprocess
+
+from DockTbx import multi
 
 class Rescoring(object):
 

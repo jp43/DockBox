@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-import prepvs as pv
+from DockTbx import prepvs as pv
 
 if __name__ == '__main__':
     pv.PrepDocking().run()
