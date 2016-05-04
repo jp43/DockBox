@@ -1,6 +1,18 @@
 import sys
 import shutil
 
+def get_ligand_name(filename):
+
+    with open(filename, 'r') as mol2f:
+        is_structure = False
+        for line in mol2f:
+            if line.startswith('@<TRIPOS>ATOM'):
+                is_structure = True
+            elif is_structure:
+                line = line.split()[7]
+                break
+    return line[0:3]
+
 def get_atoms_names(filename):
 
     atoms_names = []
@@ -73,14 +85,13 @@ def get_coordinates(filename):
                 coords.append(map(float,line_s[2:5]))
     return coords
 
-
 def update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None):
     """update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None)
 
-        Update the sample .mol2 file provided with the coordinates of the atoms 
+       Update the sample .mol2 file provided with the coordinates of the atoms 
 from the pdbfile whose atom names match with the ones in the sample
 
-!!!!!!WARNING: the function assumes unique atom names in both the pdb and mol2 files"""
+!!!!!WARNING: the function assumes unique atom names in both the pdb and mol2 files"""
 
     if not sample_mol2file:
         raise NotImplementedError("No .mol2 sample provided!")

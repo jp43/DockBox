@@ -139,7 +139,7 @@ class DockingMethod(object):
             mol2files.append(file_l)
 
         # do energy minimization on ligand hydrogens
-        mn.do_minimization(file_r, files_l=mol2files, restraints=":LIG", keep_hydrogens=True)
+        mn.do_minimization(file_r, files_l=mol2files, restraints=True, keep_hydrogens=True)
 
         # extract results from minimization and purge out
         for idx in range(n_mol2files):

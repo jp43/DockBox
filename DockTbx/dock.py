@@ -8,7 +8,7 @@ import method
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
-'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '10'}
+'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000' }
 
 class Dock(method.DockingMethod):
 
@@ -168,7 +168,7 @@ flex_drive_file $flexdfile
 ligand_outfile_prefix lig_out
 write_orientations no
 num_scored_conformers %(num_scored_conformers)s
-write_conformations yes
+write_conformations no
 cluster_conformations yes
 cluster_rmsd_threshold 2.0
 rank_ligands no" > dock6.in
@@ -201,7 +201,7 @@ dock6 -i dock6.in"""% locals()
         with open('shift_lig_coords.py', 'w') as file:
             script ="""import sys
 import numpy as np
-import tools.mol2 as mol2t
+from DockTbx.tools import mol2 as mol2t
 
 # read mol2 file
 mol2 = sys.argv[1]

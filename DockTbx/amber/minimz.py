@@ -6,7 +6,7 @@ import subprocess
 
 from DockTbx.tools import mol2 as mol2t
 
-def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
+def do_minimization(file_r, files_l=None, restraints=False, keep_hydrogens=False):
     """
     do_minimization(file_r, files_l=None, keep_hydrogens=False)
 
@@ -57,7 +57,7 @@ def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False)
     prepare_receptor('rec.pdb', file_r, keep_hydrogens)
 
     # amber minimization
-    do_amber_minimization('rec.pdb', files_l, restraints, keep_hydrogens)
+    do_amber_minimization('rec.pdb', files_l, restraints=restraints, keep_hydrogens=keep_hydrogens)
 
     os.chdir(curdir)
 
@@ -158,25 +158,25 @@ cat lig.pdb >> %(file_rl)s\n"""%locals()
 
     os.remove(script_name)
 
-def prepare_leap_config_file(script_name, file_r, files_l, file_rl, prmtop_file, inpcrd_file, pdbfile):
+def prepare_leap_config_file(script_name, file_r, files_l, file_rl, ligname=None):
 
     if files_l:
         with open(script_name, 'w') as leapf:
                 script ="""source leaprc.ff14SB
 source leaprc.gaff
-LIG = loadmol2 lig.mol2
+%(ligname)s = loadmol2 lig.mol2
 loadamberparams lig.frcmod
 p = loadPdb %(file_rl)s
-saveAmberParm p %(prmtop_file)s %(inpcrd_file)s
-savePdb p %(pdbfile)s
+saveAmberParm p start.prmtop start.inpcrd
+savePdb p start.pdb
 quit\n"""%locals()
                 leapf.write(script)
     else:
         with open(script_name, 'w') as leapf:
                 script ="""source leaprc.ff14SB
 p = loadPdb %(file_r)s
-saveAmberParm p %(prmtop_file)s %(inpcrd_file)s
-savePdb p %(pdbfile)s
+saveAmberParm p start.prmtop start.inpcrd
+savePdb p start.pdb
 quit\n"""%locals()
                 leapf.write(script)
 
@@ -216,7 +216,7 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
     constraints_line = ' | '.join([':%s@%s'%(line[22:26].strip(),line[12:16].strip()) for line in lines_added])
     #return constraints_line
 
-def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
+def prepare_minimization_config_file(script_name, restraints, keep_hydrogens, ligname=None):
 
 #    if keep_hydrogens:
 #        get_restraints_with_kept_hydrogens('complex.pdb', 'start.pdb')
@@ -226,7 +226,7 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
 # bellymask='(%(restraints)s)| %(constraints_line)s',"""%locals()
     if restraints:
         restraints_lines = """ibelly=1,
- bellymask='%(restraints)s',"""%locals()
+ bellymask=':%(ligname)s',"""%locals()
     else:
         restraints_lines = ""
 
@@ -244,13 +244,13 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
 &end\n"""%locals()
         minf.write(script)
 
-def prepare_and_minimize(restraints, keep_hydrogens):
+def prepare_and_minimize(restraints, keep_hydrogens, ligname=None):
 
     # run tleap
     subprocess.check_output('tleap -f leap.in > /dev/null', shell=True, executable='/bin/bash')
     shutil.copyfile('start.inpcrd', 'start.rst')
 
-    prepare_minimization_config_file('min.in', restraints, keep_hydrogens)
+    prepare_minimization_config_file('min.in', restraints, keep_hydrogens, ligname=ligname)
 
     try:
         # run minimization
@@ -264,16 +264,16 @@ def prepare_and_minimize(restraints, keep_hydrogens):
 
     return status
 
-def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
-
-    file_rl = 'complex.pdb'
-    prepare_leap_config_file('leap.in', file_r, files_l, file_rl, 'start.prmtop', 'start.inpcrd', 'start.pdb')
+def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=False):
 
     if files_l:
+        ligname = mol2t.get_ligand_name(files_l[0])
+        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb', ligname=ligname)
+
         for idx, file_l in enumerate(files_l):
             # prepare ligand
-            prepare_ligand(file_r, file_l, file_rl)
-            status = prepare_and_minimize(restraints, keep_hydrogens)
+            prepare_ligand(file_r, file_l, 'complex.pdb')
+            status = prepare_and_minimize(restraints, keep_hydrogens, ligname=ligname)
 
             if status == 0:
                 is_ligand = False
@@ -283,15 +283,17 @@ def do_amber_minimization(file_r, files_l, restraints, keep_hydrogens):
                         with open('lig.out.pdb', 'w') as tmpf:
                             for line in cf:
                                 if line.startswith(('ATOM', 'HETATM')):
-                                    if line[17:20] in ['UNK', 'UNL', 'LIG']:
+                                    if line[17:20] == ligname:
                                         is_ligand = True
                                 if is_ligand:
                                     tmpf.write(line)
                                 else:
                                     recf.write(line)
-
+                if not is_ligand:
+                    raise ValueError('Ligand not found in complex_out.pdb')
                 mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
     else:
+        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')
 

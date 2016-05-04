@@ -10,8 +10,8 @@ from DockTbx.licence import check as chkl
 
 required_programs = ['moebatch']
 
-default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250', 
-'scoring': 'London dG', 'maxpose': '10', 'gtest': '0.01', 'rescoring': 'London dG', 'binding_radius': '10000'}
+default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
+'maxpose': '10', 'gtest': '0.01', 'rescoring': 'London dG'}
 
 class Moe(method.DockingMethod):
 
@@ -23,8 +23,7 @@ class Moe(method.DockingMethod):
         self.options['center_bs'] = '[' + ', '.join(map(str.strip, site[1].split(','))) + ']'
 
         # set box size
-        self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
-        self.options['radius_bs'] = max(self.options['boxsize'])*1./2
+        self.options['boxsize_bs'] = '[' + ', '.join(map(str.strip, site[2].split(','))) + ']'
 
     def write_docking_script(self, filename, file_r, file_l):
    
@@ -126,7 +125,7 @@ ArgvReset ArgvExpand argv;
 
     // get residues involved in the binding site
     local center_bs = %(center_bs)s; // center for the binding site
-    local radius_bs = %(radius_bs)s; // radius of the binding site
+    local boxsize_bs = %(boxsize_bs)s; // size of the box for the binding site
     local residues_bs = []; // residues involved in binding site
 
     local idx, jdx;
@@ -139,7 +138,7 @@ ArgvReset ArgvExpand argv;
         dist = sqrt add pow[sub[center_bs, com], 2];
         isinbox = 1;
         for jdx = 1, 3 loop
-            if abs(center_bs(jdx)-com(jdx)) > radius_bs then
+            if abs(center_bs(jdx)-com(jdx)) > 0.5*boxsize_bs(jdx) then
                 isinbox = 0;
             endif
         endloop
@@ -149,7 +148,6 @@ ArgvReset ArgvExpand argv;
     endloop
 
     rec_bs = cat rAtoms residues_bs;
-
     View (Atoms[]);
 
     local alpha_sites = run['sitefind.svl', [rec_bs, []], 'AlphaSites'];

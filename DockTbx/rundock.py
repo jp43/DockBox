@@ -90,7 +90,10 @@ class Docking(object):
         for kdx in range(len(config_d.site)):
             bs = config_d.site['site'+str(kdx+1)] # current binding site
             for name, program, options in config_d.instances:
-                instdir = '%s'%name + '.'+bs[0]
+                # find name for docking directory
+                instdir = '%s'%name
+                if bs[0]:
+                    instdir += '.' + bs[0]                
                 poses_idxs = []
                 for filename in glob.glob(instdir+'/lig-*.mol2'):
                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
