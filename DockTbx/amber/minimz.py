@@ -80,7 +80,7 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
-    atoms_info = load_PROTON_INFO(os.path.dirname(os.path.abspath(__file__))+'/PROTON_INFO')
+    atoms_info = load_PROTON_INFO()
 
     nremoved = 0
     removed_lines = []
@@ -115,8 +115,9 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
     shutil.move('tmp.pdb', file_r)
     #print "Number of atom lines removed: %s" %nremoved
 
-def load_PROTON_INFO(filename):
+def load_PROTON_INFO():
 
+    filename = os.path.dirname(os.path.abspath(__file__))+'/PROTON_INFO'
     info = {}
 
     with open(filename) as ff:
@@ -136,6 +137,8 @@ def load_PROTON_INFO(filename):
                 info[resname].extend(line[15:].split())
             elif is_heavy_atom_line:
                 info[resname].extend(line_s)
+
+    info['NME'] = []
     return info
 
 def prepare_ligand(file_r, file_l, file_rl):
@@ -207,6 +210,7 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
             for jdx in lines_res[0][idx]:
                 #print lines[0][jdx], lines[1][kdx]
                 if lines[0][jdx][30:54] == lines[1][kdx][30:54]:
+                    is_added_after_tleap = False
                     is_added_after_tleap = False
             #print is_added_after_tleap
             if is_added_after_tleap:

@@ -14,6 +14,7 @@ import numpy as np
 
 from DockTbx import moe
 from DockTbx.prep import ligprep
+from DockTbx.amber import minimz as mn
 
 class PrepDocking(object):
 
@@ -88,17 +89,11 @@ class PrepDocking(object):
             default=False,
             help='No protein preparation with prepwizard')
 
-        parser.add_argument('-create_folders',
-            dest='create_folders',
+        parser.add_argument('-update',
+            dest='update',
             action='store_true',
             default=False,
-            help='Create folders with files only (used for debugging)')
-
-        parser.add_argument('-update_config_file',
-            dest='update_config_file',
-            action='store_true',
-            default=False,
-            help='Update config file only (used for debugging)')
+            help='Update directories and files only (used for debugging)')
 
         return parser
 
@@ -140,7 +135,8 @@ class PrepDocking(object):
 
     def prepare_vs(self, args):
         """Prepare files and directories for Virtual Screening"""
-        if args.create_folders or args.update_config_file:
+
+        if args.update:
             # get ligand file names
             self.files_prep_l = []
             for idx in range(self.nfiles_l):
@@ -162,54 +158,52 @@ class PrepDocking(object):
 
         # (A) LIGAND level
         for idx in range(self.nfiles_l):
-            if self.nfiles_l == 1 and not args.inplace:
+            if self.nfiles_l == 1 and args.inplace:
                 ligdir = '.'
             else:
                 ligdir = 'lig' + str(idx+1)
-                if not args.update_config_file:
-                    shutil.rmtree(ligdir, ignore_errors=True)
-                    os.mkdir(ligdir)
+                shutil.rmtree(ligdir, ignore_errors=True)
+                os.mkdir(ligdir)
 
             # (B) RECEPTOR level
             for jdx in range(self.nfiles_r):
                 recdir = ligdir
-                if self.nfiles_r == 1 and not args.inplace:
+                if self.nfiles_r == 1 and args.inplace:
                     recdir += '/.'
                 else:
                     recdir += '/rec' + str(jdx+1)
-                    if not args.update_config_file:
-                        os.mkdir(recdir)
-
+                    os.mkdir(recdir)
+                
                 # (C) ISOMER level
                 file_r = self.files_prep_r[jdx]
                 recpdir = 'rec-prep%s'%(jdx+1)
-                for kdx, file_l in enumerate(self.files_prep_l[idx]):
-                    suffix = os.path.splitext(file_l)[0]
-                    isodir = recdir + '/isomer' + str(kdx+1)
-                    if not args.update_config_file:
-                        os.mkdir(isodir)
-                    if args.config_file:
-                        if args.findsites:
-                            table = np.loadtxt(recpdir+'/sitefinder.log')
-                            if len(table.shape) == 1:
-                                table = table[np.newaxis,:]
-                            # TODO: include the size of the ligand to compute boxsize
-                            new_config_file = isodir + '/config.ini'
-                            self.update_site_config_file(new_config_file, args.config_file, table)
-                        else:
-                            # copy the config file in the directory
-                            shutil.copyfile(args.config_file, isodir + '/config.ini')
-                    if not args.update_config_file:
-                        # copy the files for ligand and receptor in the corresponding dir
-                        shutil.copyfile(file_l, isodir + '/lig.mol2')
-                        shutil.copyfile(file_r, isodir +'/rec.pdb')
-                        # save locations of original files
-                        with open(isodir + '/vs.info', 'w') as ff:
-                            print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
-                            print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
-        #self.cleanup()
 
-    def generate_mol2_files(self, file_l, args):
+                for kdx, file_l in enumerate(self.files_prep_l[idx]):
+                    # define directory name for isomer
+                    isodir = recdir
+                    if len(self.files_prep_l[idx]) == 1 and args.inplace:
+                        isodir += '/.'
+                    else:
+                        isodir += '/isomer' + str(kdx+1)
+                        os.mkdir(isodir)
+
+                    # update config file
+                    table = None
+                    if args.findsites:
+                        table = np.loadtxt(recpdir+'/sitefinder.log')
+                        if len(table.shape) == 1:
+                            table = table[np.newaxis,:]
+                    self.update_site_config_file(args.config_file, isodir, sitetable=table)
+
+                    # copy the files for ligand and receptor in the corresponding dir
+                    shutil.copyfile(file_l, isodir + '/lig.mol2')
+                    shutil.copyfile(file_r, isodir +'/rec.pdb')
+                    # save locations of original files
+                    with open(isodir + '/vs.info', 'w') as ff:
+                        print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
+                        print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
+
+    def generate_mol2file(self, file_l, args):
 
         suffix, ext = os.path.splitext(file_l)
         if ext == '.sdf':
@@ -231,103 +225,128 @@ class PrepDocking(object):
     def prepare_structures(self, args):
 
         curdir = os.getcwd()
+
         print "Preparing ligands..."
         self.files_prep_l = []
+
         for idx, file_l in enumerate(self.input_file_l):
             # create new directory
             ligpdir = 'lig-prep' + str(idx+1)
             shutil.rmtree(ligpdir, ignore_errors=True)
             os.mkdir(ligpdir)
             os.chdir(ligpdir) # change directory
+
             # (A) Run Schrodinger's ligprep
             if not args.no_ligprep:
                 new_file_l = ligprep.prepare_ligand(file_l, args.ligprep_flags)
             else:
                 new_file_l = os.path.basename(file_l)
                 shutil.copyfile(file_l, new_file_l)
-            # (B) Generate mol2files using babel
-            mol2files = self.generate_mol2_files(new_file_l, args)
+
+            # (B) Generate mol2file using babel
+            mol2files = self.generate_mol2file(new_file_l, args)
             self.files_prep_l.append(mol2files)
             os.chdir(curdir)
 
         print "Preparing receptors..."
         self.files_prep_r = []
+
         for idx, file_r in enumerate(self.input_file_r):
             recpdir = 'rec-prep' + str(idx+1)
             shutil.rmtree(recpdir, ignore_errors=True)
             os.mkdir(recpdir)
             os.chdir(recpdir)
-            # (A) Run Schrodinger's Prepwizard
+
+            # (A) clean-up PDBfile
+            removed_residues = []
+            new_file_r = os.path.basename(file_r)
+            atoms_info = mn.load_PROTON_INFO()
+            with open(file_r, 'r') as pdbi:
+                with open(new_file_r, 'w') as pdbo:
+                    for line in pdbi:
+                        if line.startswith('ATOM'):
+                            resname = line[17:20]
+                            if resname in atoms_info:
+                                pdbo.write(line)
+                            elif resname not in removed_residues:
+                                removed_residues.append(resname)
+                                print "Removed unknown residue %s"%line[17:20]
+
+            # (B) Run Schrodinger's Prepwizard
             if not args.no_prepwizard:
-                new_file_r = ligprep.prepare_receptor(file_r, args.prepwizard_flags)
-            else:
-                new_file_r = os.path.basename(file_r)
-                shutil.copyfile(file_r, new_file_r)
-            # (B) Run MOE's site finder
+                new_file_r = ligprep.prepare_receptor(new_file_r, args.prepwizard_flags)
+
+            # (C) Run MOE's site finder
             if args.findsites:
                 self.find_binding_sites(new_file_r, args)
+
             self.files_prep_r.append(os.path.abspath(new_file_r))
             os.chdir(curdir)
 
-    def update_site_config_file(self, new_config_file, config_file, table):
+    def update_site_config_file(self, config_file, dir, sitetable=None):
         """Update the config file provided to """
 
-        shutil.copyfile(config_file, new_config_file)
+        new_config_file = dir + '/config.ini'
 
-        # create tmp config file name from original config file
-        tmp_config_file = list(os.path.splitext(new_config_file))
-        tmp_config_file.insert(1,'_tmp')
-        tmp_config_file = ''.join(tmp_config_file)
+        if sitetable:
 
-        # remove section 'SITE' and option site in DOCKING section of config file if exists
-        with open(tmp_config_file, 'w') as tmpf:
-            with open(new_config_file, 'r') as newf:
-                isdock = False
-                sitesection = False
-                docksection = False
-                for line in newf:
-                    # check if still in section SITE*
-                    if line.startswith(('[SITE','[LIGPREP]')):
-                        sitesection = True
-                    if sitesection and line.startswith('[') and not line.startswith(('[SITE','[LIGPREP]')): # new section has been reached
-                        sitesection = False
-                    # check if still in section DOCKING
-                    if line.startswith('[DOCKING]'):
-                        docksection = True
-                        isdock = True
-                    if docksection and line.startswith('[') and not line.startswith('[DOCKING]'): # new section has been reached
-                        docksection = False
-                    # check if option line in section DOCKING
-                    if line.strip().startswith('site') and docksection:
-                        siteline = True
-                    else:
-                        siteline = False
-                    if not sitesection and not siteline:
+            # create tmp config file name from original config file
+            tmp_config_file = list(os.path.splitext(new_config_file))
+            tmp_config_file.insert(1,'_tmp')
+            tmp_config_file = ''.join(tmp_config_file)
+
+            # remove section 'SITE' and option site in DOCKING section of config file if exists
+            with open(tmp_config_file, 'w') as tmpf:
+                with open(config_file, 'r') as newf:
+                    isdock = False
+                    sitesection = False
+                    docksection = False
+                    for line in newf:
+                        # check if still in section SITE*
+                        if line.startswith('[SITE'):
+                            sitesection = True
+                        if sitesection and line.startswith('[') and not line.startswith('[SITE'): # new section has been reached
+                            sitesection = False
+                        # check if still in section DOCKING
+                        if line.startswith('[DOCKING]'):
+                            docksection = True
+                            isdock = True
+                        if docksection and line.startswith('[') and not line.startswith('[DOCKING]'): # new section has been reached
+                            docksection = False
+                        # check if option line in section DOCKING
+                        if line.strip().startswith('site') and docksection:
+                            siteline = True
+                        else:
+                            siteline = False
+                        if not sitesection and not siteline:
+                            tmpf.write(line)
+            shutil.move(tmp_config_file, new_config_file)
+ 
+            # add new sections 'SITE' and option site
+            with open(tmp_config_file, 'w') as tmpf:
+                with open(new_config_file, 'r') as newf:
+                    for line in newf:
                         tmpf.write(line)
-        shutil.move(tmp_config_file, new_config_file)
-
-        # add new sections 'SITE' and option site
-        with open(tmp_config_file, 'w') as tmpf:
-            with open(new_config_file, 'r') as newf:
-                for line in newf:
-                    tmpf.write(line)
-                    if line.startswith('[DOCKING]'):
-                        tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in table])+'\n')
-                for line in table:
-                    section = 'SITE' + str(int(line[0]))
-                    center_conf = ', '.join(map(str, line[2:5].tolist()))
-                    boxsize_conf = ', '.join(map(str, [2*line[5] for idx in range(3)]))
-                    newsite_section = """
+                        if line.startswith('[DOCKING]'):
+                            tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in table])+'\n')
+                    for line in table:
+                        section = 'SITE' + str(int(line[0]))
+                        center_conf = ', '.join(map(str, line[2:5].tolist()))
+                        boxsize_conf = ', '.join(map(str, [2*line[5] for idx in range(3)]))
+                        newsite_section = """
 [%(section)s]
 center = %(center_conf)s
 boxsize = %(boxsize_conf)s"""% locals()
 
-                    tmpf.write(newsite_section+'\n')
-
-        shutil.move(tmp_config_file, new_config_file)
+                        tmpf.write(newsite_section+'\n')
+            shutil.move(tmp_config_file, new_config_file)
+        else:
+            # check workdir is curdir
+            if not os.path.abspath(dir) == os.getcwd():
+                shutil.copyfile(config_file, new_config_file)
 
     def find_binding_sites(self, pdbfile, args):
-        """Write and execute MOE script to locate the possible binding sites"""
+        """Write and execute MOE script to localize possible binding sites"""
 
         # (A) write script
         script_name = 'find_binding_sites.sh'
