@@ -288,8 +288,7 @@ class PrepDocking(object):
 
         new_config_file = dir + '/config.ini'
 
-        if sitetable:
-
+        if sitetable is not None:
             # create tmp config file name from original config file
             tmp_config_file = list(os.path.splitext(new_config_file))
             tmp_config_file.insert(1,'_tmp')
@@ -328,8 +327,8 @@ class PrepDocking(object):
                     for line in newf:
                         tmpf.write(line)
                         if line.startswith('[DOCKING]'):
-                            tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in table])+'\n')
-                    for line in table:
+                            tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in sitetable])+'\n')
+                    for line in sitetable:
                         section = 'SITE' + str(int(line[0]))
                         center_conf = ', '.join(map(str, line[2:5].tolist()))
                         boxsize_conf = ', '.join(map(str, [2*line[5] for idx in range(3)]))

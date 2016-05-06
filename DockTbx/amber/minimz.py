@@ -94,7 +94,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                     if atom_name[0].isdigit():
                         atom_name = atom_name[1:] + atom_name[0]
                     if atom_name[0] == 'H':
-                        is_hydrogen_known = (atom_name in atoms_info[resname]) or (atom_name == 'H')
+                        is_hydrogen_known = atom_name in atoms_info[resname]
                         if keep_hydrogens and not is_hydrogen_known:
                             remove_line = True
                             removed_lines.append(line)
@@ -137,6 +137,11 @@ def load_PROTON_INFO():
                 info[resname].extend(line[15:].split())
             elif is_heavy_atom_line:
                 info[resname].extend(line_s)
+
+    no_h_residues = ['PRO']
+    for resname in info:
+        if resname not in no_h_residues:
+            info[resname].append('H')
 
     info['NME'] = []
     return info
