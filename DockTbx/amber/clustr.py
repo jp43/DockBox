@@ -4,8 +4,8 @@ import stat
 import shutil
 import subprocess
 
-import amber.minimz as mn
-import tools.mol2 as mol2t
+from DockTbx.amber import minimz as mn
+from DockTbx.tools import mol2 as mol2t
 
 def do_clustering(files_r, files_l, cutoff=2.0):
     """
