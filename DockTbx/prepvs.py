@@ -302,6 +302,8 @@ class PrepDocking(object):
                             elif resname not in removed_residues:
                                 removed_residues.append(resname)
                                 print "Removed unknown residue %s"%line[17:20]
+                        elif line.startswith(('TER','END')):
+                            pdbo.write(line)
 
             # (B) Run Schrodinger's Prepwizard
             if not args.no_prepwizard:

@@ -98,6 +98,13 @@ cat lig.pdb >> %(file_rl)s\n"""%locals()
 
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
     subprocess.check_output('./' + script_name, shell=True, executable='/bin/bash')
+
+    with open('lig.pdb', 'r') as ligf:
+        with open(file_r, 'a') as cmplxf:
+            for line in ligf:
+                if line.startswith(('ATOM','HETATM','TER')):
+                    cmplxf.write(line)
+
     os.remove(script_name)
 
 def prepare_leap_config_file(filename, file_r, files_l, files_rl):

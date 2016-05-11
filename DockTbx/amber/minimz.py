@@ -58,7 +58,6 @@ def do_minimization(file_r, files_l=None, restraints=False, keep_hydrogens=False
 
     # amber minimization
     do_amber_minimization('rec.pdb', files_l, restraints=restraints, keep_hydrogens=keep_hydrogens)
-
     os.chdir(curdir)
 
 def prepare_receptor(file_r_out, file_r, keep_hydrogens):
@@ -77,9 +76,9 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
     # remove hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens)
 
-
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
+    chainIDs = []
     atoms_info = load_PROTON_INFO()
 
     nremoved = 0
@@ -88,13 +87,30 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
         with open('tmp.pdb', 'w') as wf:
             for line in rf:
                 remove_line = False
+
                 if line.startswith('ATOM'): # atom line
                     resname = line[17:20].strip()
                     atom_name = line[12:16].strip()
+                    chainID = line[21:22]
+                    resnum = line[22:26].strip()
+
+                    # check if N-terminal
+                    if chainID not in chainIDs:
+                        chainIDs.append(chainID)
+                        is_nterminal = True
+                        resnum_prev = resnum
+                    else:
+                        if resnum_prev != resnum:
+                            is_nterminal = False
+
+                    # atom (if atom name starts with a digit, correct it)
                     if atom_name[0].isdigit():
                         atom_name = atom_name[1:] + atom_name[0]
+
+                    # check if hydrogen should be removed
                     if atom_name[0] == 'H':
-                        is_hydrogen_known = atom_name in atoms_info[resname]
+                        is_hydrogen_from_nterminal = is_nterminal and atom_name == 'H'
+                        is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
                         if keep_hydrogens and not is_hydrogen_known:
                             remove_line = True
                             removed_lines.append(line)
@@ -103,12 +119,14 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                         elif not keep_hydrogens:
                             remove_line = True
                             nremoved += 1
+                    # check if non-hydrogen atom should be removed
                     else:
                         is_atom_known = atom_name in atoms_info[resname]
                         if not is_atom_known:
                             remove_line = True
                             removed_lines.append(line)
                             nremoved += 1
+
                 if not remove_line:
                     wf.write(line)
     #print '\n'.join(removed_lines)
@@ -117,7 +135,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
 
 def load_PROTON_INFO():
 
-    filename = os.path.dirname(os.path.abspath(__file__))+'/PROTON_INFO'
+    filename = os.path.dirname(os.path.abspath(__file__)) + '/PROTON_INFO'
     info = {}
 
     with open(filename) as ff:
@@ -138,7 +156,7 @@ def load_PROTON_INFO():
             elif is_heavy_atom_line:
                 info[resname].extend(line_s)
 
-    no_h_residues = ['PRO']
+    no_h_residues = []
     for resname in info:
         if resname not in no_h_residues:
             info[resname].append('H')
@@ -147,6 +165,7 @@ def load_PROTON_INFO():
     return info
 
 def prepare_ligand(file_r, file_l, file_rl):
+
 
     script_name = 'prepare_ligand.sh'
     with open(script_name, 'w') as ff:
@@ -166,13 +185,13 @@ cat lig.pdb >> %(file_rl)s\n"""%locals()
 
     os.remove(script_name)
 
-def prepare_leap_config_file(script_name, file_r, files_l, file_rl, ligname=None):
+def prepare_leap_config_file(script_name, file_r, files_l, file_rl):
 
     if files_l:
         with open(script_name, 'w') as leapf:
                 script ="""source leaprc.ff14SB
 source leaprc.gaff
-%(ligname)s = loadmol2 lig.mol2
+LIG = loadmol2 lig.mol2
 loadamberparams lig.frcmod
 p = loadPdb %(file_rl)s
 saveAmberParm p start.prmtop start.inpcrd
@@ -225,7 +244,7 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
     constraints_line = ' | '.join([':%s@%s'%(line[22:26].strip(),line[12:16].strip()) for line in lines_added])
     #return constraints_line
 
-def prepare_minimization_config_file(script_name, restraints, keep_hydrogens, ligname=None):
+def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
 
 #    if keep_hydrogens:
 #        get_restraints_with_kept_hydrogens('complex.pdb', 'start.pdb')
@@ -235,7 +254,7 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens, li
 # bellymask='(%(restraints)s)| %(constraints_line)s',"""%locals()
     if restraints:
         restraints_lines = """ibelly=1,
- bellymask=':%(ligname)s',"""%locals()
+ bellymask=':LIG',"""%locals()
     else:
         restraints_lines = ""
 
@@ -253,17 +272,18 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens, li
 &end\n"""%locals()
         minf.write(script)
 
-def prepare_and_minimize(restraints, keep_hydrogens, ligname=None):
+def prepare_and_minimize(restraints, keep_hydrogens):
 
     # run tleap
     subprocess.check_output('tleap -f leap.in > /dev/null', shell=True, executable='/bin/bash')
     shutil.copyfile('start.inpcrd', 'start.rst')
 
-    prepare_minimization_config_file('min.in', restraints, keep_hydrogens, ligname=ligname)
+    prepare_minimization_config_file('min.in', restraints, keep_hydrogens)
 
     try:
         # run minimization
         subprocess.check_output('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True, executable='/bin/bash')
+
         # get output configuration
         subprocess.check_output('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True, executable='/bin/bash')
         status = 0 # minimization finished normaly
@@ -276,13 +296,15 @@ def prepare_and_minimize(restraints, keep_hydrogens, ligname=None):
 def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=False):
 
     if files_l:
-        ligname = mol2t.get_ligand_name(files_l[0])
-        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb', ligname=ligname)
-
+        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         for idx, file_l in enumerate(files_l):
+            # change ligand name to LIG
+            ligname = mol2t.get_ligand_name(file_l)
+            mol2t.change_ligand_name(file_l, 'LIG')
+
             # prepare ligand
             prepare_ligand(file_r, file_l, 'complex.pdb')
-            status = prepare_and_minimize(restraints, keep_hydrogens, ligname=ligname)
+            status = prepare_and_minimize(restraints, keep_hydrogens)
 
             if status == 0:
                 is_ligand = False
@@ -292,7 +314,7 @@ def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=Fals
                         with open('lig.out.pdb', 'w') as tmpf:
                             for line in cf:
                                 if line.startswith(('ATOM', 'HETATM')):
-                                    if line[17:20] == ligname:
+                                    if line[17:20] == 'LIG':
                                         is_ligand = True
                                 if is_ligand:
                                     tmpf.write(line)
@@ -301,8 +323,8 @@ def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=Fals
                 if not is_ligand:
                     raise ValueError('Ligand not found in complex_out.pdb')
                 mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
+                mol2t.change_ligand_name('lig-%s.out.mol2'%(idx+1), ligname)
     else:
         prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')
-

@@ -70,6 +70,33 @@ def give_unique_atom_names(file_l):
 
     shutil.move(tmpfile, file_l)
 
+def change_ligand_name(file_l, newligname):
+
+    tmpfile = 'tmp.mol2'
+    with open(file_l, 'r') as oldf:
+        newf = open(tmpfile, 'w')
+
+        known_atom_types = []
+        atom_numbers = []
+        is_first_atom = True
+
+        for line in oldf:
+            if line.startswith('@<TRIPOS>ATOM'):
+                is_structure = True
+                newf.write(line)
+            elif line.startswith('@<TRIPOS>'):
+                is_structure = False
+                newf.write(line)
+            elif is_structure:
+                line_s = line.rsplit(None, 2)
+                ligname = line_s[-2]
+                newline = line.replace(ligname,newligname)
+                newf.write(newline)
+            else:
+                newf.write(line)
+
+    shutil.move(tmpfile, file_l)
+
 def get_coordinates(filename):
 
     coords = []
@@ -89,9 +116,8 @@ def update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None):
     """update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None)
 
        Update the sample .mol2 file provided with the coordinates of the atoms 
-from the pdbfile whose atom names match with the ones in the sample
-
-!!!!!WARNING: the function assumes unique atom names in both the pdb and mol2 files"""
+from the pdbfile whose atom names match with the ones in the sample (the 
+function assumes unique atom names in both the pdb and mol2 files)"""
 
     if not sample_mol2file:
         raise NotImplementedError("No .mol2 sample provided!")
