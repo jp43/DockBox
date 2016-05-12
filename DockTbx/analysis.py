@@ -114,6 +114,7 @@ class DockAnalysis(object):
         heterg = []
         population = []
         instances_clusters = []
+        poses = []
 
         ff = open(filename)
         for line in ff:
@@ -122,6 +123,7 @@ class DockAnalysis(object):
                 # indices = numbers of the poses involved in the current cluster
                 indices = [i for i, x in enumerate(line.strip()) if x == 'X']
                 population.append(len(indices))
+                poses.append([idx + 1 for idx in indices])
                 instances = np.array(self.instances_l)[indices].tolist()
                 if self.scores:
                     avg = 0
@@ -146,7 +148,8 @@ class DockAnalysis(object):
                 ff.write("Cluster #%i \n"%(idx+1))
                 ff.write("Poses predicted by " + ', '.join(instances_clusters[idx]) + '\n')
                 ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
-                ff.write("Representative pose: %i\n\n"%poses_clustrs_idxs[idx])
+                ff.write("Representative pose: %i\n"%poses_clustrs_idxs[idx])
+                ff.write("Poses: %s\n\n"%(', '.join(map(str, poses[idx]))))
 
         # Option 1
         #best_score = 0
