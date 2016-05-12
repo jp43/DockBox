@@ -129,17 +129,15 @@ class DockingMethod(object):
     def minimize_extracted_poses(self, file_r):
         """Perform AMBER minimization on extracted poses"""
 
-        # number of mol2 files generated
-        n_mol2files = len(glob.glob('lig-*.mol2'))
-
-        mol2files = []
-        for idx in range(n_mol2files):
-            file_l = 'lig-%s.mol2'%(idx+1)
-            mol2t.give_unique_atom_names(file_l)
-            mol2files.append(file_l)
+        files_l = []
+        n_files_l = len(glob.glob('lig-*.mol2'))
+        for idx in range(n_files_l):
+            mol2file = 'lig-%s.mol2'%(idx+1)
+            if os.path.isfile(mol2file):
+                files_l.append(mol2file)
 
         # do energy minimization on ligand hydrogens
-        mn.do_minimization(file_r, files_l=mol2files, restraints=True, keep_hydrogens=True)
+        mn.do_minimization(file_r, files_l=files_l, restraints=True, keep_hydrogens=True)
 
         # extract results from minimization and purge out
         for idx in range(n_mol2files):

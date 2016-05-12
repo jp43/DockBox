@@ -73,7 +73,8 @@ vina --score_only --config vina.config > vina.out"""% locals()
                         score = float(line[19:].split()[0])
                         print >> sf, score
 
-        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -h &>/dev/null',shell=True, executable='/bin/bash')
+        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -d -h &>/dev/null',shell=True, executable='/bin/bash')
+        self.give_unique_hydrogen_names_to_output_structures()
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

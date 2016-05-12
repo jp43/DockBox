@@ -28,15 +28,16 @@ def get_atoms_names(filename):
                 atoms_names.append(line_s[1])
     return atoms_names
 
-def give_unique_atom_names(file_l):
+def give_unique_atom_names(file_l, mask=None):
 
     tmpfile = 'tmp.mol2'
     with open(file_l, 'r') as oldf:
         newf = open(tmpfile, 'w')
 
-        known_atom_types = []
+        known_atom_names = []
         atom_numbers = []
         is_first_atom = True
+        is_structure = False
 
         for line in oldf:
             if line.startswith('@<TRIPOS>ATOM'):
@@ -46,24 +47,28 @@ def give_unique_atom_names(file_l):
                 is_structure = False
                 newf.write(line)
             elif is_structure:
+                line_rs = line.rsplit(None, 4)
                 line_s = line.split(None, 2)
                 if is_first_atom:
                     n_end_of_line = len(line_s[2])
                     is_first_atom = False
                 n_extra_white_spaces = max(0,len(line_s[2])-n_end_of_line)
-                atom = line_s[1]
-                atom_type = ''.join([ch for ch in atom if not ch.isdigit()])
-                if atom_type not in known_atom_types:
-                    known_atom_types.append(atom_type)
-                    atom_number = '1'
-                    atom_numbers.append(1)
+                if mask and not line_rs[-4].strip() in mask:
+                    new_atom_name = line_s[1]    
                 else:
-                    idx = known_atom_types.index(atom_type)
-                    atom_number = str(atom_numbers[idx]+1)
-                    atom_numbers[idx] += 1
-                new_atom_type = atom_type+atom_number
-                newline = ' '*(7-len(line_s[0])) + line_s[0] + 2 * ' ' + new_atom_type + \
-' '*(10-len(new_atom_type)-n_extra_white_spaces) + line_s[2]
+                    atom = line_s[1]
+                    atom_name = ''.join([ch for ch in atom if not ch.isdigit()])
+                    if atom_name not in known_atom_names:
+                        known_atom_names.append(atom_name)
+                        atom_number = '1'
+                        atom_numbers.append(1)
+                    else:
+                        idx = known_atom_names.index(atom_name)
+                        atom_number = str(atom_numbers[idx]+1)
+                        atom_numbers[idx] += 1
+                    new_atom_name = atom_name+atom_number
+                newline = ' '*(7-len(line_s[0])) + line_s[0] + 2 * ' ' + new_atom_name + \
+' '*(10-len(new_atom_name)-n_extra_white_spaces) + line_s[2]
                 newf.write(newline)
             else:
                 newf.write(line)

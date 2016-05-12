@@ -40,7 +40,6 @@ def rearrange_atom_names(file_l, order):
 
     shutil.move(tmpfile, file_l)
 
-
 def give_unique_atom_names(file_l):
 
     tmpfile = 'tmp.pdb'

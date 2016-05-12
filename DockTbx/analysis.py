@@ -7,6 +7,7 @@ import subprocess
 import glob
 import time
 
+from itertools import izip
 from DockTbx.amber import clustr
 
 class DockAnalysis(object):
@@ -80,7 +81,7 @@ class DockAnalysis(object):
             type=float,
             dest='cutoff',
             default=2.0,
-            help='RMSD cutoff for clustering. Default: 2.0 ')
+            help='RMSD cutoff for clustering. Default: 2.0')
 
         parser.add_argument('-instances',
             type=str,
@@ -112,6 +113,7 @@ class DockAnalysis(object):
         avg_score = []
         heterg = []
         population = []
+        instances_clusters = []
 
         ff = open(filename)
         for line in ff:
@@ -119,33 +121,43 @@ class DockAnalysis(object):
             if not line.startswith('#'):
                 # indices = numbers of the poses involved in the current cluster
                 indices = [i for i, x in enumerate(line.strip()) if x == 'X']
-                population.append(len(indices)*100./self.nposes)
+                population.append(len(indices))
                 instances = np.array(self.instances_l)[indices].tolist()
-                avg = 0
-                for key, value in self.scores.items():
-                    scores = np.array(value)[indices]
-                    avg += np.mean(scores)/np.amin(np.array(value))
-                avg /= len(self.scores)
-                avg_score.append(avg)
+                if self.scores:
+                    avg = 0
+                    for key, value in self.scores.items():
+                        scores = np.array(value)[indices]
+                        avg += np.mean(scores)/np.amin(np.array(value))
+                    avg /= len(self.scores)
+                    avg_score.append(avg)
                 # compute heterogeneity factor for the current cluster
+                instances_clusters.append(list(set(instances)))
                 heterg.append(len(set(instances))*100./self.ninstances)
             elif line.startswith('#Representative frames:'):
                 poses_clustrs_idxs = map(int, line[23:].split())
         ff.close()
 
         heterg = np.array(heterg)
-        population = np.array(population)
+        population = np.array(population, dtype=int)
+        nclusters = heterg.shape[0]
+
+        with open('anlz.out', 'w') as ff:
+            for idx in range(nclusters):
+                ff.write("Cluster #%i \n"%(idx+1))
+                ff.write("Poses predicted by " + ', '.join(instances_clusters[idx]) + '\n')
+                ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
+                ff.write("Representative pose: %i\n\n"%poses_clustrs_idxs[idx])
 
         # Option 1
-        best_score = 0
-        most_populated_clustrs = np.where(population>2)
-        heterg_max = np.amax(heterg)
-        for idx in most_populated_clustrs[0]:
-            if heterg[idx] == heterg_max:
-                if avg_score[idx] > best_score:
-                    best_cluster_idx = idx
-                    best_score = avg_score[idx]
+        #best_score = 0
+        #most_populated_clustrs = np.where(population>2)
+        #heterg_max = np.amax(heterg)
+        #for idx in most_populated_clustrs[0]:
+        #    if heterg[idx] == heterg_max:
+        #        if avg_score[idx] > best_score:
+        #            best_cluster_idx = idx
+        #            best_score = avg_score[idx]
 
-        best_pose_idx = poses_clustrs_idxs[best_cluster_idx]
-        print self.files_l[best_pose_idx-1]
-        print self.files_r[best_pose_idx-1]
+        #best_pose_idx = poses_clustrs_idxs[best_cluster_idx]
+        #print self.files_l[best_pose_idx-1]
+        #print self.files_r[best_pose_idx-1]

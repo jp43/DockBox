@@ -11,6 +11,7 @@ import time
 
 from DockTbx import multi
 from DockTbx import rescoring
+from DockTbx.tools import mol2 as mol2t
 
 class DockingConfig(object):
 
@@ -23,7 +24,17 @@ class DockingConfig(object):
         config = ConfigParser.SafeConfigParser()
         config.read(args.config_file)
 
-        self.input_file_l = os.path.abspath(args.input_file_l[0])
+        # prepare ligand file
+        file_l = os.path.abspath(args.input_file_l[0])
+        new_file_l = os.path.basename(file_l)
+        pref, ext = os.path.splitext(new_file_l)
+        new_file_l = pref + '.uni' + ext
+        shutil.copyfile(file_l, new_file_l)
+
+        # give unique atom names
+        mol2t.give_unique_atom_names(new_file_l)
+        self.input_file_l = os.path.abspath(new_file_l)
+
         # check if ligand file exists
         if not os.path.exists(self.input_file_l):
             raise IOError("File %s not found!"%(self.input_file_l))

@@ -21,6 +21,14 @@ class ADBased(method.DockingMethod):
 
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
 
+    def give_unique_hydrogen_names_to_output_structures(self):
+
+        # number of mol2 files generated
+        n_files_l = len(glob.glob('lig-*.mol2'))
+        for idx in range(n_files_l):
+            mol2file = 'lig-%s.mol2'%(idx+1)
+            mol2t.give_unique_atom_names(mol2file, mask=['h','H'])
+
 class Autodock(ADBased):
 
     def __init__(self, name, site, options):
@@ -133,6 +141,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         print >> sf, score
 
         subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null', shell=True, executable='/bin/bash')
+        self.give_unique_hydrogen_names_to_output_structures()
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""

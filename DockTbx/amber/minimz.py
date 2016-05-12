@@ -112,10 +112,11 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                         is_hydrogen_from_nterminal = is_nterminal and atom_name == 'H'
                         is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
                         if keep_hydrogens and not is_hydrogen_known:
-                            remove_line = True
-                            removed_lines.append(line)
-                            #print hydrogens_info[resname], atom_name
-                            nremoved += 1
+                            if not is_hydrogen_known:
+                                remove_line = True
+                                removed_lines.append(line)
+                                #print hydrogens_info[resname], atom_name
+                                nremoved += 1
                         elif not keep_hydrogens:
                             remove_line = True
                             nremoved += 1
@@ -166,16 +167,16 @@ def load_PROTON_INFO():
 
 def prepare_ligand(file_r, file_l, file_rl):
 
-
     script_name = 'prepare_ligand.sh'
     with open(script_name, 'w') as ff:
         script ="""#!/bin/bash
 # prepare mol2 file with antechamber
-antechamber -fi mol2 -i %(file_l)s -fo mol2 -o lig.mol2 -c gas > antchmb.log
-parmchk -i lig.mol2 -f mol2 -o lig.frcmod # run parmchk
+antechamber -fi mol2 -i %(file_l)s -fo mol2 -o tmp.mol2 -c gas > antchmb.log
+cp tmp.mol2 %(file_l)s
+parmchk -i %(file_l)s -f mol2 -o lig.frcmod # run parmchk
 
 # prepare complex.pdb
-antechamber -fi mol2 -i lig.mol2 -fo pdb -o lig.pdb > /dev/null # create pdb
+antechamber -fi mol2 -i %(file_l)s -fo pdb -o lig.pdb > /dev/null # create pdb
 cp %(file_r)s %(file_rl)s
 cat lig.pdb >> %(file_rl)s\n"""%locals()
         ff.write(script)
@@ -246,12 +247,6 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
 
 def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
 
-#    if keep_hydrogens:
-#        get_restraints_with_kept_hydrogens('complex.pdb', 'start.pdb')
-#
-#    if restraints and constraints_line:
-#        restraints_lines = """ibelly=1,
-# bellymask='(%(restraints)s)| %(constraints_line)s',"""%locals()
     if restraints:
         restraints_lines = """ibelly=1,
  bellymask=':LIG',"""%locals()
@@ -298,12 +293,13 @@ def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=Fals
     if files_l:
         prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         for idx, file_l in enumerate(files_l):
+            shutil.copyfile(file_l, 'lig.mol2')
             # change ligand name to LIG
-            ligname = mol2t.get_ligand_name(file_l)
-            mol2t.change_ligand_name(file_l, 'LIG')
+            ligname = mol2t.get_ligand_name('lig.mol2')
+            mol2t.change_ligand_name('lig.mol2', 'LIG')
 
             # prepare ligand
-            prepare_ligand(file_r, file_l, 'complex.pdb')
+            prepare_ligand(file_r, 'lig.mol2', 'complex.pdb')
             status = prepare_and_minimize(restraints, keep_hydrogens)
 
             if status == 0:

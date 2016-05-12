@@ -70,12 +70,11 @@ def do_clustering(files_r, files_l, cutoff=2.0):
                 if not line.startswith('TER'):
                     recf.write('TER\n')
         # prepare receptor
-        mn.prepare_receptor(new_file_r, file_r, True)
+        mn.prepare_receptor(new_file_r, file_r, False)
         new_files_r.append(new_file_r)
 
     # amber clustering
     do_amber_clustering(new_files_r, files_l, cutoff)
-
     os.chdir(curdir)
 
 def prepare_ligand(file_r, file_l, file_rl):
@@ -85,22 +84,22 @@ def prepare_ligand(file_r, file_l, file_rl):
     with open(script_name, 'w') as ff:
         script ="""#!/bin/bash
 # prepare mol2 file with antechamber
-antechamber -fi mol2 -i %(file_l)s -fo mol2 -o lig.mol2 -c gas > antchmb.log
+antechamber -fi mol2 -i %(file_l)s -fo mol2 -o tmp.mol2 -c gas > antchmb.log
+mv tmp.mol2 %(file_l)s
 if [ ! -f lig.frcmod ]; then
-  parmchk -i lig.mol2 -f mol2 -o lig.frcmod # run parmchk
+  parmchk -i %(file_l)s -f mol2 -o lig.frcmod # run parmchk
 fi 
 
 # prepare complex.pdb
-antechamber -fi mol2 -i lig.mol2 -fo pdb -o lig.pdb > /dev/null # create pdb
-cp %(file_r)s %(file_rl)s
-cat lig.pdb >> %(file_rl)s\n"""%locals()
+antechamber -fi mol2 -i %(file_l)s -fo pdb -o lig.pdb > /dev/null # create pdb
+cp %(file_r)s %(file_rl)s\n"""%locals()
         ff.write(script)
 
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
     subprocess.check_output('./' + script_name, shell=True, executable='/bin/bash')
 
     with open('lig.pdb', 'r') as ligf:
-        with open(file_r, 'a') as cmplxf:
+        with open(file_rl, 'a') as cmplxf:
             for line in ligf:
                 if line.startswith(('ATOM','HETATM','TER')):
                     cmplxf.write(line)
@@ -111,7 +110,7 @@ def prepare_leap_config_file(filename, file_r, files_l, files_rl):
 
     linespdb = ""
     for idx, file_rl in enumerate(files_rl):
-        if idx == 1:
+        if idx == 0:
             linespdb += """p = loadPdb %s
 saveAmberParm p rec-lig.prmtop rec-lig.inpcrd
 savepdb p %s\n"""%(file_rl,file_rl)
@@ -120,11 +119,10 @@ savepdb p %s\n"""%(file_rl,file_rl)
 savepdb p %s\n"""%(file_rl,file_rl)
 
     linespdb = linespdb[:-1]
-
     with open(filename, 'w') as ff:
         contents ="""source leaprc.ff14SB
 source leaprc.gaff
-LIG = loadmol2 lig.mol2
+LIG = loadmol2 ligref.mol2
 loadamberparams lig.frcmod
 %(linespdb)s
 quit"""% locals()
@@ -154,16 +152,19 @@ def do_amber_clustering(files_r, files_l, cutoff):
     os.mkdir('PDB')
     files_rl = []
     for idx, file_l in enumerate(files_l):
-        file_rl = 'PDB/rec-lig-%s.pdb'%(idx+1)
+        shutil.copyfile(file_l, 'lig.mol2')
+        # change ligand name to LIG
+        mol2t.change_ligand_name('lig.mol2', 'LIG')
         if len(files_r) != 1:
             file_r = files_r[idx]
         else:
             file_r = files_r[0]
-        prepare_ligand(file_r, file_l, file_rl)
+        file_rl = 'PDB/rec-lig-%s.pdb'%(idx+1)
+        prepare_ligand(file_r, 'lig.mol2', file_rl)
         files_rl.append(file_rl)
-        if len(files_r) != 1:
-            os.remove(file_r)
-
+        if idx == 0:
+            shutil.copyfile('lig.mol2','ligref.mol2')
+        
     # (B) Run tleap
     prepare_leap_config_file('leap.in', file_r, files_l, files_rl)
     subprocess.check_output('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
