@@ -140,7 +140,7 @@ class DockingMethod(object):
         mn.do_minimization(file_r, files_l=files_l, restraints=True, keep_hydrogens=True)
 
         # extract results from minimization and purge out
-        for idx in range(n_mol2files):
+        for idx in range(n_files_l):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
             if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
                 shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
