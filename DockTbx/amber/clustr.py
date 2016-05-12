@@ -160,7 +160,6 @@ def do_amber_clustering(files_r, files_l, cutoff):
         else:
             file_r = files_r[0]
         file_rl = 'PDB/rec-lig-%s.pdb'%(idx+1)
-        print file_l, file_rl
         prepare_ligand(file_r, 'lig.mol2', file_rl)
         files_rl.append(file_rl)
         if idx == 0:
