@@ -157,7 +157,7 @@ def load_PROTON_INFO():
             elif is_heavy_atom_line:
                 info[resname].extend(line_s)
 
-    no_h_residues = []
+    no_h_residues = ['PRO']
     for resname in info:
         if resname not in no_h_residues:
             info[resname].append('H')
