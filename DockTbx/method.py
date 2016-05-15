@@ -46,7 +46,7 @@ class DockingMethod(object):
             subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
 
         # (B) extract docking results
-        self.extract_docking_results('score.out', file_r)
+        self.extract_docking_results('score.out', file_r, file_l)
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         # poses extracted from AD or ADV are always minimized

@@ -1,9 +1,13 @@
 import os
 import sys
 import glob
-from DockTbx import autodock
 import shutil
 import subprocess
+
+from DockTbx import autodock
+
+from DockTbx.tools import reader
+from DockTbx.tools import writer
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
@@ -42,7 +46,7 @@ class Vina(autodock.ADBased):
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
@@ -53,7 +57,7 @@ vina --config vina.config > vina.out"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi
@@ -62,7 +66,7 @@ fi
 vina --score_only --config vina.config > vina.out"""% locals()
                 file.write(script)
 
-    def extract_docking_results(self, file_s, input_file_r):
+    def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""
     
         # exctract structures from .pdbqt file 
@@ -74,7 +78,14 @@ vina --score_only --config vina.config > vina.out"""% locals()
                         print >> sf, score
 
         subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m -d -h &>/dev/null',shell=True, executable='/bin/bash')
-        self.give_unique_hydrogen_names_to_output_structures()
+
+        # number of mol2 files generated
+        n_files_l = len(glob.glob('lig-*.mol2'))
+        g = writer.open('.mol2')
+        for idx in range(n_files_l):
+            mol2file = 'lig-%s.mol2'%(idx+1)
+            f = reader.open(mol2file)
+            g.write(mol2file, f.next(), ligname=f.ligname, unique=True, mask=['h','H'])
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

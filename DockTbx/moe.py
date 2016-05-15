@@ -4,8 +4,9 @@ import glob
 import shutil
 import subprocess
 
-import method
-
+from DockTbx import  method
+from DockTbx.tools import reader
+from DockTbx.tools import writer
 from DockTbx.licence import check as chkl
 
 required_programs = ['moebatch']
@@ -231,12 +232,16 @@ ArgvReset ArgvExpand argv;
 endfunction;"""% locals()
             file.write(script)
     
-    def extract_docking_results(self, file_s, input_file_r):
-    
+    def extract_docking_results(self, file_s, input_file_r, input_file_l):
+
         subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
 
-        # create multiple files with babel
-        subprocess.check_output('babel -imol2 lig.mol2 -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+        f = reader.open('lig.mol2') 
+        fi = reader.open(input_file_l) 
+        g = writer.open('.mol2')
+        # create multiple mol2 files
+        g.write('lig-.mol2', f.readlines(), ligname=fi.ligname)
+
         os.remove('lig.mol2')
 
         # get SDF to extract scores
@@ -247,6 +252,8 @@ endfunction;"""% locals()
                 for line in sdff:
                     if line.startswith("> <S>"):
                         print  >> sf, sdff.next().strip()
+
+        os.remove(sdffile)
     
     def cleanup(self):
         pass

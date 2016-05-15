@@ -9,7 +9,8 @@ import method
 
 import numpy as np
 
-from DockTbx.tools import mol2 as mol2t
+from DockTbx.tools import reader
+from DockTbx.tools import writer
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
@@ -18,16 +19,7 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 class ADBased(method.DockingMethod):
 
     def write_rescoring_script(self, filename, file_r, file_l):
-
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
-
-    def give_unique_hydrogen_names_to_output_structures(self):
-
-        # number of mol2 files generated
-        n_files_l = len(glob.glob('lig-*.mol2'))
-        for idx in range(n_files_l):
-            mol2file = 'lig-%s.mol2'%(idx+1)
-            mol2t.give_unique_atom_names(mol2file, mask=['h','H'])
 
 class Autodock(ADBased):
 
@@ -84,7 +76,7 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run autogrid
@@ -105,7 +97,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi
@@ -129,7 +121,7 @@ fi
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 file.write(script)
 
-    def extract_docking_results(self, file_s, input_file_r):
+    def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """extract poses and scores from .dlg file"""
         with open('dock.dlg','r') as pdbqtf:
             with open(file_s, 'w') as sf: 
@@ -141,7 +133,14 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         print >> sf, score
 
         subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null', shell=True, executable='/bin/bash')
-        self.give_unique_hydrogen_names_to_output_structures()
+
+        # number of mol2 files generated
+        n_files_l = len(glob.glob('lig-*.mol2'))
+        g = writer.open('.mol2')
+        for idx in range(n_files_l):
+            mol2file = 'lig-%s.mol2'%(idx+1)
+            f = reader.open(mol2file)
+            g.write(mol2file, f.next(), ligname=f.ligname, unique=True, mask=['h','H'])
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""

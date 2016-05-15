@@ -5,6 +5,9 @@ import shutil
 import glob
 import method
 
+from DockTbx.tools import reader
+from DockTbx.tools import writer
+
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
@@ -176,7 +179,7 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in"""% locals()
             file.write(script)
 
-    def extract_docking_results(self, file_s, input_file_r):
+    def extract_docking_results(self, file_s, input_file_r, input_file_l):
     
         # save scores
         with open('lig_out_scored.mol2', 'r') as ffin:
@@ -185,8 +188,10 @@ dock6 -i dock6.in"""% locals()
                     if line.startswith('##########    Grid Score:'):
                         print >> ffout, line.split()[3]
 
-        # create multiple files with babel
-        subprocess.check_call('babel -imol2 lig_out_scored.mol2 -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+        # create multiple mol2 files
+        f = reader.open('lig_out_scored.mol2')
+        g = writer.open('.mol2')
+        g.write('lig-.mol2', f.readlines(), ligname=f.ligname)
 
     def cleanup(self):
         # remove map files
