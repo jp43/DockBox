@@ -9,8 +9,7 @@ import method
 
 import numpy as np
 
-from DockTbx.tools import reader
-from DockTbx.tools import writer
+from DockTbx.tools import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
@@ -132,15 +131,13 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         score = float(line.split()[8])
                         print >> sf, score
 
-        subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m -h &>/dev/null', shell=True, executable='/bin/bash')
+        subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
 
         # number of mol2 files generated
         n_files_l = len(glob.glob('lig-*.mol2'))
-        g = writer.open('.mol2')
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
-            f = reader.open(mol2file)
-            g.write(mol2file, f.next(), ligname=f.ligname, unique=True, mask=['h','H'])
+            mol2.update_mol2file(mol2file, mol2file, ADupdate=input_file_l, unique=True, mask=['h','H'])
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""

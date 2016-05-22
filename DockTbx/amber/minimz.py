@@ -4,7 +4,8 @@ import stat
 import shutil
 import subprocess
 
-from DockTbx.tools import mol2 as mol2t
+from DockTbx.tools import mol2
+from DockTbx.tools import reader
 
 def do_minimization(file_r, files_l=None, restraints=False, keep_hydrogens=False):
     """
@@ -236,7 +237,6 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
                 #print lines[0][jdx], lines[1][kdx]
                 if lines[0][jdx][30:54] == lines[1][kdx][30:54]:
                     is_added_after_tleap = False
-                    is_added_after_tleap = False
             #print is_added_after_tleap
             if is_added_after_tleap:
                 lines_added.append(lines[1][kdx])
@@ -295,8 +295,8 @@ def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=Fals
         for idx, file_l in enumerate(files_l):
             shutil.copyfile(file_l, 'lig.mol2')
             # change ligand name to LIG
-            ligname = mol2t.get_ligand_name('lig.mol2')
-            mol2t.change_ligand_name('lig.mol2', 'LIG')
+            ligname = reader.open('lig.mol2').ligname
+            mol2.update_mol2file('lig.mol2', 'lig.mol2', ligname='LIG')
 
             # prepare ligand
             prepare_ligand(file_r, 'lig.mol2', 'complex.pdb')
@@ -318,8 +318,10 @@ def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=Fals
                                     recf.write(line)
                 if not is_ligand:
                     raise ValueError('Ligand not found in complex_out.pdb')
-                mol2t.update_mol2_from_pdb('lig.out.pdb', 'lig-%s.out.mol2'%(idx+1), sample_mol2file=file_l)
-                mol2t.change_ligand_name('lig-%s.out.mol2'%(idx+1), ligname)
+
+                mol2file = 'lig-%s.out.mol2'%(idx+1)
+                mol2.pdb2mol2('lig.out.pdb', mol2file, file_l)
+                mol2.update_mol2file(mol2file, mol2file, ligname=ligname)
     else:
         prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         prepare_and_minimize(restraints, keep_hydrogens)

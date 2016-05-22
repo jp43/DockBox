@@ -12,8 +12,7 @@ import time
 from DockTbx import multi
 from DockTbx import rescoring
 
-from DockTbx.tools import reader
-from DockTbx.tools import writer
+from DockTbx.tools import mol2
 
 class DockingConfig(object):
 
@@ -33,9 +32,7 @@ class DockingConfig(object):
         new_file_l = pref + '.uni' + ext
 
         # give unique atom names
-        f = reader.open(file_l)
-        g = writer.open('.mol2')
-        g.write(new_file_l, f.next(), unique=True)
+        mol2.update_mol2file(file_l, new_file_l, unique=True)
         self.input_file_l = os.path.abspath(new_file_l)
 
         # check if ligand file exists

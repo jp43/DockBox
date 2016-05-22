@@ -31,8 +31,10 @@ class DockAnalysis(object):
         self.files_l = []
         self.files_r = []
         self.instances_l = []
+        self.ranks = []
 
         self.scores = {}
+        nposes_per_instance = {}
 
         for jdx, dir in enumerate(self.dirs):
             posedir = dir + '/poses'
@@ -52,6 +54,11 @@ class DockAnalysis(object):
                          for idx in poses_idxs:
                              self.files_l.append(os.path.abspath(posedir+'/lig-%s.mol2'%idx))
                              self.files_r.append(os.path.abspath(dir+'/rec.pdb'))
+                             if not instance in self.instances_l:
+                                 nposes_per_instance[instance] = 1
+                             else:
+                                 nposes_per_instance[instance] += 1
+                             self.ranks.append(nposes_per_instance[instance])
                              self.instances_l.append(instance)
                          # get scores (if available)
                          rescordir = dir + '/rescoring'
@@ -110,11 +117,14 @@ class DockAnalysis(object):
    
     def extract_results(self, filename):
 
-        avg_score = []
         heterg = []
         population = []
-        instances_clusters = []
         poses = []
+
+        avg_score = []
+
+        instances = []
+        instances_no_duplicity = []
 
         ff = open(filename)
         for line in ff:
@@ -124,7 +134,6 @@ class DockAnalysis(object):
                 indices = [i for i, x in enumerate(line.strip()) if x == 'X']
                 population.append(len(indices))
                 poses.append([idx + 1 for idx in indices])
-                instances = np.array(self.instances_l)[indices].tolist()
                 if self.scores:
                     avg = 0
                     for key, value in self.scores.items():
@@ -133,8 +142,10 @@ class DockAnalysis(object):
                     avg /= len(self.scores)
                     avg_score.append(avg)
                 # compute heterogeneity factor for the current cluster
-                instances_clusters.append(list(set(instances)))
-                heterg.append(len(set(instances))*100./self.ninstances)
+                instances_cluster = np.array(self.instances_l)[indices].tolist()
+                instances.append(instances_cluster)
+                instances_no_duplicity.append(list(set(instances_cluster)))
+                heterg.append(len(set(instances_cluster))*100./self.ninstances)
             elif line.startswith('#Representative frames:'):
                 poses_clustrs_idxs = map(int, line[23:].split())
         ff.close()
@@ -143,13 +154,26 @@ class DockAnalysis(object):
         population = np.array(population, dtype=int)
         nclusters = heterg.shape[0]
 
+
+        rank_by_rank_score = []
+        for idx in range(nclusters):
+            rbr = 0
+            known_instances = []
+            for idx_pose in poses[idx]:
+                jdx = idx_pose-1
+                if not self.instances_l[jdx] in known_instances:
+                    rbr += self.ranks[jdx]
+                    known_instances.append(self.instances_l[jdx])
+            rank_by_rank_score.append(rbr*1./len(known_instances))
+
         with open('anlz.out', 'w') as ff:
             for idx in range(nclusters):
                 ff.write("Cluster #%i \n"%(idx+1))
-                ff.write("Poses predicted by " + ', '.join(instances_clusters[idx]) + '\n')
+                ff.write("Poses predicted by " + ', '.join(instances_no_duplicity[idx]) + '\n')
                 ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
                 ff.write("Representative pose: %i\n"%poses_clustrs_idxs[idx])
-                ff.write("Poses: %s\n\n"%(', '.join(map(str, poses[idx]))))
+                ff.write("Poses: %s\n"%(', '.join(map(str, poses[idx]))))
+                ff.write("Rank-by-rank score: %9.1f\n\n"%(rank_by_rank_score[idx]))
 
         # Option 1
         #best_score = 0

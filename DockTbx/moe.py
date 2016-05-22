@@ -4,9 +4,9 @@ import glob
 import shutil
 import subprocess
 
-from DockTbx import  method
+from DockTbx import method
 from DockTbx.tools import reader
-from DockTbx.tools import writer
+from DockTbx.tools import mol2
 from DockTbx.licence import check as chkl
 
 required_programs = ['moebatch']
@@ -235,13 +235,9 @@ endfunction;"""% locals()
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
         subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
-
-        f = reader.open('lig.mol2') 
-        fi = reader.open(input_file_l) 
-        g = writer.open('.mol2')
-        # create multiple mol2 files
-        g.write('lig-.mol2', f.readlines(), ligname=fi.ligname)
-
+ 
+        ligname = reader.open(input_file_l).ligname
+        mol2.update_mol2file('lig.mol2', 'lig-.mol2', ligname=ligname, multi=True)
         os.remove('lig.mol2')
 
         # get SDF to extract scores

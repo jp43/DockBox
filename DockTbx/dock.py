@@ -6,7 +6,7 @@ import glob
 import method
 
 from DockTbx.tools import reader
-from DockTbx.tools import writer
+from DockTbx.tools import mol2
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
@@ -189,9 +189,8 @@ dock6 -i dock6.in"""% locals()
                         print >> ffout, line.split()[3]
 
         # create multiple mol2 files
-        f = reader.open('lig_out_scored.mol2')
-        g = writer.open('.mol2')
-        g.write('lig-.mol2', f.readlines(), ligname=f.ligname)
+        ligname = reader.open('lig_out_scored.mol2').ligname
+        mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True)
 
     def cleanup(self):
         # remove map files

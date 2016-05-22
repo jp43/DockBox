@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 from DockTbx.amber import minimz as mn
-from DockTbx.tools import mol2 as mol2t
+from DockTbx.tools import mol2
 
 def do_clustering(files_r, files_l, cutoff=2.0):
     """
@@ -59,16 +59,6 @@ def do_clustering(files_r, files_l, cutoff=2.0):
     # prepare receptors
     for idx, file_r in enumerate(files_r):
         new_file_r = 'rec-%s.pdb'%idx
-        # only keep atom lines
-        with open(file_r, 'r') as tmpf:
-            with open('rec-%s.pdb'%idx, 'w') as recf:
-                for line in tmpf:
-                    # check if non-hydrogen atom line
-                    if line.startswith(('ATOM','TER')):
-                        recf.write(line)
-                # if last line not TER, write it
-                if not line.startswith('TER'):
-                    recf.write('TER\n')
         # prepare receptor
         mn.prepare_receptor(new_file_r, file_r, False)
         new_files_r.append(new_file_r)
@@ -106,7 +96,7 @@ cp %(file_r)s %(file_rl)s\n"""%locals()
 
     os.remove(script_name)
 
-def prepare_leap_config_file(filename, file_r, files_l, files_rl):
+def prepare_leap_config_file(filename, files_r, files_l, files_rl):
 
     linespdb = ""
     for idx, file_rl in enumerate(files_rl):
@@ -152,9 +142,7 @@ def do_amber_clustering(files_r, files_l, cutoff):
     os.mkdir('PDB')
     files_rl = []
     for idx, file_l in enumerate(files_l):
-        shutil.copyfile(file_l, 'lig.mol2')
-        # change ligand name to LIG
-        mol2t.change_ligand_name('lig.mol2', 'LIG')
+        mol2.update_mol2file(file_l, 'lig.mol2', ligname='LIG')
         if len(files_r) != 1:
             file_r = files_r[idx]
         else:
@@ -162,14 +150,14 @@ def do_amber_clustering(files_r, files_l, cutoff):
         file_rl = 'PDB/rec-lig-%s.pdb'%(idx+1)
         prepare_ligand(file_r, 'lig.mol2', file_rl)
         files_rl.append(file_rl)
+        os.remove(file_r)
         if idx == 0:
             shutil.copyfile('lig.mol2','ligref.mol2')
         
     # (B) Run tleap
-    prepare_leap_config_file('leap.in', file_r, files_l, files_rl)
+    prepare_leap_config_file('leap.in', files_r, files_l, files_rl)
     subprocess.check_output('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
 
     # (C) Run cpptraj
     prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff)
     subprocess.check_output('cpptraj -i cpptraj.in > cpptraj.log', shell=True, executable='/bin/bash')
-

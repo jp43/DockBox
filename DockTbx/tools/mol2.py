@@ -93,39 +93,130 @@ class Reader(object):
 
 class Writer(object):
 
-    def write(self, filename, contents, mode='w', ligname=None, unique=False, mask=None):
+    def write(self, filename, structs, mode='w', multi=False):
 
-        filename = self.get_filename(filename, contents)
-        if not isinstance(contents, list):
-            contents = [contents]
+        if not isinstance(structs, list):
+            structs = [structs]
 
-        for idx, struct in enumerate(contents):
-            if unique:
-                struct = give_unique_atom_names(struct, mask=mask)
+        if not isinstance(filename, str):
+            raise ValueError('filename should be a string!')
+
+        if multi:
+            suffix, ext = os.path.splitext(filename)
+            filename = []
+            for idx, struct in enumerate(structs):
+                filename.append(suffix+str(idx+1)+ext)
+        else:
+            if len(structs) == 1:
+                filename = [filename]
+            else:
+                raise ValueError(".mol2 writer not implemented to write a single file \
+                    with multiple structures!")
+
+        for idx, struct in enumerate(structs):
             with open(filename[idx], mode) as ff:
                 for section in known_section:
                     if section in struct:
                         ff.write('@<TRIPOS>'+section+'\n')
                         for line in struct[section]:
                             if section == 'ATOM':
-                                if ligname:
-                                    line[-2] = ligname
                                 newline = '%7s %-5s    %9s %9s %9s %-5s    %2s %-5s     %8s\n'%tuple(line)
                             else:
                                 newline = line
                             ff.write(newline)
 
-    def get_filename(self, filename, contents):
+def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None):
 
-        new_filename = []
-        if isinstance(contents, list):
-            suffix, ext = os.path.splitext(filename)
-            for idx, struct in enumerate(contents):
-                new_filename.append(suffix+str(idx+1)+ext)
+    f = Reader(inputfile)
+    structs = f.readlines()
+    f.close()
+
+    updated_structs = []
+    for struct in structs:
+        if ADupdate:
+            struct = update_AD_output_from_original_struct(struct, ADupdate)
+        if ligname:
+            struct = update_ligand_name(struct, ligname)
+        if unique:
+            struct = give_unique_atom_names(struct, mask=mask)
+        updated_structs.append(struct)
+
+    Writer().write(outputfile, updated_structs, multi=multi)
+
+def pdb2mol2(inputfile, outputfile, sample):
+
+    # get atom lines in PDB:
+    atom_lines_pdb = []
+    with open(inputfile, 'r') as pdbf:
+        for line in pdbf:
+            if line.startswith(('ATOM','HETATM')):
+                atom_lines_pdb.append(line)
+
+    f = Reader(sample)
+    structs = f.readlines()
+    f.close()
+
+    struct = structs[0]
+    new_struct = struct
+    for idx, line in enumerate(struct['ATOM']):
+        atom_name_mol2 = line[1].lower()
+        is_atom = False
+        for line_pdb in atom_lines_pdb:
+            atom_name_pdb = line_pdb[12:16].strip().lower()
+            if atom_name_pdb == atom_name_mol2:
+                if is_atom:
+                    raise ValueError("Mol2 atom name already found in PDB file, your files should have unique atom names!")
+                is_atom = True
+                coords = [coord + '0' for coord in line_pdb[30:54].split()]
+                for jdx in range(3):
+                    new_struct['ATOM'][idx][jdx+2] = coords[jdx]
+        if not is_atom:
+            raise IOError("Mol2 atom name not found in PDB file, check your input files!")
+
+    Writer().write(outputfile, new_struct)
+
+def update_ligand_name(struct, ligname):
+
+    new_struct = struct
+    for idx, line in enumerate(struct['ATOM']):
+        new_struct['ATOM'][idx][-2] = ligname
+
+    ligname_p = new_struct['ATOM'][0][-2]
+    for idx, line in enumerate(struct['SUBSTRUCTURE']):
+        new_struct['SUBSTRUCTURE'][idx] = line.replace(ligname_p, ligname)
+
+    return new_struct
+
+def is_unique_name(struct):
+
+    known_atom_names = []
+    for line in struct['ATOM']:
+        atom_name = line[1]
+        if atom_name not in known_atom_names:
+            known_atom_names.append(atom_name)
         else:
-            new_filename.append(filename)
-        return new_filename
+            return False
+    return True
 
+def update_AD_output_from_original_struct(struct1, filename):
+
+    # read original structure
+    f = Reader(filename)
+    struct2 = f.next()
+    new_struct = struct2
+    f.close()
+
+    for idx, struct in enumerate([struct1, struct2]):
+        if not is_unique_name(struct):
+            raise ValueError("Mol2 structure (%i) should have unique atom names"%(idx+1))
+
+    for idx, line2 in enumerate(struct2['ATOM']):
+        for line1 in struct1['ATOM']:
+            if line1[1] == line2[1]:
+                for jdx in range(2,5):
+                    new_struct['ATOM'][idx][jdx] = line1[jdx]
+
+    return new_struct
 
 def give_unique_atom_names(struct, mask=None):
 
@@ -187,18 +278,6 @@ def give_unique_atom_names(struct, mask=None):
 
     return new_struct
 
-def get_ligand_name(filename):
-
-    with open(filename, 'r') as mol2f:
-        is_structure = False
-        for line in mol2f:
-            if line.startswith('@<TRIPOS>ATOM'):
-                is_structure = True
-            elif is_structure:
-                line = line.split()[7]
-                break
-    return line[0:3]
-
 def get_atoms_names(filename):
 
     atoms_names = []
@@ -213,33 +292,6 @@ def get_atoms_names(filename):
                 line_s = line.split()
                 atoms_names.append(line_s[1])
     return atoms_names
-
-def change_ligand_name(file_l, newligname):
-
-    tmpfile = 'tmp.mol2'
-    with open(file_l, 'r') as oldf:
-        newf = open(tmpfile, 'w')
-
-        known_atom_types = []
-        atom_numbers = []
-        is_first_atom = True
-
-        for line in oldf:
-            if line.startswith('@<TRIPOS>ATOM'):
-                is_structure = True
-                newf.write(line)
-            elif line.startswith('@<TRIPOS>'):
-                is_structure = False
-                newf.write(line)
-            elif is_structure:
-                line_s = line.rsplit(None, 2)
-                ligname = line_s[-2]
-                newline = line.replace(ligname,newligname)
-                newf.write(newline)
-            else:
-                newf.write(line)
-
-    shutil.move(tmpfile, file_l)
 
 def get_coordinates(filename):
 
@@ -256,62 +308,3 @@ def get_coordinates(filename):
                 coords.append(map(float,line_s[2:5]))
     return coords
 
-def update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None):
-    """update_mol2_from_pdb(input_pdbfile, output_mol2file, sample_mol2file=None)
-
-        Update the sample .mol2 file provided with the coordinates of the atoms 
-from the pdbfile whose atom names match with the ones in the sample (the function 
-assumes unique atom names in both the pdb and mol2 files)"""
-
-    if not sample_mol2file:
-        raise NotImplementedError("No .mol2 sample provided!")
-
-    # load atom lines in PDB:
-    atom_lines_pdb = []
-    with open(input_pdbfile, 'r') as pdbf:
-        for line in pdbf:
-            if line.startswith(('ATOM','HETATM')):
-                atom_lines_pdb.append(line)
-
-    # load atom lines in mol2:
-    atom_lines_mol2 = []
-    with open(sample_mol2file, 'r') as mol2f:
-        is_structure = False
-        for line in mol2f:
-            if line.startswith('@<TRIPOS>ATOM'):
-                is_structure = True
-            elif line.startswith('@<TRIPOS>'):
-                is_structure = False
-            elif is_structure:
-                atom_lines_mol2.append(line)
-
-    new_atom_lines_mol2 = []
-    for line_mol2 in atom_lines_mol2:
-        newline = line_mol2
-        line_mol2_start = line_mol2.rsplit(None, 7)[0]
-        line_mol2_end = line_mol2.split(None, 5)[5]
-        atom_name_mol2 = line_mol2.split()[1].lower()
-        for line_pdb in atom_lines_pdb:
-            atom_name_pdb = line_pdb[12:16].strip().lower()
-            if atom_name_pdb == atom_name_mol2:
-                coords = [coord + '0' for coord in line_pdb[30:54].split()]
-                newline = line_mol2_start + ' '*(10-len(atom_name_mol2)) + ' '*(10-len(coords[0])) + str(coords[0]) + \
-' '*(10-len(coords[1])) + str(coords[1]) + ' '*(10-len(coords[2])) + str(coords[2]) + ' ' + line_mol2_end
-        new_atom_lines_mol2.append(newline)
-
-    idx = 0
-    with open(output_mol2file, 'w') as mf:
-        with open(sample_mol2file, 'r') as mol2f:
-            is_structure = False
-            for line in mol2f:
-                if line.startswith('@<TRIPOS>ATOM'):
-                    is_structure = True
-                    mf.write(line)
-                elif line.startswith('@<TRIPOS>'):
-                    is_structure = False
-                    mf.write(line)
-                elif is_structure:
-                    mf.write(new_atom_lines_mol2[idx])
-                    idx += 1
-                else:
-                    mf.write(line)
