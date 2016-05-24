@@ -192,7 +192,7 @@ class PrepDocking(object):
                     for kdx, file_l in enumerate(self.files_prep_l[idx]):
                         workdir = self.make_dirs(recdir, 'isomer', self.files_prep_l[idx], kdx, args)
                         if self.config_file:
-                            self.update_config_file(workdir, config_file, recpdir, args)
+                            self.update_config_file(workdir, args.config_file, recpdir, args)
                         # copy the files for ligand and receptor in the corresponding working dir
                         shutil.copyfile(file_l, workdir + '/lig.mol2')
                         shutil.copyfile(file_r, workdir +'/rec.pdb')
@@ -208,7 +208,7 @@ class PrepDocking(object):
                 file_r = self.files_prep_r[jdx]
                 recpdir = 'rec-prep%s'%(jdx+1)
                 if self.config_file:
-                    self.update_config_file(workdir, config_file, recpdir, args)
+                    self.update_config_file(workdir, args.config_file, recpdir, args)
                 shutil.copyfile(file_r, workdir +'/rec.pdb')
                 with open(workdir + '/vs.info', 'w') as ff:
                     print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
@@ -374,8 +374,8 @@ class PrepDocking(object):
                 for line in newf:
                     tmpf.write(line)
                     if line.startswith('[DOCKING]'):
-                        tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in sitetable])+'\n')
-                for line in sitetable:
+                        tmpf.write('site = ' + ', '.join(['site%s'%int(line[0]) for line in table])+'\n')
+                for line in table:
                     section = 'SITE' + str(int(line[0]))
                     center_conf = ', '.join(map(str, line[2:5].tolist()))
                     boxsize_conf = ', '.join(map(str, [2*line[5] for idx in range(3)]))
