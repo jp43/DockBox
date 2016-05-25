@@ -50,8 +50,13 @@ class DockingMethod(object):
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         # poses extracted from AD or ADV are always minimized
-        if self.program in ['vina', 'autodock'] or minimize:
-            self.minimize_extracted_poses(file_r)
+        restraints = []
+        if self.program in ['vina', 'autodock']:
+            restraints.append(':LIG & @H=')
+        if minimize:
+            restraints.append(':LIG')
+        if restraints:
+            self.minimize_extracted_poses(file_r, restraints)
         self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
@@ -118,15 +123,16 @@ class DockingMethod(object):
                 os.remove(file_l)
                 out_of_range_idxs.append(jdx)
 
-        with open(file_s, 'r') as sf:
-            with open('score.tmp.out', 'w') as sft:
-                for idx, line in enumerate(sf):
-                    if idx not in out_of_range_idxs:
-                        sft.write(line)
+        if files_l:
+            with open(file_s, 'r') as sf:
+                with open('score.tmp.out', 'w') as sft:
+                    for idx, line in enumerate(sf):
+                        if idx not in out_of_range_idxs:
+                            sft.write(line)
 
-        shutil.move('score.tmp.out', file_s)
+            shutil.move('score.tmp.out', file_s)
 
-    def minimize_extracted_poses(self, file_r):
+    def minimize_extracted_poses(self, file_r, restraints):
         """Perform AMBER minimization on extracted poses"""
 
         files_l = []
@@ -136,15 +142,15 @@ class DockingMethod(object):
             if os.path.isfile(mol2file):
                 files_l.append(mol2file)
 
-        # do energy minimization on ligand hydrogens
-        mn.do_minimization(file_r, files_l=files_l, restraints=True, keep_hydrogens=True)
+        if files_l:
+            # do energy minimization on ligand hydrogens
+            mn.do_minimization(file_r, files_l=files_l, restraints=restraints, keep_hydrogens=True)
 
         # extract results from minimization and purge out
         for idx in range(n_files_l):
             mol2file = 'lig-%s.out.mol2'%(idx+1)
             if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
                 shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
-                #shutil.copyfile('minimz/'+mol2file, 'lig-%s.out.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
         #shutil.rmtree('minimz')

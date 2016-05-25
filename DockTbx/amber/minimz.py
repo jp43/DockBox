@@ -7,7 +7,7 @@ import subprocess
 from DockTbx.tools import mol2
 from DockTbx.tools import reader
 
-def do_minimization(file_r, files_l=None, restraints=False, keep_hydrogens=False):
+def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
     """
     do_minimization(file_r, files_l=None, keep_hydrogens=False)
 
@@ -56,6 +56,9 @@ def do_minimization(file_r, files_l=None, restraints=False, keep_hydrogens=False
 
     # prepare receptor
     prepare_receptor('rec.pdb', file_r, keep_hydrogens)
+
+    if not isinstance(restraints, list):
+        restraints = [restraints]
 
     # amber minimization
     do_amber_minimization('rec.pdb', files_l, restraints=restraints, keep_hydrogens=keep_hydrogens)
@@ -240,21 +243,22 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
             #print is_added_after_tleap
             if is_added_after_tleap:
                 lines_added.append(lines[1][kdx])
-            
+           
     print "Number of atoms added by tleap: %s"%len(lines_added)
     constraints_line = ' | '.join([':%s@%s'%(line[22:26].strip(),line[12:16].strip()) for line in lines_added])
     #return constraints_line
 
-def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
+def prepare_minimization_config_file(script_name, restraint=None):
 
-    if restraints:
-        restraints_lines = """ibelly=1,
- bellymask=':LIG',"""%locals()
+    if restraint:
+        restraint_lines = """ibelly=1,
+ bellymask='%(restraint)s',"""%locals()
     else:
-        restraints_lines = ""
+        restraint_lines = ""
 
     with open(script_name, 'w') as minf:
-        script ="""Minimization with Cartesian restraints
+        if restraint == ':LIG':
+            script ="""Minimization with Cartesian restraints
 &cntrl
  imin=1, maxcyc=2000,
  igb=0,
@@ -263,7 +267,19 @@ def prepare_minimization_config_file(script_name, restraints, keep_hydrogens):
  ntpr=5,
  cut=12,
  ntb=0,
- %(restraints_lines)s
+ %(restraint_lines)s
+&end\n"""%locals()
+        elif restraint == ':LIG & @H=':
+            script ="""Minimization with Cartesian restraints
+&cntrl
+ imin=1,
+ maxcyc=100,
+ igb=0,
+ ntmin=1,
+ ntpr=5,
+ cut=12,
+ ntb=0,
+ %(restraint_lines)s
 &end\n"""%locals()
         minf.write(script)
 
@@ -273,22 +289,24 @@ def prepare_and_minimize(restraints, keep_hydrogens):
     subprocess.check_output('tleap -f leap.in > /dev/null', shell=True, executable='/bin/bash')
     shutil.copyfile('start.inpcrd', 'start.rst')
 
-    prepare_minimization_config_file('min.in', restraints, keep_hydrogens)
+    for idx, restraint in enumerate(restraints):
+        infile = 'min%i.in'%idx
+        outfile = 'min%i.out'%idx 
+        prepare_minimization_config_file(infile, restraint)
+        try:
+            # run minimization
+            subprocess.check_output('sander -O -i %s -o %s -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null'%(infile, outfile), shell=True, executable='/bin/bash')
+            shutil.move('end.inpcrd', 'start.inpcrd')
+            status = 0 # minimization finished normaly
+        except subprocess.CalledProcessError as e:
+            # the minimization failed
+            return e.returncode
 
-    try:
-        # run minimization
-        subprocess.check_output('sander -O -i min.in -o min.out -c start.inpcrd -p start.prmtop -ref start.rst -r end.inpcrd > /dev/null', shell=True, executable='/bin/bash')
-
-        # get output configuration
-        subprocess.check_output('cpptraj -p start.prmtop -y end.inpcrd -x complex_out.pdb > /dev/null', shell=True, executable='/bin/bash')
-        status = 0 # minimization finished normaly
-    except subprocess.CalledProcessError as e:
-        # the minimization failed
-        status = e.returncode
-
+    # get output configuration
+    subprocess.check_output('cpptraj -p start.prmtop -y start.inpcrd -x complex_out.pdb > /dev/null', shell=True, executable='/bin/bash')
     return status
 
-def do_amber_minimization(file_r, files_l, restraints=False, keep_hydrogens=False):
+def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False):
 
     if files_l:
         prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')

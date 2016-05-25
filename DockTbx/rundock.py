@@ -96,7 +96,6 @@ class Docking(object):
         nposes = [1] # number of poses involved for each binding site
         sh = 1 # shift of model
 
-        idx = 0
         summary = ''
         for kdx in range(len(config_d.site)):
             bs = config_d.site['site'+str(kdx+1)] # current binding site
@@ -109,6 +108,7 @@ class Docking(object):
                 for filename in glob.glob(instdir+'/lig-*.mol2'):
                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
                 poses_idxs = sorted(poses_idxs)
+                idx = -1
                 for idx, pose_idx in enumerate(poses_idxs):
                     shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, resultdir+'/lig-%s.mol2'%(idx+sh))
                 summary += '%10s      %10s       %10s       %10s\n'%(program, idx+1, sh, kdx+1)

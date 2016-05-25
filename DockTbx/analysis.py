@@ -126,6 +126,8 @@ class DockAnalysis(object):
         instances = []
         instances_no_duplicity = []
 
+        print self.instances_l
+
         ff = open(filename)
         for line in ff:
             # if line does not start with #
@@ -153,7 +155,6 @@ class DockAnalysis(object):
         heterg = np.array(heterg)
         population = np.array(population, dtype=int)
         nclusters = heterg.shape[0]
-
 
         rank_by_rank_score = []
         for idx in range(nclusters):
