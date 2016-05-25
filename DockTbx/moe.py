@@ -234,22 +234,23 @@ endfunction;"""% locals()
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
+
         subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
- 
-        ligname = reader.open(input_file_l).ligname
-        mol2.update_mol2file('lig.mol2', 'lig-.mol2', ligname=ligname, multi=True)
-        os.remove('lig.mol2')
 
-        # get SDF to extract scores
-        sdffile = 'lig.sdf'
-        subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
-        with open(sdffile, 'r') as sdff:
-            with open(file_s, 'w') as sf:
-                for line in sdff:
-                    if line.startswith("> <S>"):
-                        print  >> sf, sdff.next().strip()
+        if os.path.exists('lig.mol2'):
+            ligname = reader.open(input_file_l).ligname
+            mol2.update_mol2file('lig.mol2', 'lig-.mol2', ligname=ligname, multi=True)
+            os.remove('lig.mol2')
 
-        os.remove(sdffile)
+            # get SDF to extract scores
+            sdffile = 'lig.sdf'
+            subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
+            with open(sdffile, 'r') as sdff:
+                with open(file_s, 'w') as sf:
+                    for line in sdff:
+                        if line.startswith("> <S>"):
+                            print  >> sf, sdff.next().strip()
+            os.remove(sdffile)
     
     def cleanup(self):
         pass
