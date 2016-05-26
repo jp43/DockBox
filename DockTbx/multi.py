@@ -6,6 +6,7 @@ known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe'], 
 class MultiProgramTask(object):
 
     def __init__(self, task, config):
+
         self.task = task
         self.section = task.upper()
 

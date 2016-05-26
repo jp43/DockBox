@@ -49,15 +49,9 @@ class DockingMethod(object):
         self.extract_docking_results('score.out', file_r, file_l)
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
-        # poses extracted from AD or ADV are always minimized
-        restraints = []
-        if self.program in ['vina', 'autodock']:
-            restraints.append(':LIG & @H=')
         if minimize:
-            restraints.append(':LIG')
-        if restraints:
-            self.minimize_extracted_poses(file_r, restraints)
-        self.remove_out_of_range_poses('score.out')
+            self.minimize_extracted_poses(file_r)
+        #self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
         if cleanup:
@@ -120,6 +114,7 @@ class DockingMethod(object):
                         isout = True
                         break
             if isout:
+                #print "out"
                 os.remove(file_l)
                 out_of_range_idxs.append(jdx)
 
@@ -132,8 +127,14 @@ class DockingMethod(object):
 
             shutil.move('score.tmp.out', file_s)
 
-    def minimize_extracted_poses(self, file_r, restraints):
+    def minimize_extracted_poses(self, file_r):
         """Perform AMBER minimization on extracted poses"""
+
+        restraints = []
+        # poses extracted from AD or ADV are always minimized
+        if self.program in ['vina', 'autodock']:
+            restraints.append(':LIG & @H=')
+        restraints.append(':LIG')
 
         files_l = []
         n_files_l = len(glob.glob('lig-*.mol2'))

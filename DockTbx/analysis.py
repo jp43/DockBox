@@ -126,8 +126,6 @@ class DockAnalysis(object):
         instances = []
         instances_no_duplicity = []
 
-        print self.instances_l
-
         ff = open(filename)
         for line in ff:
             # if line does not start with #

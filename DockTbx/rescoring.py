@@ -10,11 +10,12 @@ class Rescoring(object):
 
     def __init__(self, config, args):
 
-        self.config = multi.MultiProgramScoring(config)
-        self.instances = self.config.instances
-        self.site = self.config.site
-
         self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
+
+        if self.is_rescoring:
+            self.config = multi.MultiProgramScoring(config)
+            self.instances = self.config.instances
+            self.site = self.config.site
 
         self.rescore_only = False
         if args.rescore_only:

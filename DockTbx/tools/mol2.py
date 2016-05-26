@@ -182,8 +182,9 @@ def update_ligand_name(struct, ligname):
         new_struct['ATOM'][idx][-2] = ligname
 
     ligname_p = new_struct['ATOM'][0][-2]
-    for idx, line in enumerate(struct['SUBSTRUCTURE']):
-        new_struct['SUBSTRUCTURE'][idx] = line.replace(ligname_p, ligname)
+    if 'SUBSTRUCTURE' in struct:
+        for idx, line in enumerate(struct['SUBSTRUCTURE']):
+            new_struct['SUBSTRUCTURE'][idx] = line.replace(ligname_p, ligname)
 
     return new_struct
 
