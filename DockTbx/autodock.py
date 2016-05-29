@@ -26,6 +26,8 @@ class ADBased(method.DockingMethod):
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, mol2file, ADupdate=sample, unique=True, mask=['h','H'])
+            mol2.arrange_hydrogens(mol2file, 'tmp.mol2')
+            shutil.move('tmp.mol2', mol2file)
 
 class Autodock(ADBased):
 
@@ -139,7 +141,6 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         print >> sf, score
 
         subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-        #self.update_output_mol2files(sample=None)
         self.update_output_mol2files(sample=input_file_l)
 
     def extract_rescoring_results(self, filename):

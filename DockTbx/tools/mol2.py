@@ -1,6 +1,12 @@
 import os
 import sys
 import shutil
+import subprocess
+
+from MolKit import Read
+from PyBabel.atomTypes import AtomHybridization
+
+from DockTbx.tools.babel import ArrangeHydrogens
 
 # recognized sections
 known_section = ['MOLECULE', 'ATOM', 'BOND', 'SUBSTRUCTURE']
@@ -126,7 +132,6 @@ class Writer(object):
                             ff.write(newline)
 
 def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None):
-
     f = Reader(inputfile)
     structs = f.readlines()
     f.close()
@@ -144,7 +149,6 @@ def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=N
     Writer().write(outputfile, updated_structs, multi=multi)
 
 def pdb2mol2(inputfile, outputfile, sample):
-
     # get atom lines in PDB:
     atom_lines_pdb = []
     with open(inputfile, 'r') as pdbf:
@@ -176,7 +180,6 @@ def pdb2mol2(inputfile, outputfile, sample):
     Writer().write(outputfile, new_struct)
 
 def update_ligand_name(struct, ligname):
-
     new_struct = struct
     for idx, line in enumerate(struct['ATOM']):
         new_struct['ATOM'][idx][-2] = ligname
@@ -189,7 +192,6 @@ def update_ligand_name(struct, ligname):
     return new_struct
 
 def is_unique_name(struct):
-
     known_atom_names = []
     for line in struct['ATOM']:
         atom_name = line[1]
@@ -200,7 +202,6 @@ def is_unique_name(struct):
     return True
 
 def update_AD_output_from_original_struct(struct1, filename):
-
     # read original structure
     f = Reader(filename)
     struct2 = f.next()
@@ -218,6 +219,83 @@ def update_AD_output_from_original_struct(struct1, filename):
                     new_struct['ATOM'][idx][jdx] = line1[jdx]
 
     return new_struct
+
+def arrange_hydrogens(inputfile, outputfile):
+
+    mol = Read(inputfile)
+    base, ext = os.path.splitext(inputfile)
+
+    # remove hydrogens from structure
+    inputfile_noH = base + '_noH' + ext
+    subprocess.check_output('babel -imol2 %s -omol2 %s -d &>/dev/null'%(inputfile,inputfile_noH), shell=True, executable='/bin/bash')
+    molnoH = Read(inputfile_noH)
+
+    allAtoms = mol.allAtoms
+    allAtomsNoH = molnoH.allAtoms
+
+    babel = AtomHybridization()
+
+    babel.assignHybridization(allAtoms)
+    babel.assignHybridization(allAtomsNoH)
+
+    # get mol2 ids of all atoms and all hydrogens
+    ff = Reader(inputfile)
+    struct = ff.next()
+    hat_mol2_ids = []
+    at_mol2_ids = []
+    for line in struct['ATOM']:
+        atom_name = line[5]
+        #print line[2]
+        if atom_name[0] in ['H', 'h']:
+            hat_mol2_ids.append(line[0])
+        at_mol2_ids.append(line[0])
+
+    hat_mol2_ids = map(int, hat_mol2_ids)
+    at_mol2_ids = map(int, at_mol2_ids)
+
+    # find out the heavy atom each hydrogen is bound with
+    at_with_hat_mol2_ids = []
+    for id in hat_mol2_ids:
+        for line in struct['BOND']:
+            line_s = line.split()
+            origin_atom_id = int(line_s[1])
+            target_atom_id = int(line_s[2])
+            #print origin_atom_id
+            if id == origin_atom_id:
+                at_with_hat_mol2_ids.append(target_atom_id)
+            elif id == target_atom_id:
+                at_with_hat_mol2_ids.append(origin_atom_id)
+
+    if len(at_with_hat_mol2_ids) != len(hat_mol2_ids):
+        raise ValueError("Each hydrogen should have only one bound! Check you .mol2 file")
+
+    #print hat_mol2_ids
+    #print at_with_hat_mol2_ids
+
+    addh = ArrangeHydrogens()
+    # at_with_hat_idxs are the indices of atoms related to each hydrogen of hat
+    hat, at_with_hat_idxs = addh.addHydrogens(allAtoms, allAtomsNoH)
+
+    hat_coords = []
+    hat_done_mol2_ids = []
+    for idx, at_with_hat_idx in enumerate(at_with_hat_idxs):
+        at_with_hat_mol2_id = at_mol2_ids[at_with_hat_idx]
+        hat_mol2_ids_cur = [hat_mol2_ids[jdx] for jdx, id in enumerate(at_with_hat_mol2_ids) \
+            if id == at_with_hat_mol2_id]
+        kdx = 0
+        while hat_mol2_ids_cur[kdx] in hat_done_mol2_ids:
+            kdx += 1
+        hat_done_mol2_ids.append(hat_mol2_ids_cur[kdx])
+        hat_coords.append(hat[idx][0])
+
+    for line in struct['ATOM']:
+        id = int(line[0])
+        if id in hat_done_mol2_ids:
+            idx = hat_done_mol2_ids.index(id)
+            line[2:5] = map("{:.4f}".format, hat_coords[idx])
+
+    Writer().write(outputfile, struct)
+    os.remove(inputfile_noH)
 
 def give_unique_atom_names(struct, mask=None):
 
