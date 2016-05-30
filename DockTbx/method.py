@@ -51,7 +51,7 @@ class DockingMethod(object):
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
             self.minimize_extracted_poses(file_r)
-        #self.remove_out_of_range_poses('score.out')
+        self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
         if cleanup:
