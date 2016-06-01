@@ -130,12 +130,6 @@ class DockingMethod(object):
     def minimize_extracted_poses(self, file_r):
         """Perform AMBER minimization on extracted poses"""
 
-        restraints = []
-        # poses extracted from AD or ADV are always minimized
-        #if self.program in ['vina', 'autodock']:
-        #    restraints.append(':LIG & @H=')
-        #restraints.append(':LIG')
-
         files_l = []
         n_files_l = len(glob.glob('lig-*.mol2'))
         for idx in range(n_files_l):

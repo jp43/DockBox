@@ -292,7 +292,7 @@ def arrange_hydrogens(inputfile, outputfile):
         id = int(line[0])
         if id in hat_done_mol2_ids:
             idx = hat_done_mol2_ids.index(id)
-            line[2:5] = map("{:.4f}".format, hat_coords[idx])
+            line[2:5] = ["%.4f"%coords for coords in hat_coords[idx]]
 
     Writer().write(outputfile, struct)
     os.remove(inputfile_noH)
@@ -328,10 +328,8 @@ def give_unique_atom_names(struct, mask=None):
             nfigs = len(str(atom_numbers[idx]))
             if nfigs >= 3:
                 raise ValueError("more than 99 atoms of the same type detected!")
-            elif nletters == 2:
+            elif nletters >= 2: # impose 1 character for each atom
                 new_atom_names.append(known_atom_names[idx][:1])
-            elif nletters == 3:
-                new_atom_names.append(known_atom_names[idx][:3-nfigs])
         elif nchars <= 3:
             new_atom_names.append(known_atom_names[idx])
 
