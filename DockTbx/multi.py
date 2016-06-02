@@ -1,7 +1,7 @@
 import sys
 import subprocess
 
-known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe'], 'rescoring': ['vina', 'autodock', 'glide']}
+known_program_names = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], 'rescoring': ['vina', 'autodock', 'glide']}
 
 class MultiProgramTask(object):
 

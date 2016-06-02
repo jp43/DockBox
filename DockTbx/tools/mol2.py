@@ -131,7 +131,7 @@ class Writer(object):
                                 newline = line
                             ff.write(newline)
 
-def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None):
+def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None, remove=None):
     f = Reader(inputfile)
     structs = f.readlines()
     f.close()
@@ -144,6 +144,8 @@ def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=N
             struct = update_ligand_name(struct, ligname)
         if unique:
             struct = give_unique_atom_names(struct, mask=mask)
+        if remove:
+            struct = remove_atoms(struct, remove)
         updated_structs.append(struct)
 
     Writer().write(outputfile, updated_structs, multi=multi)
@@ -217,8 +219,58 @@ def update_AD_output_from_original_struct(struct1, filename):
             if line1[1] == line2[1]:
                 for jdx in range(2,5):
                     new_struct['ATOM'][idx][jdx] = line1[jdx]
-
     return new_struct
+
+def remove_atoms(struct, atomtype):
+
+    if not isinstance(atomtype, list):
+        atomtype = [atomtype]
+
+    new_struct = struct
+    atom_section = [] 
+    bond_section = []
+
+    jdx = 0
+    old_atoms_idxs = []
+    new_atoms_idxs = []
+    removed_atom_idxs = []
+
+    for idx, line in enumerate(struct['ATOM']):
+        old_atoms_idxs.append(line[0])
+        if line[5] in atomtype:
+            new_atoms_idxs.append('-1')
+            removed_atom_idxs.append(line[0])
+        else:
+            jdx += 1
+            new_atoms_idxs.append(str(jdx))
+            line[0] = jdx
+            atom_section.append(line)
+
+    natoms = jdx
+
+    jdx = 0
+    for line in struct['BOND']:
+        line_s = line.split()
+        origin_atom_id = line_s[1]
+        target_atom_id = line_s[2]
+        if (not origin_atom_id in removed_atom_idxs) and (not target_atom_id in removed_atom_idxs):
+            jdx += 1
+            line_s[0] = str(jdx)
+            line_s[1] = new_atoms_idxs[old_atoms_idxs.index(origin_atom_id)]
+            line_s[2] = new_atoms_idxs[old_atoms_idxs.index(target_atom_id)]
+            bond_section.append("%4s %4s %4s %-4s\n"%tuple(line_s))
+
+    nbonds = jdx
+    
+    line_s = new_struct['MOLECULE'][1].split()
+    line_s[0] = str(natoms)
+    line_s[1] = str(nbonds)
+    new_struct['MOLECULE'][1] = '   '  + '  '.join(line_s) + '\n'
+
+    new_struct['ATOM'] = atom_section
+    new_struct['BOND'] = bond_section
+
+    return new_struct 
 
 def arrange_hydrogens(inputfile, outputfile):
 

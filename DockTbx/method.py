@@ -119,13 +119,14 @@ class DockingMethod(object):
                 out_of_range_idxs.append(jdx)
 
         if files_l:
-            with open(file_s, 'r') as sf:
-                with open('score.tmp.out', 'w') as sft:
-                    for idx, line in enumerate(sf):
-                        if idx not in out_of_range_idxs:
-                            sft.write(line)
+            if os.path.exists(file_s):
+                with open(file_s, 'r') as sf:
+                    with open('score.tmp.out', 'w') as sft:
+                        for idx, line in enumerate(sf):
+                            if idx not in out_of_range_idxs:
+                                sft.write(line)
 
-            shutil.move('score.tmp.out', file_s)
+                shutil.move('score.tmp.out', file_s)
 
     def minimize_extracted_poses(self, file_r):
         """Perform AMBER minimization on extracted poses"""
