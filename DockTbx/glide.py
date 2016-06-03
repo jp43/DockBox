@@ -43,7 +43,8 @@ class Glide(method.DockingMethod):
         locals().update(self.options)
 
         # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-        prepwizard_cmd = chkl.eval("prepwizard -WAIT -noprotassign -nohtreat -noimpref %(file_r)s target.mae"%locals(), 'schrodinger')    
+        prepwizard_cmd = chkl.eval("prepwizard -WAIT -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
+        #prepwizard_cmd = chkl.eval("prepwizard -WAIT -noprotassign -nohtreat -noimpref %(file_r)s target.mae"%locals(), 'schrodinger')    
 
         # prepare grid cmd
         glide_grid_cmd = chkl.eval("glide -WAIT grid.in", 'schrodinger') # grid prepare
