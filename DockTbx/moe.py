@@ -234,7 +234,6 @@ endfunction;"""% locals()
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
-
         subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
 
         if os.path.exists('lig.mol2'):
@@ -252,6 +251,178 @@ endfunction;"""% locals()
                             print  >> sf, sdff.next().strip()
             os.remove(sdffile)
     
+    def write_rescoring_script(self, filename, file_r, file_l):
+
+        locals().update(self.options)
+
+        convertmol2_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
+db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
+
+        rescoring_cmd = chkl.eval("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
+
+        # write vina script
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+
+%(convertmol2_cmd)s
+
+echo "#svl
+function DockAtoms, DockFile;
+function DockMDBwAtoms, DockMDBwFile;
+
+global argv;
+function ArgvPull;
+
+local function main []
+
+    // Set potential and setup parameters
+    pot_Load '$MOE/lib/Amber10EHT.ff';
+
+    pot_Setup [
+        strEnable: 1,
+        angEnable: 1,
+        stbEnable: 1,
+        oopEnable: 1,
+        torEnable: 1,
+        vdwEnable: 1,
+        eleEnable: 1,
+        solEnable: 0,
+        resEnable: 1,
+        strWeight: 1,
+        angWeight: 1,
+        stbWeight: 1,
+        oopWeight: 1,
+        torWeight: 1,
+        vdwWeight: 1,
+        eleWeight: 1,
+        solWeight: 1,
+        resWeight: 1,
+        cutoffEnable: 1,
+        cutoffOn: 8,
+        cutoffOff: 10,
+        eleDist: 2,
+        vdwScale14: 0.5,
+        vdwBuffer1: 0,
+        vdwBuffer2: 0,
+        eleScale14: 0.833333,
+        eleDielectric: 1,
+        eleBuffer: 0,
+        solDielectric: 80,
+        solDielectricOffset: 0,
+        state0: 1,
+        state1: 0,
+        state2: 1,
+        threadCount: 0
+    ];
+
+ArgvReset ArgvExpand argv;
+    local [recmdb, ligmdb, ph4file, outf] = ArgvPull [
+        ['-rec','-lig','-ph4','-o'],
+        1
+    ];
+
+    // If no receptor given as argument use default rec.moe
+    if isnull recmdb then
+        recmdb = 'rec.moe';
+    endif
+
+    local basename = fbase recmdb;
+    local extension = fext recmdb;
+
+    // output docking database file
+    outf = 'dock.mdb';
+
+    // Receptor file or database
+    // Assume that the file is a moe or pdb file extract chains atoms
+
+    local chains = ReadAuto [recmdb, []];
+    local rec = cat cAtoms chains; // extract atom info from atom
+
+    local alpha_sites = run['sitefind.svl', [rec, []], 'AlphaSites'];
+
+    // Take first/highest scoring pocket alpha_sites(1)
+    // Take fpos data alpha_sites(1)(1)
+    // Take only coords of fpos data alpha_sites(1)(1)(2)
+    local a_sites = apt cat alpha_sites(1)(1)(2); // x, y, z coords
+
+    // Make dummy He atoms for alpha site
+    local dummy, x, y, z;
+    for x = 1, length a_sites loop
+        dummy(x) = sm_Build ['[He]'];
+        aSetPos [dummy(x), a_sites(x)];
+    endloop
+
+    // Make a collection of site atoms to send to docking
+    // from the alpha site
+    oSetCollection ['Site', dummy];
+    local site = oGetCollection 'Site';
+
+    // Ligand database
+    local lmdb = _db_Open [ligmdb, 'read'];
+    if lmdb == 0 then
+        exit twrite ['Cannot read ligand mdb file {}', ligmdb];
+    endif
+
+    local ent = 0; // must have this set to zero
+    while ent = db_NextEntry[lmdb, ent] loop; //loop through ligand database
+        local ligdata = db_Read[lmdb, ent]; //read data for each entry
+        local ligmoldata = ligdata.mol; // extract into moldata
+        local ligchains = mol_Create ligmoldata; //create molecule in window
+        local lig = cat cAtoms ligchains; // extract atom info from atom
+    endloop
+
+    // Set options for docking and refinement
+    // maxpose is set to accept 50 poses, change as required
+    local opt = [
+                outrmsd: 1,
+                sel_ent_only_rec: 0,
+                sel_ent_only: 0,
+                wall: [ '', 0, [ 0, 0, 0 ], [ 1000000, 1000000, 1000000 ], 0 ],
+                csearch: 1,
+                placement: 'None',
+                scoring: 'None',
+                dup_placement: 1,
+                rescoring: '%(rescoring)s',
+                rescoring_opt: [ train : 0 ],
+                dup_refine: 1,
+                remaxpose: 1,
+                descexpr: '',
+                receptor_mfield: '',
+                ligand_mfield: '',
+                tplate: [  ],
+                tplateSel: [  ],
+                ligmdbname: ligmdb,
+                recmdbname: recmdb
+    ];
+
+    //Perform the docking
+    DockFile [rec, site, ligmdb, outf, opt];
+
+    oDestroy ligchains;
+    db_Close lmdb;
+    write ['Docking finished at {}.\\n', asctime []];
+
+endfunction;" > moe_rescoring.svl
+
+%(rescoring_cmd)s"""% locals()
+            file.write(script)
+
+    def extract_rescoring_results(self, file_s):
+
+        # get SDF to extract scores
+        sdffile = 'lig.sdf'
+        subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
+        with open(sdffile, 'r') as sdff:
+            with open(file_s, 'a') as sf:
+                if os.path.exists('lig.sdf'):
+                    for line in sdff:
+                        if line.startswith("> <S>"):
+                            print >> sf, sdff.next().strip()
+                            break
+                    os.remove(sdffile)
+                else:
+                    print >> sf, 'NaN'
+
     def cleanup(self):
         pass
 
