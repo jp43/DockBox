@@ -99,7 +99,7 @@ class Reader(object):
 
 class Writer(object):
 
-    def write(self, filename, structs, mode='w', multi=False):
+    def write(self, filename, structs, mode='w', multi=False, last=None):
 
         if not isinstance(structs, list):
             structs = [structs]
@@ -111,18 +111,19 @@ class Writer(object):
             suffix, ext = os.path.splitext(filename)
             filename = []
             for idx, struct in enumerate(structs):
-                filename.append(suffix+str(idx+1)+ext)
+                if (last and (idx+1) <= last) or not last:
+                    filename.append((idx, suffix+str(idx+1)+ext))
         else:
             if len(structs) == 1:
-                filename = [filename]
+                filename = [(0, filename)]
             else:
                 raise ValueError(".mol2 writer not implemented to write a single file \
                     with multiple structures!")
 
-        for idx, struct in enumerate(structs):
-            with open(filename[idx], mode) as ff:
+        for idx, fname in filename:
+            with open(fname, mode) as ff:
                 for section in known_section:
-                    if section in struct:
+                    if section in struct[idx]:
                         ff.write('@<TRIPOS>'+section+'\n')
                         for line in struct[section]:
                             if section == 'ATOM':
