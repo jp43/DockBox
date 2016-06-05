@@ -123,7 +123,8 @@ class Writer(object):
         for idx, fname in filename:
             with open(fname, mode) as ff:
                 for section in known_section:
-                    if section in struct[idx]:
+                    struct = structs[idx]
+                    if section in struct:
                         ff.write('@<TRIPOS>'+section+'\n')
                         for line in struct[section]:
                             if section == 'ATOM':
@@ -132,7 +133,7 @@ class Writer(object):
                                 newline = line
                             ff.write(newline)
 
-def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None, remove=None):
+def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None, remove=None, last=None):
     f = Reader(inputfile)
     structs = f.readlines()
     f.close()
@@ -149,7 +150,7 @@ def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=N
             struct = remove_atoms(struct, remove)
         updated_structs.append(struct)
 
-    Writer().write(outputfile, updated_structs, multi=multi)
+    Writer().write(outputfile, updated_structs, multi=multi, last=last)
 
 def pdb2mol2(inputfile, outputfile, sample):
     # get atom lines in PDB:
