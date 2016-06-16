@@ -7,7 +7,7 @@ import subprocess
 from DockTbx import method
 from DockTbx.tools import reader
 from DockTbx.tools import mol2
-from DockTbx.licence import check as chkl
+from DockTbx.license import check as chkl
 
 required_programs = ['gold_auto']
 
@@ -29,6 +29,8 @@ class Gold(method.DockingMethod):
     def write_docking_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
+
+        dock_cmd = chkl.eval("gold_auto gold.conf", 'gold') # cmd for docking
 
         # write autodock script
         with open(filename, 'w') as file:
@@ -109,7 +111,7 @@ score_param_file = DEFAULT
   PROTEIN DATA
 protein_datafile = %(file_r)s" > gold.conf
 
-gold_auto gold.conf"""% locals()
+%(dock_cmd)s"""% locals()
             file.write(script)
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):

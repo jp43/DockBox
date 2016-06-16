@@ -63,7 +63,7 @@ def check_import(pkgname, pkgver):
     globals()[pkgname] = mod
 
 setup(name='DockingToolBox',
-      packages=['DockTbx', 'DockTbx.amber', 'DockTbx.licence', 'DockTbx.tools', 'DockTbx.prep'],
+      packages=['DockTbx', 'DockTbx.amber', 'DockTbx.license', 'DockTbx.tools', 'DockTbx.prep'],
       package_data = {'DockTbx.amber': ['PROTON_INFO']},
       scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz'],
       license='LICENSE.txt',

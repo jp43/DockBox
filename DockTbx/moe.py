@@ -7,7 +7,7 @@ import subprocess
 from DockTbx import method
 from DockTbx.tools import reader
 from DockTbx.tools import mol2
-from DockTbx.licence import check as chkl
+from DockTbx.license import check as chkl
 
 required_programs = ['moebatch']
 
@@ -34,7 +34,7 @@ class Moe(method.DockingMethod):
 db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
     
         dock_cmd = chkl.eval("moebatch -run moe_dock.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
-    
+
         # write script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash

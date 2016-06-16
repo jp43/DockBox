@@ -63,6 +63,8 @@ class DockingMethod(object):
     def run_rescoring(self, file_r, files_l):
         """Rescore multiple ligands on one receptor"""
 
+        single_run_programs = ['glide']
+
         curdir = os.getcwd()
         # find name for scoring directory
         scordir = self.name
@@ -73,6 +75,11 @@ class DockingMethod(object):
 
         # change directory
         os.chdir(scordir)
+        print scordir
+
+        if self.program in single_run_programs:
+            # if the program rescores in one run, provides a list of files
+            files_l = [files_l]
 
         # iterate over all the poses
         for file_l in files_l:
@@ -80,9 +87,9 @@ class DockingMethod(object):
             script_name = "run_scoring_" + self.program + ".sh"
             self.write_rescoring_script(script_name, file_r, file_l)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
-      
+
             # (B) run scoring method
-            subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
+            subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
 
             # (C) extract docking results
             self.extract_rescoring_results('score.out')

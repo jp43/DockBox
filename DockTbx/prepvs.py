@@ -77,9 +77,9 @@ class PrepDocking(object):
 
         parser.add_argument('-pwzdflags',
             type=str,
-            default="-fix -fillsidechains -pH \'neutral\'",
+            default="-fix -pH \'neutral\'",
             dest='prepwizard_flags',
-            help='Prepwizard (Schrodinger) flags for protein preparation. Default: "-fix -fillsidechains -pH \'neutral\'"')
+            help='Prepwizard (Schrodinger) flags for protein preparation. Default: "-fix -pH \'neutral\'"')
 
         parser.add_argument('-nopwzd',
             dest='no_prepwizard',
