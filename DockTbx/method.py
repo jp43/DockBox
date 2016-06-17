@@ -75,7 +75,6 @@ class DockingMethod(object):
 
         # change directory
         os.chdir(scordir)
-        print scordir
 
         if self.program in single_run_programs:
             # if the program rescores in one run, provides a list of files
