@@ -2,3 +2,4 @@
 
 from DockTbx.amber import minimz as mn
 
+mn.run()

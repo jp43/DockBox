@@ -65,7 +65,7 @@ def check_import(pkgname, pkgver):
 setup(name='DockingToolBox',
       packages=['DockTbx', 'DockTbx.amber', 'DockTbx.license', 'DockTbx.tools', 'DockTbx.prep'],
       package_data = {'DockTbx.amber': ['PROTON_INFO']},
-      scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz'],
+      scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz'],
       license='LICENSE.txt',
       description='Docking ToolBox package',
       long_description=open('README.in').read(),

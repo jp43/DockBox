@@ -3,6 +3,7 @@ import sys
 import stat
 import shutil
 import subprocess
+import argparse
 
 from DockTbx.tools import mol2
 from DockTbx.tools import reader
@@ -16,7 +17,7 @@ def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False)
     Parameters
     ----------
     file_r: filename for receptor (.pdb)
-    files_l: list of filenames (.pdb, .mol2) for ligand, when ligand-protein complex
+    files_l: list of filenames (.mol2) for ligand, when ligand-protein complex
 
     Steps
     -----
@@ -344,3 +345,36 @@ def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False
         prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')
+
+def create_arg_parser():
+
+    parser = argparse.ArgumentParser(description="Run Amber Minimization")
+
+    parser.add_argument('-l',
+        type=str,
+        dest='input_file_l',
+        nargs='+',
+        default=None,
+        help = 'Ligand coordinate file(s): .mol2')
+
+    parser.add_argument('-r',
+        type=str,
+        dest='input_file_r',
+        required=True,
+        help = 'Receptor coordinate file(s): .pdb')
+
+    parser.add_argument('-restraints',
+        type=str,
+        dest='restraints',
+        default=None,
+        help = 'Restraints')
+
+    return parser
+
+def run():
+
+    parser = create_arg_parser()
+    args = parser.parse_args()
+
+    do_minimization(args.input_file_r, files_l=args.input_file_l, restraints=args.restraints, keep_hydrogens=False)
+
