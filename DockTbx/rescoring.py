@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import shutil
 import time
 import subprocess
@@ -50,16 +50,18 @@ class Rescoring(object):
 
         curdir = os.getcwd()
         workdir = 'rescoring'
+        if not os.path.exists(workdir):
+            os.mkdir(workdir)
 
-        shutil.rmtree(workdir, ignore_errors=True)
-        os.mkdir(workdir)
         os.chdir(workdir)
     
-        for kdx in range(len(self.site)):
-            site = self.site['site'+str(kdx+1)]
+        # iterate over rescoring instances
+        for instance, program, options in self.instances:
+            shutil.rmtree(instance+'.score', ignore_errors=True)
 
-            # iterate over rescoring instances
-            for instance, program, options in self.instances:
+            for kdx in range(len(self.site)):
+                site = self.site['site'+str(kdx+1)]
+
                 # get complex filenames
                 files_l = [os.path.abspath('../poses/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
 
@@ -69,7 +71,7 @@ class Rescoring(object):
                 DockingInstance = DockingClass(instance, site, options)
                 outputfile = DockingInstance.run_rescoring(file_r, files_l)
 
-                # cat output in file
+                # cat output in file (cat instead of copying because of the binding sites)
                 subprocess.check_output('cat %s >> %s'%(outputfile,instance+'.score'), shell=True, executable='/bin/bash')
 
         os.chdir(curdir)

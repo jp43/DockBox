@@ -20,7 +20,7 @@ class DockAnalysis(object):
             if not os.path.isdir(dir):
                 raise ValueError('Directory %s not found'%dir)
             elif not os.path.isdir(posedir):
-                raise ValueError('Folder %s/poses not found'%posedir)
+                raise ValueError('Folder %s not found'%posedir)
             else:
                 self.dirs.append(os.path.abspath(dir))
         self.ndirs = len(self.dirs)

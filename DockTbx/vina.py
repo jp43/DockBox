@@ -24,7 +24,7 @@ class Vina(autodock.ADBased):
             self.options['center_'+xyz] = center[idx]
             self.options['size_'+xyz] = boxsize[idx]
 
-    def write_docking_script(self, filename, file_r, file_l, rescoring=False):
+    def write_docking_script(self, filename, file_r, file_l, rescoring=False, fix=''):
         """write docking script for Vina"""
 
         locals().update(self.options)
@@ -48,7 +48,7 @@ prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
-vina --config vina.config > vina.out"""% locals()
+vina --config vina.config 1> vina.out 2> vina.err"""% locals()
                 file.write(script)
         else:
             with open(filename, 'w') as file:
@@ -66,14 +66,15 @@ vina --score_only --config vina.config > vina.out"""% locals()
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""
-    
-        # exctract structures from .pdbqt file 
-        with open('lig_out.pdbqt','r') as pdbqtf:
-            with open(file_s, 'w') as sf:
-                for line in pdbqtf:
-                    if line.startswith('REMARK VINA RESULT:'):
-                        score = float(line[19:].split()[0])
-                        print >> sf, score
+
+        if os.path.exists('lig_out.pdbqt'): 
+            # extract structures from .pdbqt file 
+            with open('lig_out.pdbqt','r') as pdbqtf:
+                with open(file_s, 'w') as sf:
+                    for line in pdbqtf:
+                        if line.startswith('REMARK VINA RESULT:'):
+                            score = float(line[19:].split()[0])
+                            print >> sf, score
 
         subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
         self.update_output_mol2files(sample=input_file_l)

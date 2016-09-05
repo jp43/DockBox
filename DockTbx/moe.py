@@ -412,16 +412,16 @@ endfunction;" > moe_rescoring.svl
         # get SDF to extract scores
         sdffile = 'lig.sdf'
         subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
-        with open(sdffile, 'r') as sdff:
-            with open(file_s, 'a') as sf:
-                if os.path.exists('lig.sdf'):
+        with open(file_s, 'a') as sf:
+            if os.path.exists(sdffile):
+                with open(sdffile, 'r') as sdff:
                     for line in sdff:
                         if line.startswith("> <S>"):
                             print >> sf, sdff.next().strip()
                             break
                     os.remove(sdffile)
-                else:
-                    print >> sf, 'NaN'
+            else:
+                print >> sf, 'NaN'
 
     def cleanup(self):
         pass

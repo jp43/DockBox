@@ -32,8 +32,8 @@ class DockingMethod(object):
             os.mkdir(dockdir)
         os.chdir(dockdir)
 
-        print "Starting docking with %s..."%self.program.capitalize()
         if not extract_only:
+            print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
             print self.options
 
@@ -42,8 +42,11 @@ class DockingMethod(object):
             self.write_docking_script(script_name, file_r, file_l)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-            # running this script will run the docking procedure
-            subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
+            try:
+                # try running the docking procedure
+                subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
+            except subprocess.CalledProcessError:
+                pass
 
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
@@ -88,7 +91,10 @@ class DockingMethod(object):
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
             # (B) run scoring method
-            subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
+            try:
+                subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
+            except subprocess.CalledProcessError:
+                pass
 
             # (C) extract docking results
             self.extract_rescoring_results('score.out')
@@ -170,4 +176,15 @@ class DockingMethod(object):
         pass
 
     def cleanup(self):
+        pass
+
+class ScoringMethod(DockingMethod):
+
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False):
+        pass
+
+    def remove_out_of_range_poses(self, file_s):
+        pass
+
+    def minimize_extracted_poses(self, file_r):
         pass
