@@ -9,10 +9,10 @@ import argparse
 import ConfigParser
 import time
 
-from DockTbx import multi
-from DockTbx import rescoring
+from MOBPred import multi
+from MOBPred import rescoring
 
-from DockTbx.tools import mol2
+from MOBPred.tools import mol2
 
 class DockingConfig(object):
 
@@ -83,6 +83,11 @@ class Docking(object):
             action='store_true',
             default=False,
             help='Extract structures only (usually used for debugging)')
+
+        parser.add_argument('-d',
+            dest='posedir',
+            default='poses',
+            help='Directory containing poses to rescore (should be used with rescore_only option)')
 
         return parser
 
@@ -160,4 +165,4 @@ cleanup=config_d.cleanup, extract_only=config.extract_only)
 
         # run rescoring
         if config.rescoring.is_rescoring:
-            config.rescoring.run(config.input_file_r)
+            config.rescoring.run(config.input_file_r, args.posedir)

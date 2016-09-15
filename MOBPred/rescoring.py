@@ -4,7 +4,7 @@ import shutil
 import time
 import subprocess
 
-from DockTbx import multi
+from MOBPred import multi
 
 class Rescoring(object):
 
@@ -34,17 +34,17 @@ class Rescoring(object):
         else:
             return default
 
-    def run(self, file_r):
+    def run(self, file_r, posedir):
         """Run rescoring on docking poses"""
     
         tcpu1 = time.time()
         print "Starting rescoring..."
     
         # look for results folder
-        if not os.path.isdir('poses'):
-            raise IOError('no folder poses found!')
+        if not os.path.isdir(posedir):
+            raise IOError('no folder %s found!'%posedir)
         else:
-            with open('poses/info.dat') as inff:
+            with open(posedir+'/info.dat') as inff:
                 nposes = inff.next()
                 nposes = map(int, nposes.strip().split())
 
@@ -54,16 +54,17 @@ class Rescoring(object):
             os.mkdir(workdir)
 
         os.chdir(workdir)
-    
         # iterate over rescoring instances
         for instance, program, options in self.instances:
-            shutil.rmtree(instance+'.score', ignore_errors=True)
+            # remove old scoring file
+            if os.path.isfile(instance+'.score'):
+                os.remove(instance+'.score')
 
             for kdx in range(len(self.site)):
                 site = self.site['site'+str(kdx+1)]
 
                 # get complex filenames
-                files_l = [os.path.abspath('../poses/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
+                files_l = [os.path.abspath('../'+posedir+'/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
 
                 # get docking class
                 DockingClass = getattr(sys.modules[program], program.capitalize())

@@ -6,11 +6,11 @@ import subprocess
 
 import numpy as np
 
-from DockTbx import method
+from MOBPred import method
 
-from DockTbx.tools import reader
-from DockTbx.tools import mol2
-from DockTbx.license import check as chkl
+from MOBPred.tools import reader
+from MOBPred.tools import mol2
+from MOBPred.license import check as chkl
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 

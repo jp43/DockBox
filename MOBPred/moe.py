@@ -4,10 +4,10 @@ import glob
 import shutil
 import subprocess
 
-from DockTbx import method
-from DockTbx.tools import reader
-from DockTbx.tools import mol2
-from DockTbx.license import check as chkl
+from MOBPred import method
+from MOBPred.tools import reader
+from MOBPred.tools import mol2
+from MOBPred.license import check as chkl
 
 required_programs = ['moebatch']
 

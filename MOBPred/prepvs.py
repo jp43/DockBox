@@ -12,9 +12,9 @@ import time
 import glob
 import numpy as np
 
-from DockTbx import moe
-from DockTbx.prep import ligprep
-from DockTbx.amber import minimz as mn
+from MOBPred import moe
+from MOBPred.prep import ligprep
+from MOBPred.amber import minimz as mn
 
 class PrepDocking(object):
 

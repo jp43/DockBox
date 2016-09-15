@@ -4,8 +4,8 @@ import stat
 import shutil
 import subprocess
 
-from DockTbx.amber import minimz as mn
-from DockTbx.tools import mol2
+from MOBPred.amber import minimz as mn
+from MOBPred.tools import mol2
 
 def do_clustering(files_r, files_l, cutoff=2.0):
     """

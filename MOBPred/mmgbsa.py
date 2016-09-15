@@ -9,8 +9,8 @@ import method
 
 import numpy as np
 
-from DockTbx.amber import minimz as mn
-from DockTbx.tools import mol2
+from MOBPred.amber import minimz as mn
+from MOBPred.tools import mol2
 
 required_programs = ['MMPBSA.py', 'cpptraj', 'babel']
 
@@ -31,8 +31,8 @@ rm -rf tmp; mkdir tmp
 # copy ligand file
 cp %(file_l)s tmp/lig0.mol2
 
-echo "from DockTbx.tools import mol2
-from DockTbx.amber import minimz as mn
+echo "from MOBPred.tools import mol2
+from MOBPred.amber import minimz as mn
 
 mol2.update_mol2file('%(file_l)s', 'tmp/lig0.mol2', ligname='LIG')
 mn.prepare_receptor('tmp/rec.pdb', '%(file_r)s', False)" > prepare_files1.py

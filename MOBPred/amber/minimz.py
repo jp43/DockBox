@@ -5,8 +5,8 @@ import shutil
 import subprocess
 import argparse
 
-from DockTbx.tools import mol2
-from DockTbx.tools import reader
+from MOBPred.tools import mol2
+from MOBPred.tools import reader
 
 def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
     """

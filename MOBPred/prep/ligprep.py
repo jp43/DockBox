@@ -5,7 +5,7 @@ import stat
 import glob
 import subprocess
 
-from DockTbx.license import check as chkl
+from MOBPred.license import check as chkl
 
 def prepare_ligand(file_l, flags):
 

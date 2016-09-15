@@ -5,8 +5,8 @@ import glob
 import shutil
 import subprocess
 
-from DockTbx.amber import minimz as mn
-from DockTbx.tools import mol2 as mol2t
+from MOBPred.amber import minimz as mn
+from MOBPred.tools import mol2 as mol2t
 
 class DockingMethod(object):
 
@@ -83,21 +83,25 @@ class DockingMethod(object):
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
 
-        # iterate over all the poses
-        for file_l in files_l:
-            # (A) write script
-            script_name = "run_scoring_" + self.program + ".sh"
-            self.write_rescoring_script(script_name, file_r, file_l)
-            os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+        if files_l:
+            # iterate over all the poses
+            for file_l in files_l:
+                # (A) write script
+                script_name = "run_scoring_" + self.program + ".sh"
+                self.write_rescoring_script(script_name, file_r, file_l)
+                os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-            # (B) run scoring method
-            try:
-                subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
-            except subprocess.CalledProcessError:
-                pass
+                # (B) run scoring method
+                try:
+                    subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
+                except subprocess.CalledProcessError:
+                    pass
 
-            # (C) extract docking results
-            self.extract_rescoring_results('score.out')
+                # (C) extract docking results
+                self.extract_rescoring_results('score.out')
+        else:
+            # if no files provided, create an empty score.out file
+            open('score.out', 'w').close()
 
         os.chdir(curdir)
         return scordir + '/score.out'

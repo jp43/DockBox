@@ -9,7 +9,7 @@ import method
 
 import numpy as np
 
-from DockTbx.tools import mol2
+from MOBPred.tools import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 

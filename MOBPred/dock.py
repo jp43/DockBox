@@ -5,8 +5,8 @@ import shutil
 import glob
 import method
 
-from DockTbx.tools import reader
-from DockTbx.tools import mol2
+from MOBPred.tools import reader
+from MOBPred.tools import mol2
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
@@ -205,7 +205,7 @@ dock6 -i dock6.in"""% locals()
         with open('shift_lig_coords.py', 'w') as file:
             script ="""import sys
 import numpy as np
-from DockTbx.tools import mol2 as mol2t
+from MOBPred.tools import mol2 as mol2t
 
 # read mol2 file
 mol2 = sys.argv[1]
