@@ -1,12 +1,9 @@
 import os
-import sys
-import subprocess
-import shutil
 import glob
 import method
 
-from MOBPred.tools import reader
-from MOBPred.tools import mol2
+from tools import reader
+from tools import mol2
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 

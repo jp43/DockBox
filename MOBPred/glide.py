@@ -5,12 +5,10 @@ import shutil
 import subprocess
 
 import numpy as np
-
-from MOBPred import method
-
-from MOBPred.tools import reader
-from MOBPred.tools import mol2
-from MOBPred.license import check as chkl
+import method
+from tools import reader
+from tools import mol2
+from license import check as chkl
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 

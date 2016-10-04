@@ -3,9 +3,8 @@ import sys
 import glob
 import shutil
 import subprocess
-
-from MOBPred import autodock
-from MOBPred.tools import mol2
+import autodock
+from tools import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 

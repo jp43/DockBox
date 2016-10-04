@@ -1,5 +1,4 @@
 import os
-import sys
 import stat
 import shutil
 import subprocess
@@ -377,4 +376,3 @@ def run():
     args = parser.parse_args()
 
     do_minimization(args.input_file_r, files_l=args.input_file_l, restraints=args.restraints, keep_hydrogens=False)
-

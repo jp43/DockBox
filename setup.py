@@ -55,18 +55,18 @@ def check_import(pkgname, pkgver):
         # code for mycmp() taken from http://stackoverflow.com/questions/1714027/version-number-comparison
         if mycmp(mod_ver,pkgver) < 0:
             exit_with_error(
-                "You need %(pkgname)s %(pkgver)s or greater to run lsdmap!"
+                "You need %(pkgname)s %(pkgver)s or greater to install this package!"
                 % {'pkgname': pkgname, 'pkgver': pkgver} )
 
     print(( "* Found %(pkgname)s %(pkgver)s package installed."
             % {'pkgname': pkgname, 'pkgver': mod.__version__} ))
     globals()[pkgname] = mod
 
-setup(name='DockingToolBox',
+setup(name='MOBPredictor',
       packages=['MOBPred', 'MOBPred.amber', 'MOBPred.license', 'MOBPred.tools', 'MOBPred.prep'],
       package_data = {'MOBPred.amber': ['PROTON_INFO']},
       scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz'],
       license='LICENSE.txt',
-      description='Docking ToolBox package',
+      description='All you need to predict non-covalent modes of binding',
       long_description=open('README.in').read(),
 )

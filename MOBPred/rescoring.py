@@ -4,7 +4,7 @@ import shutil
 import time
 import subprocess
 
-from MOBPred import multi
+import multi
 
 class Rescoring(object):
 

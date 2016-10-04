@@ -1,16 +1,5 @@
 import os
-import sys
-import tempfile
-import subprocess
-import glob
-import shutil
-import fileinput
 import method
-
-import numpy as np
-
-from MOBPred.amber import minimz as mn
-from MOBPred.tools import mol2
 
 required_programs = ['MMPBSA.py', 'cpptraj', 'babel']
 
@@ -99,7 +88,7 @@ cd .."""% locals()
     def extract_rescoring_results(self, file_s):
 
         with open(file_s, 'a') as sf:
-            if os.path.exists('tmp/mm.out'):
+            if os.path.isfile('tmp/mm.out'):
                 with open('tmp/mm.out', 'r') as mmf:
                     for line in mmf:
                         if line.startswith("DELTA TOTAL"):

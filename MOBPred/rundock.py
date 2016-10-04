@@ -9,10 +9,10 @@ import argparse
 import ConfigParser
 import time
 
-from MOBPred import multi
-from MOBPred import rescoring
+import multi
+import rescoring
 
-from MOBPred.tools import mol2
+from tools import mol2
 
 class DockingConfig(object):
 

@@ -1,12 +1,11 @@
 import os
-import sys
 import stat
 import glob
 import shutil
 import subprocess
 
-from MOBPred.amber import minimz as mn
-from MOBPred.tools import mol2 as mol2t
+from amber import minimz as mn
+from tools import mol2 as mol2t
 
 class DockingMethod(object):
 

@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from __future__ import with_statement
 
-import sys
 import os
 import subprocess
 import shutil
@@ -11,10 +10,10 @@ import stat
 import time
 import glob
 import numpy as np
+import moe
+import ligprep
 
-from MOBPred import moe
-from MOBPred.prep import ligprep
-from MOBPred.amber import minimz as mn
+from amber import minimz as mn
 
 class PrepDocking(object):
 

@@ -1,15 +1,9 @@
 import os
-import sys
-import tempfile
 import subprocess
 import glob
 import shutil
-import fileinput
 import method
-
-import numpy as np
-
-from MOBPred.tools import mol2
+from tools import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 

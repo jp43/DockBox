@@ -6,7 +6,7 @@ import subprocess
 from MolKit import Read
 from PyBabel.atomTypes import AtomHybridization
 
-from MOBPred.tools.babel import ArrangeHydrogens
+from babel import ArrangeHydrogens
 
 # recognized sections
 known_section = ['MOLECULE', 'ATOM', 'BOND', 'SUBSTRUCTURE']

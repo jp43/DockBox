@@ -1,0 +1,39 @@
+import os
+import sys
+import method
+from tools import mol2
+
+required_programs = ['dsx']
+
+class Dsx(method.ScoringMethod):
+
+    def write_rescoring_script(self, filename, file_r, file_l):
+
+        locals().update(self.options)
+
+        # write vina script
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+set -e
+# remove pre-existing result file
+rm -rf dsr.txt
+
+# execute DSX
+dsx -P %(file_r)s -L %(file_l)s -F dsx.txt
+"""% locals()
+            file.write(script)
+
+    def extract_rescoring_results(self, file_s):
+
+        with open(file_s, 'a') as sf:
+            if os.path.isfile('dsx.txt'):
+                with open('dsx.txt', 'r') as txtf:
+                    for line in txtf:
+                        if line.startswith(" 0"):
+                            print >> sf, line.split('|')[3].strip()
+                            break
+            else:
+                print >> sf, 'NaN'
+
+    def cleanup(self):
+        pass

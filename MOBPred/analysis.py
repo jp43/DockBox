@@ -1,4 +1,3 @@
-import sys
 import os
 import argparse
 import shutil
@@ -7,8 +6,8 @@ import subprocess
 import glob
 import time
 
-from itertools import izip
-from MOBPred.amber import clustr
+import pandas as pd
+from amber import clustr
 
 class DockAnalysis(object):
 
@@ -62,18 +61,10 @@ class DockAnalysis(object):
                                  nposes_per_instance[instance] += 1
                              self.ranks.append(nposes_per_instance[instance])
                              self.instances_l.append(instance)
-                         # get scores (if available)
-                         rescordir = dir + '/rescoring'
-                         if os.path.isdir(rescordir):
-                             for filename in glob.glob(rescordir+'/*.score'):
-                                 program = os.path.splitext(os.path.basename(filename))[0]
-                                 scores = np.loadtxt(filename).tolist()
-                                 if program not in self.scores:
-                                     self.scores[program] = []
-                                 for idx in poses_idxs:
-                                     self.scores[program].append(scores[idx-1])
-
-        self.ninstances = len(set(self.instances_l))
+        if args.ninstances:
+            self.ninstances = args.ninstances
+        else:
+            self.ninstances = len(set(self.instances_l))
         self.nposes = len(self.files_l)
 
     def create_arg_parser(self):
@@ -98,11 +89,22 @@ class DockAnalysis(object):
             nargs='+',
             help='Choose instances to be used for consensus docking')
 
+        parser.add_argument('-ni',
+            type=int,
+            dest='ninstances',
+            help='Number of instances')
+
         parser.add_argument('-overlap',
             type=int,
             dest='min_overlap',
             default=1,
             help='Do not keep small clusters (predicted at least min_overlap softwares)')
+
+        parser.add_argument('-extract-only',
+            action='store_true',
+            dest='extract_results_only',
+            default=False,
+            help='Extract results only!!!!')
 
         return parser
 
@@ -116,8 +118,9 @@ class DockAnalysis(object):
         # initialize parameters
         self.initialize(args)
 
-        # performs clustering
-        clustr.do_clustering(self.files_r, self.files_l, cutoff=args.cutoff)
+        if not args.extract_results_only:
+            # performs clustering
+            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.cutoff)
         self.extract_results('clustr/info.dat', args)
 
         tcpu2 = time.time()
@@ -125,112 +128,116 @@ class DockAnalysis(object):
    
     def extract_results(self, filename, args):
 
-        heterg = []
-        population = []
-        poses = []
+        #heterg = []
+        #population = []
+        #poses = []
 
-        avg_score = []
+        #instances = []
+        #instances_no_duplicity = []
+        features = ['pose_idx', 'cluster_idx', 'heterogeneity', 'population', 'instance']
 
-        instances = []
-        instances_no_duplicity = []
+        results = {}
+        for column in features:
+            results[column] = []
 
-        ff = open(filename)
-        for line in ff:
-            # if line does not start with #
-            if not line.startswith('#'):
-                # indices = numbers of the poses involved in the current cluster
-                indices = [i for i, x in enumerate(line.strip()) if x == 'X']
-                population.append(len(indices))
-                poses.append([idx + 1 for idx in indices])
-                if self.scores:
-                    avg = 0
-                    for key, value in self.scores.items():
-                        scores = np.array(value)[indices]
-                        avg += np.mean(scores)/np.amin(np.array(value))
-                    avg /= len(self.scores)
-                    avg_score.append(avg)
-                # compute heterogeneity factor for the current cluster
-                instances_cluster = np.array(self.instances_l)[indices].tolist()
-                instances.append(instances_cluster)
-                instances_no_duplicity.append(list(set(instances_cluster)))
-                heterg.append(len(set(instances_cluster))*100./self.ninstances)
-            elif line.startswith('#Representative frames:'):
-                rep_poses_idxs = map(int, line[23:].split())
-        ff.close()
+        cluster_idx = 0
+        with open(filename, 'r') as ff:
+            for line in ff:
+                if not line.startswith('#'):
+                    indices = [i for i, x in enumerate(line.strip()) if x == 'X']
+                    population = len(indices)
+                    instances_cluster = np.array(self.instances_l)[indices].tolist()
+                    nprograms = len(list(set(instances_cluster)))
+                    cluster_idx += 1 
+                    for index in indices:
+                        results['pose_idx'].append(index+1)
+                        results['cluster_idx'].append(cluster_idx)
+                        results['heterogeneity'].append(nprograms*100./self.ninstances)
+                        results['population'].append(population)
+                        results['instance'].append(self.instances_l[index])
 
-        rep_poses = [self.files_l[idx-1] for idx in rep_poses_idxs]
+        dataset = pd.DataFrame(results)
+        dataset = dataset.sort_values(['pose_idx'])
+        dataset = dataset[features]
+        dataset.to_csv('results.csv', index=False)
 
-        heterg = np.array(heterg)
-        population = np.array(population, dtype=int)
-        nclusters = heterg.shape[0]
+        #ff = open(filename)
+        #for line in ff:
+        #    # if line does not start with #
+        #    if not line.startswith('#'):
+        #        # indices = numbers of the poses involved in the current cluster
+        #        indices = [i for i, x in enumerate(line.strip()) if x == 'X']
+        #        population.append(len(indices))
+        #        poses.append([idx + 1 for idx in indices])
+        #        # compute heterogeneity factor for the current cluster
+        #        instances_cluster = np.array(self.instances_l)[indices].tolist()
+        #        instances.append(instances_cluster)
+        #        instances_no_duplicity.append(list(set(instances_cluster)))
+        #        heterg.append(len(set(instances_cluster))*100./self.ninstances)
+        #    elif line.startswith('#Representative frames:'):
+        #        rep_poses_idxs = map(int, line[23:].split())
+        #ff.close()
 
-        rank_by_rank_score = []
-        for idx in range(nclusters):
-            rbr = 0
-            known_instances = []
-            for idx_pose in poses[idx]:
-                jdx = idx_pose-1
-                if not self.instances_l[jdx] in known_instances:
-                    rbr += self.ranks[jdx]
-                    known_instances.append(self.instances_l[jdx])
-            rank_by_rank_score.append(rbr*1./len(known_instances))
+        #rep_poses = [self.files_l[idx-1] for idx in rep_poses_idxs]
 
-        kdx = 0
-        with open('anlz.out', 'w') as ff:
-            for idx in range(nclusters):
-                if len(instances_no_duplicity[idx]) >= args.min_overlap:
-                    kdx += 1
-                    ff.write("Cluster #%i \n"%kdx)
-                    ff.write("Poses predicted by " + ', '.join(instances_no_duplicity[idx]) + '\n')
-                    ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
-                    ff.write("Representative pose: %s\n"%os.path.basename(rep_poses[idx]))
-                    ff.write("Poses: %s\n"%(', '.join(map(str, poses[idx]))))
-                    ff.write("Rank-by-rank score: %9.1f\n\n"%(rank_by_rank_score[idx]))
+        #heterg = np.array(heterg)
+        #population = np.array(population, dtype=int)
+        #nclusters = heterg.shape[0]
 
-        resultdir = 'poses-filtered'
-        shutil.rmtree(resultdir, ignore_errors=True)
-        os.mkdir(resultdir)
-
-        # copy receptor file
-        shutil.copyfile(self.files_r[0], resultdir+'/rec.pdb')
-
-        # order poses per binding site
-        sites_rep_poses = [self.sites[idx-1] for idx in rep_poses_idxs]
-        rep_poses_site_ordered = np.argsort(sites_rep_poses)
-
-        kdx = 0
-        summary = ''
-        cursite = 0 
-        nposes = [] # number of poses involved for each binding site
-        for idx in rep_poses_site_ordered:
-            # update binding site
-            if cursite != sites_rep_poses[idx]:
-                cursite = sites_rep_poses[idx]
-                nposes.append(kdx+1)
-            if len(instances_no_duplicity[idx]) >= args.min_overlap:
-                shutil.copyfile(rep_poses[idx], resultdir+'/lig-%s.mol2'%(kdx+1))
-                summary += '%30s      %10s       %10s       %10s\n'%(','.join(instances_no_duplicity[idx]), 1, kdx+1, sites_rep_poses[idx])
-                kdx += 1
-        nposes.append(kdx+1)
-
-        # write files containing the number of poses
-        # generated by each software
-        with open(resultdir+'/info.dat', 'w') as ff:
-            ff.write('   '.join(map(str,nposes))+'\n')
-            ff.write('#                     program           nposes           firstidx             site\n')
-            ff.write(summary)
+        #rank_by_rank_score = []
+        #for idx in range(nclusters):
+        #    rbr = 0
+        #    known_instances = []
+        #    for idx_pose in poses[idx]:
+        #        jdx = idx_pose-1
+        #        if not self.instances_l[jdx] in known_instances:
+        #            rbr += self.ranks[jdx]
+        #            known_instances.append(self.instances_l[jdx])
+        #    rank_by_rank_score.append(rbr*1./len(known_instances))
 
 
-        # Option 1
-        #best_score = 0
-        #most_populated_clustrs = np.where(population>2)
-        #heterg_max = np.amax(heterg)
-        #for idx in most_populated_clustrs[0]:
-        #    if heterg[idx] == heterg_max:
-        #        if avg_score[idx] > best_score:
-        #            best_cluster_idx = idx
-        #            best_score = avg_score[idx]
+        #kdx = 0
+        #with open('anlz.out', 'w') as ff:
+        #    for idx in range(nclusters):
+        #        if len(instances_no_duplicity[idx]) >= args.min_overlap:
+        #            kdx += 1
+        #            ff.write("Cluster #%i \n"%kdx)
+        #            ff.write("Poses predicted by " + ', '.join(instances_no_duplicity[idx]) + '\n')
+        #            ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
+        #            ff.write("Representative pose: %s\n"%os.path.basename(rep_poses[idx]))
+        #            ff.write("Poses: %s\n"%(', '.join(map(str, poses[idx]))))
+        #            ff.write("Rank-by-rank score: %9.1f\n\n"%(rank_by_rank_score[idx]))
 
-        #best_pose_idx = poses_clustrs_idxs[best_cluster_idx]
-        #print self.files_l[best_pose_idx-1]
-        #print self.files_r[best_pose_idx-1]
+        #resultdir = 'poses-filtered'
+        #shutil.rmtree(resultdir, ignore_errors=True)
+        #os.mkdir(resultdir)
+
+        ## copy receptor file
+        #shutil.copyfile(self.files_r[0], resultdir+'/rec.pdb')
+
+        ## order poses per binding site
+        #sites_rep_poses = [self.sites[idx-1] for idx in rep_poses_idxs]
+        #rep_poses_site_ordered = np.argsort(sites_rep_poses)
+
+        #kdx = 0
+        #summary = ''
+        #cursite = 0 
+        #nposes = [] # number of poses involved for each binding site
+        #for idx in rep_poses_site_ordered:
+        #    # update binding site
+        #    if cursite != sites_rep_poses[idx]:
+        #        cursite = sites_rep_poses[idx]
+        #        nposes.append(kdx+1)
+        #    if len(instances_no_duplicity[idx]) >= args.min_overlap:
+        #        shutil.copyfile(rep_poses[idx], resultdir+'/lig-%s.mol2'%(kdx+1))
+        #        summary += '%30s      %10s       %10s       %10s\n'%(','.join(instances_no_duplicity[idx]), 1, kdx+1, sites_rep_poses[idx])
+        #        kdx += 1
+        #nposes.append(kdx+1)
+
+        ## write files containing the number of poses
+        ## generated by each software
+        #with open(resultdir+'/info.dat', 'w') as ff:
+        #    ff.write('   '.join(map(str,nposes))+'\n')
+        #    ff.write('#                     program           nposes           firstidx             site\n')
+        #    ff.write(summary)
+
