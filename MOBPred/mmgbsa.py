@@ -9,7 +9,6 @@ class Mmgbsa(method.ScoringMethod):
 
         locals().update(self.options)
 
-        # write vina script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
 set -e

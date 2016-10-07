@@ -11,7 +11,15 @@ class Mol2Format(object):
         import mol2
         return mol2.Reader(filename, **kwargs)
 
-known_formats={'.mol2': Mol2Format()}
+class PDBFormat(object):
+    """
+    class used to read .mol2 file(s)
+    """
+    def open(self, filename, kwargs):
+        import pdb
+        return pdb.Reader(filename, **kwargs)
+
+known_formats={'.mol2': Mol2Format(), '.pdb': PDBFormat()}
 
 class ReaderFormatError(ReaderError):
 

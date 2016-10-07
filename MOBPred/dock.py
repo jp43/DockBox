@@ -12,9 +12,9 @@ default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maxi
 
 class Dock(method.DockingMethod):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Dock, self).__init__(name, site, options)
+        super(Dock, self).__init__(instance, site, options)
         self.options['center'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"' # set box center
 
         # set box size

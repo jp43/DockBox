@@ -9,8 +9,9 @@ from tools import mol2 as mol2t
 
 class DockingMethod(object):
 
-    def __init__(self, name, site, options):
-        self.name = name
+    def __init__(self, instance, site, options):
+
+        self.instance = instance
         self.site = site
         self.options = options
 
@@ -21,7 +22,11 @@ class DockingMethod(object):
 
         curdir = os.getcwd()
         # find name for docking directory
-        dockdir = self.name
+        if 'name' in self.options:
+            dockdir = self.options['name']
+        else:
+            dockdir = self.instance
+
         if self.site[0]:
             dockdir += '.' + self.site[0]
 
@@ -66,10 +71,14 @@ class DockingMethod(object):
         """Rescore multiple ligands on one receptor"""
 
         single_run_programs = ['glide']
-
         curdir = os.getcwd()
+
         # find name for scoring directory
-        scordir = self.name
+        if 'name' in self.options:
+            scordir = self.options['name']
+        else:
+            scordir = self.instance
+
         if self.site[0]:
             scordir += '.' + self.site[0]
         shutil.rmtree(scordir, ignore_errors=True)

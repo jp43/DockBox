@@ -16,9 +16,9 @@ default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP'
 
 class Glide(method.DockingMethod):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Glide, self).__init__(name, site, options)
+        super(Glide, self).__init__(instance, site, options)
 
         # set box center
         center = site[1] # set box

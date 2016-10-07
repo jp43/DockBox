@@ -15,9 +15,9 @@ default_settings = {'nposes': '20'}
 
 class Gold(method.DockingMethod):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Gold, self).__init__(name, site, options)
+        super(Gold, self).__init__(instance, site, options)
 
         # set box origin
         self.options['origin'] = ' '.join(map(str.strip, site[1].split(',')))

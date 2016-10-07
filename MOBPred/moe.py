@@ -16,9 +16,9 @@ default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placem
 
 class Moe(method.DockingMethod):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Moe, self).__init__(name, site, options)
+        super(Moe, self).__init__(instance, site, options)
 
         # set box center
         self.options['center_bs'] = '[' + ', '.join(map(str.strip, site[1].split(','))) + ']'

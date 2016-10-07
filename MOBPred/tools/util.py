@@ -8,3 +8,6 @@ def center_of_geometry(coords):
         cog = cog + coords[idx]
     cog = cog / num_atom
     return cog
+
+
+

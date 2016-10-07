@@ -9,8 +9,9 @@ import argparse
 import ConfigParser
 import time
 
-import multi
+import setup
 import rescoring
+
 
 from tools import mol2
 
@@ -44,7 +45,7 @@ class DockingConfig(object):
         if not os.path.exists(self.input_file_r):
             raise IOError("File %s not found!"%(self.input_file_r))
 
-        self.docking = multi.MultiProgramDocking(config)
+        self.docking = setup.DockingSetup(config)
         self.extract_only = args.extract_only
         self.rescoring = rescoring.Rescoring(config, args)
 

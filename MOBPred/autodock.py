@@ -25,9 +25,9 @@ class ADBased(method.DockingMethod):
 
 class Autodock(ADBased):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Autodock, self).__init__(name, site, options)
+        super(Autodock, self).__init__(instance, site, options)
 
         # set box center
         self.options['gridcenter'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"'

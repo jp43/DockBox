@@ -12,9 +12,9 @@ default_settings = {'cpu': '1', 'num_modes': '9', 'energy_range': '3'}
 
 class Vina(autodock.ADBased):
 
-    def __init__(self, name, site, options):
+    def __init__(self, instance, site, options):
 
-        super(Vina, self).__init__(name, site, options)
+        super(Vina, self).__init__(instance, site, options)
 
         center = map(str.strip, site[1].split(','))
         boxsize = map(str.strip, site[2].split(','))
