@@ -4,7 +4,7 @@ import method
 
 mandatory_settings = ['type']
 known_types = ['distance', 'volume']
-default_settings = {'type': 'distance', 'residues': None}
+default_settings = {'type': 'distance', 'residues': None, 'distance_mode': 'cog'}
 
 class Colvar(method.ScoringMethod):
     """ScoringMethod class to compute a collective variable from ligand/complex structure"""
@@ -24,8 +24,45 @@ class Colvar(method.ScoringMethod):
         locals().update(self.options)
 
         if self.options['type'] == 'distance':
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
+
+            if self.options['distance_mode'] == 'cog':
+                with open(filename, 'w') as file:
+                    script ="""#!/bin/bash
+set -e
+echo "from MOBPred.tools import mol2, PDB
+from MOBPred.tools import reader
+from MOBPred.tools import util
+import numpy as np
+
+ligrd = reader.open('%(file_l)s')
+coords_lig = [map(float,line[2:5]) for line in ligrd.next()['ATOM']]
+coords_lig = np.array(coords_lig)
+cog_lig = util.center_of_geometry(coords_lig)
+
+recrd = reader.open('%(file_r)s')
+residue = %(residues)s
+
+dist_min = 1e10
+rec = recrd.next()['ATOM']
+for rs in residue:
+
+    coords_rec = [map(float,line[4:7]) for line in rec if line[3] == str(rs)]
+    coords_rec = np.array(coords_rec)
+    cog_rec = util.center_of_geometry(coords_rec)
+
+    dist = np.sqrt(np.sum((cog_lig - cog_rec)**2))
+    if dist < dist_min:
+        dist_min = dist
+
+# write min distance
+with open('cv.out', 'w') as ff:
+    ff.write(str(dist_min))" > get_distance.py 
+python get_distance.py"""% locals()
+                    file.write(script)
+
+            elif self.options['distance_mode'] == 'min':
+                with open(filename, 'w') as file:
+                    script ="""#!/bin/bash
 set -e
 echo "from MOBPred.tools import mol2, PDB
 from MOBPred.tools import reader
@@ -53,7 +90,7 @@ for idx, cl in enumerate(coords_lig):
 with open('cv.out', 'w') as ff:
     ff.write(str(dist.min()))" > get_distance.py 
 python get_distance.py"""% locals()
-                file.write(script)
+                    file.write(script)
 
         elif self.options['type'] == 'volume':
             with open(filename, 'w') as file:
@@ -68,19 +105,13 @@ $SCHRODINGER/run volume_calc.py -imae lig.mae > cv.out"""% locals()
     def extract_rescoring_results(self, file_s):
 
         with open(file_s, 'a') as sf:
-            if os.path.isfile('cv.out'):
+            try:
                 with open('cv.out', 'r') as ff:
                     if self.options['type'] == 'distance':
-                        try:
-                            print >> sf, ff.next().strip()
-                        except StopIteration:
-                            print >> sf, 'NaN'
+                        print >> sf, ff.next().strip()
                     elif self.options['type'] == 'volume':
-                        try:
-                            ff.next()
-                            ff.next()
-                            print >> sf, ff.next().split(',')[1].replace('\n','') 
-                        except StopIteration:
-                            print >> sf, 'NaN'
-            else:
+                        ff.next()
+                        ff.next()
+                        print >> sf, ff.next().split(',')[1].replace('\n','') 
+            except:
                 print >> sf, 'NaN'

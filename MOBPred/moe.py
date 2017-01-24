@@ -11,8 +11,8 @@ from license import check as chkl
 
 required_programs = ['moebatch']
 
-default_settings = {'placement': 'Alpha PMI', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
-'maxpose': '10', 'gtest': '0.01', 'rescoring': 'London dG'}
+default_settings = {'placement': 'Triangle Matcher', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
+'maxpose': '10', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
 
 class Moe(method.DockingMethod):
 

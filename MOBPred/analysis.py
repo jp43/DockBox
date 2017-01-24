@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import shutil
 import numpy as np
@@ -7,7 +8,7 @@ import glob
 import time
 
 import pandas as pd
-from amber import clustr
+from MOBPred.amber import clustr
 
 class DockAnalysis(object):
 
@@ -31,6 +32,7 @@ class DockAnalysis(object):
         self.files_r = []
         self.sites = []
         self.instances_l = []
+        self.relative_idxs_l = []
         self.ranks = []
 
         self.scores = {}
@@ -51,7 +53,7 @@ class DockAnalysis(object):
                          keep_instance = False
                      if keep_instance:
                          poses_idxs = range(firstidx,firstidx+nposes)
-                         for idx in poses_idxs:
+                         for index, idx in enumerate(poses_idxs):
                              self.files_l.append(os.path.abspath(posedir+'/lig-%s.mol2'%idx))
                              self.files_r.append(os.path.abspath(dir+'/rec.pdb'))
                              self.sites.append(int(site))
@@ -61,6 +63,7 @@ class DockAnalysis(object):
                                  nposes_per_instance[instance] += 1
                              self.ranks.append(nposes_per_instance[instance])
                              self.instances_l.append(instance)
+                             self.relative_idxs_l.append(index)
         if args.ninstances:
             self.ninstances = args.ninstances
         else:
@@ -106,6 +109,12 @@ class DockAnalysis(object):
             default=False,
             help='Extract results only!!!!')
 
+        parser.add_argument('-cleanup',
+            action='store_true',
+            dest='cleanup',
+            default=False,
+            help='Cleanup intermediate files')
+
         return parser
 
     def run(self):
@@ -128,13 +137,7 @@ class DockAnalysis(object):
    
     def extract_results(self, filename, args):
 
-        #heterg = []
-        #population = []
-        #poses = []
-
-        #instances = []
-        #instances_no_duplicity = []
-        features = ['pose_idx', 'cluster_idx', 'heterogeneity', 'population', 'instance']
+        features = ['pose_idx', 'cluster_idx', 'heterogeneity', 'programs', 'population', 'instance', 'score', 'file', 'is_representative']
 
         results = {}
         for column in features:
@@ -147,97 +150,31 @@ class DockAnalysis(object):
                     indices = [i for i, x in enumerate(line.strip()) if x == 'X']
                     population = len(indices)
                     instances_cluster = np.array(self.instances_l)[indices].tolist()
-                    nprograms = len(list(set(instances_cluster)))
-                    cluster_idx += 1 
+                    programs = list(set(instances_cluster))
+                    nprograms = len(programs)
+                    cluster_idx += 1
                     for index in indices:
                         results['pose_idx'].append(index+1)
                         results['cluster_idx'].append(cluster_idx)
                         results['heterogeneity'].append(nprograms*100./self.ninstances)
+                        results['programs'].append(','.join(programs))
                         results['population'].append(population)
-                        results['instance'].append(self.instances_l[index])
+                        instance = self.instances_l[index]
+                        results['instance'].append(instance)
+                        with open(instance+'/score.out', 'r') as sout:
+                            for kdx, line in enumerate(sout):
+                                if kdx == self.relative_idxs_l[index]:
+                                    results['score'].append(line.replace('\n',''))
+                        results['file'].append(self.files_l[index])
+                elif line.startswith('#Representative frames:'):
+                    rep_structures = map(int, line.split()[2:])
+                    for index in results['pose_idx']:
+                        results['is_representative'].append(index in rep_structures)
 
         dataset = pd.DataFrame(results)
         dataset = dataset.sort_values(['pose_idx'])
         dataset = dataset[features]
         dataset.to_csv('results.csv', index=False)
 
-        #ff = open(filename)
-        #for line in ff:
-        #    # if line does not start with #
-        #    if not line.startswith('#'):
-        #        # indices = numbers of the poses involved in the current cluster
-        #        indices = [i for i, x in enumerate(line.strip()) if x == 'X']
-        #        population.append(len(indices))
-        #        poses.append([idx + 1 for idx in indices])
-        #        # compute heterogeneity factor for the current cluster
-        #        instances_cluster = np.array(self.instances_l)[indices].tolist()
-        #        instances.append(instances_cluster)
-        #        instances_no_duplicity.append(list(set(instances_cluster)))
-        #        heterg.append(len(set(instances_cluster))*100./self.ninstances)
-        #    elif line.startswith('#Representative frames:'):
-        #        rep_poses_idxs = map(int, line[23:].split())
-        #ff.close()
-
-        #rep_poses = [self.files_l[idx-1] for idx in rep_poses_idxs]
-
-        #heterg = np.array(heterg)
-        #population = np.array(population, dtype=int)
-        #nclusters = heterg.shape[0]
-
-        #rank_by_rank_score = []
-        #for idx in range(nclusters):
-        #    rbr = 0
-        #    known_instances = []
-        #    for idx_pose in poses[idx]:
-        #        jdx = idx_pose-1
-        #        if not self.instances_l[jdx] in known_instances:
-        #            rbr += self.ranks[jdx]
-        #            known_instances.append(self.instances_l[jdx])
-        #    rank_by_rank_score.append(rbr*1./len(known_instances))
-
-
-        #kdx = 0
-        #with open('anlz.out', 'w') as ff:
-        #    for idx in range(nclusters):
-        #        if len(instances_no_duplicity[idx]) >= args.min_overlap:
-        #            kdx += 1
-        #            ff.write("Cluster #%i \n"%kdx)
-        #            ff.write("Poses predicted by " + ', '.join(instances_no_duplicity[idx]) + '\n')
-        #            ff.write("Population: %9.2f (%i/%i) \n"%(population[idx]*100./self.nposes,population[idx],self.nposes))
-        #            ff.write("Representative pose: %s\n"%os.path.basename(rep_poses[idx]))
-        #            ff.write("Poses: %s\n"%(', '.join(map(str, poses[idx]))))
-        #            ff.write("Rank-by-rank score: %9.1f\n\n"%(rank_by_rank_score[idx]))
-
-        #resultdir = 'poses-filtered'
-        #shutil.rmtree(resultdir, ignore_errors=True)
-        #os.mkdir(resultdir)
-
-        ## copy receptor file
-        #shutil.copyfile(self.files_r[0], resultdir+'/rec.pdb')
-
-        ## order poses per binding site
-        #sites_rep_poses = [self.sites[idx-1] for idx in rep_poses_idxs]
-        #rep_poses_site_ordered = np.argsort(sites_rep_poses)
-
-        #kdx = 0
-        #summary = ''
-        #cursite = 0 
-        #nposes = [] # number of poses involved for each binding site
-        #for idx in rep_poses_site_ordered:
-        #    # update binding site
-        #    if cursite != sites_rep_poses[idx]:
-        #        cursite = sites_rep_poses[idx]
-        #        nposes.append(kdx+1)
-        #    if len(instances_no_duplicity[idx]) >= args.min_overlap:
-        #        shutil.copyfile(rep_poses[idx], resultdir+'/lig-%s.mol2'%(kdx+1))
-        #        summary += '%30s      %10s       %10s       %10s\n'%(','.join(instances_no_duplicity[idx]), 1, kdx+1, sites_rep_poses[idx])
-        #        kdx += 1
-        #nposes.append(kdx+1)
-
-        ## write files containing the number of poses
-        ## generated by each software
-        #with open(resultdir+'/info.dat', 'w') as ff:
-        #    ff.write('   '.join(map(str,nposes))+'\n')
-        #    ff.write('#                     program           nposes           firstidx             site\n')
-        #    ff.write(summary)
-
+if __name__ == '__main__':
+    DockAnalysis().run() 

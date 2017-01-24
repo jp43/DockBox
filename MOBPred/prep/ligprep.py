@@ -32,12 +32,12 @@ def generate_3D_structure(file_l, flags):
     output_file = suffix + ".prep.sdf"
 
     # write ligprep command
-    cmd = chkl.eval("ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -osd %(output_file)s"%locals(), 'schrodinger')
+    #cmd = chkl.eval("ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -osd %(output_file)s"%locals(), 'schrodinger')
+    cmd = "ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -osd %(output_file)s"%locals()
 
     script_name = 'run_ligprep.sh'
     with open(script_name, 'w') as file:
         script ="""#!/bin/bash
-set -e
 %(cmd)s"""% locals()
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)

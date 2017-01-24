@@ -181,9 +181,13 @@ dock6 -i dock6.in"""% locals()
         # save scores
         with open('lig_out_scored.mol2', 'r') as ffin:
             with open(file_s, 'w') as ffout:
+                idx = 0
                 for line in ffin:
                     if line.startswith('##########    Grid Score:'):
                         print >> ffout, line.split()[3]
+                        idx += 1
+                    if idx == int(self.options['nposes']):
+                        break 
 
         # create multiple mol2 files
         ligname = reader.open('lig_out_scored.mol2').ligname
@@ -193,9 +197,11 @@ dock6 -i dock6.in"""% locals()
         # remove map files
         for ff in glob.glob('grid*'):
             os.remove(ff)
-    
-        os.remove('selected_spheres.sph') 
-        os.remove('target_noH.ms')
+
+        filenames = ['selected_spheres.sph', 'target_noH.ms']
+        for ff in filenames:
+            if os.path.isfile(ff):
+                os.remove(ff) 
     
     def write_shift_coordinates_script(self):
     

@@ -78,7 +78,7 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run autogrid
@@ -99,7 +99,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi

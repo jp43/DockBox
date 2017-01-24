@@ -6,7 +6,7 @@ import subprocess
 import minimz as mn
 from MOBPred.tools import mol2
 
-def do_clustering(files_r, files_l, cutoff=2.0):
+def do_clustering(files_r, files_l, cutoff=2.0, cleanup=True):
     """
     do_clustering(files_r, files_l=None)
 
@@ -63,7 +63,7 @@ def do_clustering(files_r, files_l, cutoff=2.0):
         new_files_r.append(new_file_r)
 
     # amber clustering
-    do_amber_clustering(new_files_r, files_l, cutoff)
+    do_amber_clustering(new_files_r, files_l, cutoff, cleanup=cleanup)
     os.chdir(curdir)
 
 def prepare_ligand(file_r, file_l, file_rl):
@@ -135,7 +135,7 @@ cluster ":LIG & !@/H" nofit mass epsilon %(cutoff)s summary summary.dat info inf
 """% locals()
         file.write(contents)
 
-def do_amber_clustering(files_r, files_l, cutoff):
+def do_amber_clustering(files_r, files_l, cutoff, cleanup=True):
 
     # (A) Prepare ligand and PDB files
     os.mkdir('PDB')
@@ -160,3 +160,9 @@ def do_amber_clustering(files_r, files_l, cutoff):
     # (C) Run cpptraj
     prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff)
     subprocess.check_output('cpptraj -i cpptraj.in > cpptraj.log', shell=True, executable='/bin/bash')
+
+    if cleanup:
+        # (D) remove PDB folder and other large files
+        shutil.rmtree('PDB', ignore_errors=True)
+        os.remove('leap.log')
+        os.remove('rec-lig.prmtop')

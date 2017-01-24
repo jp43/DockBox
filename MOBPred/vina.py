@@ -82,14 +82,16 @@ vina --score_only --config vina.config > vina.out"""% locals()
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
     
     def extract_rescoring_results(self, filename):
+
         with open(filename, 'a') as ff:
             with open('vina.out', 'r') as outf:
                 for line in outf:
                     if line.startswith('Affinity:'):
                         print >> ff, line.split()[1]
-    
-        os.remove('lig.pdbqt')
-        os.remove('target.pdbqt')
-        
+        filenames = ['lig.pdbqt', 'target.pdbqt']
+        for ff in filenames:
+            if os.path.isfile(ff):
+                os.remove(ff)
+  
     def cleanup(self):
         pass

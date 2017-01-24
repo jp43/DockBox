@@ -117,7 +117,7 @@ class Docking(object):
                 idx = -1
                 for idx, pose_idx in enumerate(poses_idxs):
                     shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, resultdir+'/lig-%s.mol2'%(idx+sh))
-                summary += '%10s      %10s       %10s       %10s\n'%(program, idx+1, sh, kdx+1)
+                summary += '%10s      %10s       %10s       %10s\n'%(name, idx+1, sh, kdx+1)
                 sh += idx + 1
             nposes.append(sh)
 
