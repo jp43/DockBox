@@ -10,6 +10,13 @@ required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
 'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
 
+# may want to generate partial charges for the ligand with Chimera
+# in that case, chimera works like antechamber, use simply
+# addcharge nonstd :LIG net-charge method am1
+# before writing the mol2 file
+# where net-charge should be computed by running the command
+# until it does not fail
+
 class Dock(method.DockingMethod):
 
     def __init__(self, instance, site, options):
@@ -34,13 +41,19 @@ set -e
 # remove hydrogens from target
 echo "delete element.H
 write format pdb #0 target_noH.pdb" > removeH.cmd
-chimera --nogui --silent %(file_r)s removeH.cmd
+chimera --nogui %(file_r)s removeH.cmd
 rm -rf removeH.cmd
 
-# convert pdb to mol2
-echo "write format mol2 #0 target.mol2" > pdb2mol.cmd
-chimera --nogui --silent %(file_r)s pdb2mol.cmd
-rm -rf pdb2mol.cmd
+# prepare receptor (add missing h, add partial charges,...)
+echo "import chimera
+from DockPrep import prep
+
+models = chimera.openModels.list(modelTypes=[chimera.Molecule])
+prep(models)
+
+from WriteMol2 import writeMol2
+writeMol2(models, 'target.mol2')" > dockprep.py
+chimera --nogui %(file_r)s dockprep.py
 
 # generating receptor surface
 dms target_noH.pdb -n -w %(probe_radius)s -v -o target_noH.ms

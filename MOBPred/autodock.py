@@ -17,11 +17,49 @@ class ADBased(method.DockingMethod):
     def update_output_mol2files(self, sample=None):
         # number of mol2 files generated
         n_files_l = len(glob.glob('lig-*.mol2'))
+
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, mol2file, ADupdate=sample, unique=True, mask=['h','H'])
             mol2.arrange_hydrogens(mol2file, 'tmp.mol2')
             shutil.move('tmp.mol2', mol2file)
+
+    def write_fix_pdbqt_script(self):
+
+        with open('fix_pdbqt.py', 'w') as file:
+            script ="""import os
+import sys
+import shutil
+
+input_file = sys.argv[1]
+
+filename, ext = os.path.splitext(input_file)
+file_tmp = filename + '_tmp.pdbqt'
+
+lines_to_be_removed = []
+has_branch_started = False
+with open(input_file, 'r') as ff:
+    for line in ff:
+        if has_branch_started:
+            has_branch_started = False
+            branch_num = start_branch_line.split()[-1]
+            if line.split()[1] != branch_num:
+                lines_to_be_removed.append(start_branch_line)
+                lines_to_be_removed.append('END' + start_branch_line)
+        if line.startswith('BRANCH'):
+            start_branch_line = line
+            has_branch_started = True
+
+if lines_to_be_removed:
+    with open(input_file, 'r') as ff:
+        with open(file_tmp, 'w') as of:
+            for line in ff:
+                if line.startswith(('BRANCH', 'ENDBRANCH')) and line in lines_to_be_removed:
+                    pass
+                else:
+                    of.write(line)
+    shutil.move(file_tmp, input_file)"""
+            file.write(script)
 
 class Autodock(ADBased):
 
@@ -60,6 +98,8 @@ class Autodock(ADBased):
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
         autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autodock_options.iteritems()])
 
+        self.write_fix_pdbqt_script()
+
         if not rescoring:
             if 'ga_num_evals' not in self.options:
                 ga_num_evals_lines="""prepare_dpf4.py -l lig.pdbqt -r target.pdbqt -o dock.dpf -p move=lig.pdbqt
@@ -79,6 +119,7 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python fix_pdbqt.py lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run autogrid
@@ -100,6 +141,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python fix_pdbqt.py lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi
@@ -127,25 +169,36 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         """extract poses and scores from .dlg file"""
 
         if os.path.exists('dock.dlg'):
-            with open('dock.dlg','r') as pdbqtf:
+            with open('dock.dlg','r') as dlgf:
                 with open(file_s, 'w') as sf: 
                     line = '' # initialize line
-                    while 'CLUSTERING HISTOGRAM' not in line:
-                        line = pdbqtf.next()
+                    for line in dlgf:
                         if 'Estimated Free Energy of Binding' in line:
                             score = float(line.split()[8])
                             print >> sf, score
+                        if 'CLUSTERING HISTOGRAM' in line:
+                            break
 
-            subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-            self.update_output_mol2files(sample=input_file_l)
+            try:
+                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+                self.update_output_mol2files(sample=input_file_l)
+            except subprocess.CalledProcessError:
+                pass
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""
         with open(filename, 'a') as ff:
-            with open('dock.dlg', 'r') as outf:
-                for line in outf:
-                    if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
-                        print >> ff, line.split()[8]
+            if os.path.exists('dock.dlg'):
+                with open('dock.dlg', 'r') as outf:
+                    has_fe_line = False
+                    for line in outf:
+                        if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
+                            print >> ff, line.split()[8]
+                            has_fe_line = True
+                    if not has_fe_line:
+                        print >> ff, 'NaN'
+            else:
+                print >> ff, 'NaN'
 
     def cleanup(self):
         # remove map files

@@ -31,9 +31,11 @@ class DockAnalysis(object):
         self.files_l = []
         self.files_r = []
         self.sites = []
+        self.programs_l = []
         self.instances_l = []
         self.relative_idxs_l = []
         self.ranks = []
+        self.dirs_l = []
 
         self.scores = {}
         nposes_per_instance = {}
@@ -45,25 +47,28 @@ class DockAnalysis(object):
                 inff.next()
                 inff.next()
                 for line in inff:
-                     instance, nposes, firstidx, site = line.split()
+                     program, nposes, firstidx, site = line.split()
                      firstidx = int(firstidx)
                      nposes = int(nposes)
-                     keep_instance = True
-                     if args.instances and instance not in args.instances:
-                         keep_instance = False
-                     if keep_instance:
+                     if site == 'None':
+                         instance = program
+                     else:
+                         instance = program + '.' + site
+                     if not (args.instances and instance not in args.instances):
                          poses_idxs = range(firstidx,firstidx+nposes)
                          for index, idx in enumerate(poses_idxs):
                              self.files_l.append(os.path.abspath(posedir+'/lig-%s.mol2'%idx))
                              self.files_r.append(os.path.abspath(dir+'/rec.pdb'))
-                             self.sites.append(int(site))
+                             self.sites.append(site)
                              if not instance in self.instances_l:
                                  nposes_per_instance[instance] = 1
                              else:
                                  nposes_per_instance[instance] += 1
                              self.ranks.append(nposes_per_instance[instance])
+                             self.programs_l.append(program)
                              self.instances_l.append(instance)
                              self.relative_idxs_l.append(index)
+                             self.dirs_l.append(dir)
         if args.ninstances:
             self.ninstances = args.ninstances
         else:
@@ -129,7 +134,7 @@ class DockAnalysis(object):
 
         if not args.extract_results_only:
             # performs clustering
-            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.cutoff)
+            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.cutoff, cleanup=False)
         self.extract_results('clustr/info.dat', args)
 
         tcpu2 = time.time()
@@ -149,7 +154,7 @@ class DockAnalysis(object):
                 if not line.startswith('#'):
                     indices = [i for i, x in enumerate(line.strip()) if x == 'X']
                     population = len(indices)
-                    instances_cluster = np.array(self.instances_l)[indices].tolist()
+                    instances_cluster = np.array(self.programs_l)[indices].tolist()
                     programs = list(set(instances_cluster))
                     nprograms = len(programs)
                     cluster_idx += 1
@@ -161,7 +166,7 @@ class DockAnalysis(object):
                         results['population'].append(population)
                         instance = self.instances_l[index]
                         results['instance'].append(instance)
-                        with open(instance+'/score.out', 'r') as sout:
+                        with open(self.dirs_l[index]+'/'+instance+'/score.out', 'r') as sout:
                             for kdx, line in enumerate(sout):
                                 if kdx == self.relative_idxs_l[index]:
                                     results['score'].append(line.replace('\n',''))

@@ -27,6 +27,7 @@ class Vina(autodock.ADBased):
         """write docking script for Vina"""
 
         locals().update(self.options)
+        self.write_fix_pdbqt_script()
 
         # write vina config file
         with open('vina.config', 'w') as cf:
@@ -44,6 +45,7 @@ class Vina(autodock.ADBased):
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
+python fix_pdbqt.py lig.pdbqt
 prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 
 # run vina
@@ -55,6 +57,7 @@ vina --config vina.config 1> vina.out 2> vina.err"""% locals()
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
+python fix_pdbqt.py lig.pdbqt
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -r %(file_r)s -o target.pdbqt
 fi

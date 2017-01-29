@@ -30,7 +30,7 @@ class DockingConfig(object):
         file_l = os.path.abspath(args.input_file_l[0])
         new_file_l = os.path.basename(file_l)
         pref, ext = os.path.splitext(new_file_l)
-        new_file_l = pref + '.uni' + ext
+        new_file_l = pref + '_uniq' + ext
 
         # give unique atom names
         mol2.update_mol2file(file_l, new_file_l, unique=True)
@@ -117,7 +117,7 @@ class Docking(object):
                 idx = -1
                 for idx, pose_idx in enumerate(poses_idxs):
                     shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, resultdir+'/lig-%s.mol2'%(idx+sh))
-                summary += '%10s      %10s       %10s       %10s\n'%(name, idx+1, sh, kdx+1)
+                summary += '%10s      %10s       %10s       %10s\n'%(name, idx+1, sh, bs[0])
                 sh += idx + 1
             nposes.append(sh)
 

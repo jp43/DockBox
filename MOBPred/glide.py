@@ -27,11 +27,11 @@ class Glide(method.DockingMethod):
         # set box size
         boxsize = site[2]
         boxsize = map(str.strip, boxsize.split(','))
-        self.options['innerbox'] = ', '.join(map(str,map(int,map(float,boxsize))))
+        self.options['innerbox'] = ', '.join(["%i"%int(float(boxsize[idx])) for idx in range(3)])
 
         outerbox = []
         for idx, xyz in enumerate(['x', 'y', 'z']):
-            self.options['act'+xyz+'range'] = str(float(boxsize[idx]) + 10.0)
+            self.options['act'+xyz+'range'] = str("%.1f"%float(boxsize[idx]))
             outerbox.append(self.options['act'+xyz+'range'])
 
         self.options['outerbox'] = ', '.join(outerbox)
@@ -171,24 +171,28 @@ PRECISION SP" > dock.in
 %(glide_dock_cmd)s"""% locals()
             file.write(script)
 
-    def extract_rescoring_results(self, filename): 
+    def extract_rescoring_results(self, filename, nligands):
         idxs = []
         scores = []
 
-        with open('dock.scor', 'r') as ffin:
-            line = ffin.next()
-            while not line.startswith('===='):
+        if os.path.exists('dock.scor'):
+            with open('dock.scor', 'r') as ffin:
                 line = ffin.next()
-            while True:
-                line = ffin.next()
-                if line.strip():
-                    idxs.append(int(line[36:42].strip()))
-                    scores.append(line[43:51].strip())
-                else:
-                    break
+                while not line.startswith('===='):
+                    line = ffin.next()
+                while True:
+                    line = ffin.next()
+                    if line.strip():
+                        idxs.append(int(line[36:42].strip()))
+                        scores.append(line[43:51].strip())
+                    else:
+                        break
 
-        scores = np.array(scores)
-        scores = scores[np.argsort(idxs)]
+            scores = np.array(scores)
+            scores = scores[np.argsort(idxs)]
+        else:
+            scores = [ 'NaN' for idx in range(nligands)]
+
         with open(filename, 'w') as ffout:
             for sc in scores:
                 print >> ffout, sc

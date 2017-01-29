@@ -5,21 +5,33 @@ from tools import mol2
 
 required_programs = ['dsx']
 
+default_settings = {'pot_dir': None, 'other_flags': None}
+
 class Dsx(method.ScoringMethod):
 
     def write_rescoring_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
 
+        if self.options['pot_dir']:
+            pot_dir_str = ' -D ' + self.options['pot_dir']
+        else:
+            pot_dir_str = ''
+
+        if self.options['other_flags']:
+            other_flags_str = ' ' + self.options['other_flags']
+        else:
+            other_flags_str = ''
+
         # write vina script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
 set -e
 # remove pre-existing result file
-rm -rf dsr.txt
+rm -rf dsx.txt
 
 # execute DSX
-dsx -P %(file_r)s -L %(file_l)s -F dsx.txt
+dsx -P %(file_r)s -L %(file_l)s -F dsx.txt%(pot_dir_str)s%(other_flags_str)s
 """% locals()
             file.write(script)
 

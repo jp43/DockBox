@@ -48,7 +48,7 @@ class DockingMethod(object):
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
             try:
-                # try running the docking procedure
+                # try running docking procedure
                 subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
             except subprocess.CalledProcessError:
                 pass
@@ -94,7 +94,7 @@ class DockingMethod(object):
 
         if files_l:
             # iterate over all the poses
-            for file_l in files_l:
+            for idx, file_l in enumerate(files_l):
                 # (A) write script
                 script_name = "run_scoring_" + self.program + ".sh"
                 self.write_rescoring_script(script_name, file_r, file_l)
@@ -107,7 +107,11 @@ class DockingMethod(object):
                     pass
 
                 # (C) extract docking results
-                self.extract_rescoring_results('score.out')
+                if self.program in single_run_programs:
+                    nligands = len(files_l[0])
+                    self.extract_rescoring_results('score.out', nligands)
+                else:
+                    self.extract_rescoring_results('score.out')
         else:
             # if no files provided, create an empty score.out file
             open('score.out', 'w').close()

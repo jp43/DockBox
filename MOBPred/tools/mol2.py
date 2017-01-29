@@ -33,8 +33,8 @@ class Reader(object):
             elif first_atom:
                 line_s = line.split()
                 if not ligname:
-                    ligname = line_s[-2]
-                elif line_s[-2] != ligname:
+                    ligname = line_s[7]
+                elif line_s[7] != ligname:
                     raise ValueError('Ligand name not consistent between structures')
                 first_atom = False
         ff.close()
@@ -81,6 +81,8 @@ class Reader(object):
             elif section and line.strip():
                 if section == 'ATOM':
                     atom = line.split()
+                    if len(atom) > 9:
+                        atom = atom[:9]
                     struct[section].append(atom)
                 else:
                     struct[section].append(line)
@@ -134,6 +136,7 @@ class Writer(object):
                             ff.write(newline)
 
 def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=None, unique=False, mask=None, remove=None, last=None):
+
     f = Reader(inputfile)
     structs = f.readlines()
     f.close()
@@ -145,7 +148,7 @@ def update_mol2file(inputfile, outputfile, ADupdate=None, multi=False, ligname=N
         if ligname:
             struct = update_ligand_name(struct, ligname)
         if unique:
-            struct = give_unique_atom_names(struct, mask=mask)
+            struct = give_unique_atom_names(struct, mask)
         if remove:
             struct = remove_atoms(struct, remove)
         updated_structs.append(struct)
@@ -323,9 +326,6 @@ def arrange_hydrogens(inputfile, outputfile):
     if len(at_with_hat_mol2_ids) != len(hat_mol2_ids):
         raise ValueError("Each hydrogen should have only one bound! Check you .mol2 file")
 
-    #print hat_mol2_ids
-    #print at_with_hat_mol2_ids
-
     addh = ArrangeHydrogens()
     # at_with_hat_idxs are the indices of atoms related to each hydrogen of hat
     hat, at_with_hat_idxs = addh.addHydrogens(allAtoms, allAtomsNoH)
@@ -353,59 +353,18 @@ def arrange_hydrogens(inputfile, outputfile):
 
 def give_unique_atom_names(struct, mask=None):
 
-    known_atom_names = []
-    atom_numbers = []
-
-    for line in struct['ATOM']:
-        if not mask or line[-4] in mask:
-            atom = line[1]
-            atom_name = ''.join([ch for ch in atom if not ch.isdigit()])
-            if atom_name not in known_atom_names:
-                known_atom_names.append(atom_name)
-                atom_number = '1'
-                atom_numbers.append(1)
-            else:
-                idx = known_atom_names.index(atom_name)
-                atom_number = str(atom_numbers[idx]+1)
-                atom_numbers[idx] += 1
-
-    # generate new atom names with 3 characters
-    new_atom_names = []
-    natoms = len(known_atom_names)
-    for idx in range(natoms):
-        name = known_atom_names[idx] + str(atom_numbers[idx])
-        nchars = len(name)
-        if nchars > 5:
-            raise ValueError("atom with more than 5 characters detected!")
-        if nchars > 3 and nchars <= 5:
-            nletters = len(known_atom_names[idx])
-            nfigs = len(str(atom_numbers[idx]))
-            if nfigs >= 3:
-                raise ValueError("more than 99 atoms of the same type detected!")
-            elif nletters >= 2: # impose 1 character for each atom
-                new_atom_names.append(known_atom_names[idx][:1])
-        elif nchars <= 3:
-            new_atom_names.append(known_atom_names[idx])
-
     new_struct = struct
+    known_atom_types = {}
 
-    new_known_atom_names = []
-    new_atom_numbers = []
     for jdx, line in enumerate(struct['ATOM']):
-        if not mask or line[-4] in mask:
-            atom = line[1]
-            atom_name = ''.join([ch for ch in atom if not ch.isdigit()])
-            idx = known_atom_names.index(atom_name)
-            atom_name = new_atom_names[idx]
-            if atom_name not in new_known_atom_names:
-                new_known_atom_names.append(atom_name)
-                atom_number = '1'
-                new_atom_numbers.append(1)
+        if not mask or line[5] in mask:
+            sybyl_atom_type = line[5]
+            atom_type = sybyl_atom_type.split('.')[0].upper()
+            if atom_type in known_atom_types:
+                known_atom_types[atom_type] += 1
             else:
-                idx = new_known_atom_names.index(atom_name)
-                atom_number = str(new_atom_numbers[idx]+1)
-                new_atom_numbers[idx] += 1
-            new_struct['ATOM'][jdx][1] = atom_name+atom_number
+                known_atom_types[atom_type] = 1
+            new_struct['ATOM'][jdx][1] = atom_type + str(known_atom_types[atom_type])
 
     return new_struct
 
@@ -438,4 +397,3 @@ def get_coordinates(filename):
                 line_s = line.split()
                 coords.append(map(float,line_s[2:5]))
     return coords
-

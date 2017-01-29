@@ -67,9 +67,9 @@ class PrepDocking(object):
 
         parser.add_argument('-ligpflags',
             type=str,
-            default="-W e,-ph,7.0,-pht,2.0 -epik",
+            default="-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4",
             dest='ligprep_flags',
-            help='Ligprep (Schrodinger) flags for ligand preparation. Default: "-W e,-ph,7.0,-pht,2.0 -epik"')
+            help='Ligprep (Schrodinger) flags for ligand preparation. Default: "-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4"')
 
         parser.add_argument('-noligp',
             dest='no_ligprep',
@@ -249,6 +249,8 @@ class PrepDocking(object):
             input_format_flag = '-isdf'
         elif ext in ['.smi', '.txt']:
             input_format_flag = '-ismi'
+        elif ext == '.mol2':
+            return [os.path.abspath(file_l)]
         else:
             raise IOError("Format %s not recognized!"%(ext[1:]))
 
