@@ -58,7 +58,7 @@ class DockAnalysis(object):
                          poses_idxs = range(firstidx,firstidx+nposes)
                          for index, idx in enumerate(poses_idxs):
                              self.files_l.append(os.path.abspath(posedir+'/lig-%s.mol2'%idx))
-                             self.files_r.append(os.path.abspath(dir+'/rec.pdb'))
+                             self.files_r.append(os.path.abspath(posedir+'/rec.pdb'))
                              self.sites.append(site)
                              if not instance in self.instances_l:
                                  nposes_per_instance[instance] = 1

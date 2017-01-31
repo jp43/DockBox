@@ -180,13 +180,13 @@ class DockingMethod(object):
                 os.remove('lig-%s.mol2'%(idx+1))
         #shutil.rmtree('minimz')
 
-    def write_rescoring_script(self, script_name, file_r, file_l):
+    def write_rescoring_script(self, script_name, file_r, file_l, file_q):
         pass
 
     def extract_rescoring_results(self, filename):
         pass
 
-    def write_docking_script(self, script_name, file_r, file_l):
+    def write_docking_script(self, script_name, file_r, file_l, file_q):
         pass
 
     def extract_docking_results(self, file_r, file_l, file_s, input_file_r):
@@ -197,7 +197,7 @@ class DockingMethod(object):
 
 class ScoringMethod(DockingMethod):
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False):
+    def run_docking(self, file_r, file_l, file_q, minimize=False, cleanup=False, extract_only=False):
         pass
 
     def remove_out_of_range_poses(self, file_s):

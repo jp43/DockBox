@@ -174,4 +174,4 @@ cleanup=config_d.cleanup, extract_only=config.extract_only)
 
         # run rescoring
         if config.rescoring.is_rescoring:
-            config.rescoring.run(config.input_file_r, args.posedir)
+            config.rescoring.run(config.input_file_r, args.posedir, config.charge_file)

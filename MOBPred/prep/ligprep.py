@@ -44,9 +44,9 @@ def generate_3D_structure(file_l, flags):
     # execute ligprep
     subprocess.check_output('./' + script_name +" &> ligprep.log", shell=True, executable='/bin/bash')
 
-    # cleanup directory
-    for logf in glob.glob(suffix +'*.log'):
-       os.remove(logf)
+    ## cleanup directory
+    #for logf in glob.glob(suffix +'*.log'):
+    #   os.remove(logf)
 
     return output_file
 

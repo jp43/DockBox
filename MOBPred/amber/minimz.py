@@ -77,8 +77,6 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
             if not line.startswith('TER'):
                 recf.write('TER\n')
 
-    load_atomic_ions()
-
     # remove atoms and hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens)
 

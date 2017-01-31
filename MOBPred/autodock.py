@@ -12,8 +12,8 @@ default_settings = {'ga_run': '100', 'spacing': '0.238'}
 
 class ADBased(method.DockingMethod):
 
-    def write_rescoring_script(self, filename, file_r, file_l):
-        self.write_docking_script(filename, file_r, file_l, rescoring=True)
+    def write_rescoring_script(self, filename, file_r, file_l, file_q):
+        self.write_docking_script(filename, file_r, file_l, file_q, rescoring=True)
 
     def update_output_mol2files(self, sample=None):
         # number of mol2 files generated
@@ -73,8 +73,8 @@ from tempfile import mkstemp
 
 from MOBPred.amber.minimz import load_atomic_ions
 
-# first all atoms are supposed to be recognized
-are_unrecognized_atoms = False
+# first all residues are supposed to be recognized
+are_unrecognized_residues = False
 
 # check if and which atoms were not recognized by autodock
 non_standard_residues = []
