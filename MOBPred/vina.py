@@ -23,11 +23,13 @@ class Vina(autodock.ADBased):
             self.options['center_'+xyz] = center[idx]
             self.options['size_'+xyz] = boxsize[idx]
 
-    def write_docking_script(self, filename, file_r, file_l, rescoring=False, fix=''):
+    def write_docking_script(self, filename, file_r, file_l, file_q, rescoring=False):
         """write docking script for Vina"""
 
         locals().update(self.options)
-        self.write_fix_pdbqt_script()
+
+        self.write_check_lig_pdbqt_script()
+        self.write_check_nonstd_residues_script()
 
         # write vina config file
         with open('vina.config', 'w') as cf:
@@ -37,6 +39,9 @@ class Vina(autodock.ADBased):
             # write other options
             for key, value in self.options.iteritems():
                 print >> cf, key + ' = ' + value
+
+        file_q_str = ''
+        if file_q: file_q_str = str(file_q)
     
         # write vina script
         if not rescoring:
@@ -44,9 +49,13 @@ class Vina(autodock.ADBased):
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
-python fix_pdbqt.py lig.pdbqt
-prepare_receptor4.py -r %(file_r)s -o target.pdbqt
+# ligand
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python check_lig_pdbqt.py lig.pdbqt
+
+# receptor
+prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
+python check_nonstd_residues.py target.pdbqt %(file_q_str)s
 
 # run vina
 vina --config vina.config 1> vina.out 2> vina.err"""% locals()
@@ -56,10 +65,12 @@ vina --config vina.config 1> vina.out 2> vina.err"""% locals()
                 script ="""#!/bin/bash
 set -e
 # generate .pdbqt files
-prepare_ligand4.py -C -l %(file_l)s -o lig.pdbqt
-python fix_pdbqt.py lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python check_lig_pdbqt.py lig.pdbqt
+
 if [ ! -f target.pdbqt ]; then
-  prepare_receptor4.py -r %(file_r)s -o target.pdbqt
+  prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log
+  python check_nonstd_residues.py target.pdbqt %(file_q_str)s
 fi
 
 # run vina
@@ -81,8 +92,8 @@ vina --score_only --config vina.config > vina.out"""% locals()
         subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
         self.update_output_mol2files(sample=input_file_l)
 
-    def write_rescoring_script(self, filename, file_r, file_l):
-        self.write_docking_script(filename, file_r, file_l, rescoring=True)
+    def write_rescoring_script(self, filename, file_r, file_l, file_q):
+        self.write_docking_script(filename, file_r, file_l, file_q, rescoring=True)
     
     def extract_rescoring_results(self, filename):
 

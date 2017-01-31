@@ -10,12 +10,11 @@ required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
 'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
 
-# may want to generate partial charges for the ligand with Chimera
-# in that case, chimera works like antechamber, use simply
-# addcharge nonstd :LIG net-charge method am1
-# before writing the mol2 file
-# where net-charge should be computed by running the command
-# until it does not fail
+# per default, ligand partial charges are kept as they are in the original .mol2 file
+# however, we might want to generate them using with Chimera. In that case, chimera
+# works like antechamber, use simply addcharge nonstd :LIG net-charge method am1
+# before writing the mol2 file where net-charge should be computed by running 
+# the command antechamber until it does not fail
 
 class Dock(method.DockingMethod):
 
@@ -28,11 +27,63 @@ class Dock(method.DockingMethod):
         self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
         self.options['sphgen_radius'] = str(max(self.options['boxsize'])/2)
 
-    def write_docking_script(self, filename, file_r, file_l):
+    def write_check_nonstd_residues_script(self):
+
+        raise NotImplementedError
+
+        with open('check_nonstd_residues.py', 'w') as file:
+            script = """import sys
+import shutil
+from tempfile import mkstemp
+
+# if some atoms are not recognized, we look if a file with charges has been specified
+file_q = sys.argv[2] # the file should be the second argument
+lines_file_q = []
+with open(file_q, 'r') as qf:
+    for line in qf:
+        lines_file_q.append(line.split())
+
+# update .pdbqt file for the receptor
+fh, abs_path = mkstemp()
+
+with open(abs_path, 'w') as tempf:
+    with open(sys.argv[1]) as ff:
+
+        for line in ff:
+            if line.startswith(('ATOM', 'HETATM')):
+                atomnum_pdbqt = int(line[6:11])
+                atomname_pdbqt = line[12:16].strip()
+                resname_pdbqt = line[17:20].strip()
+
+                is_atom_recognized = False
+                if mode == 'custom':
+                    # update the charges of the atoms specified in the charge file
+                    for line_file_q in lines_file_q:
+                        if atomnum_pdbqt == int(line_file_q[0]) and atomname_pdbqt == line_file_q[1]:
+                           charge = "%.3f"%float(line_file_q[-1])
+                           tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
+                           is_atom_recognized = True
+                           break
+                if is_atom_recognized:
+                    tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
+                else:
+                    tempf.write(line)
+            else:
+                tempf.write(line)
+
+shutil.move(abs_path, sys.argv[1])"""
+            file.write(script)
+
+
+    def write_docking_script(self, filename, file_r, file_l, file_q):
 
         locals().update(self.options)
         self.write_shift_coordinates_script()
-      
+
+        charges_update_lines = ""
+        if file_q:
+            charges_update_lines += "python check_nonstd_residues.py target.mol2 %s"%str(file_q)
+
         # write autodock script
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
@@ -54,6 +105,8 @@ prep(models)
 from WriteMol2 import writeMol2
 writeMol2(models, 'target.mol2')" > dockprep.py
 chimera --nogui %(file_r)s dockprep.py
+
+%(charges_update_lines)s
 
 # generating receptor surface
 dms target_noH.pdb -n -w %(probe_radius)s -v -o target_noH.ms

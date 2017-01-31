@@ -40,7 +40,7 @@ class Glide(method.DockingMethod):
         if 'tmpdir' in self.options:
             self.tmpdirline = "export SCHRODINGER_TMPDIR=%s"%self.options['tmpdir']
 
-    def write_docking_script(self, filename, file_r, file_l):
+    def write_docking_script(self, filename, file_r, file_l, file_q):
         """ Write docking script for glide """
         locals().update(self.options)
 
@@ -121,7 +121,7 @@ PRECISION %(precision)s" > dock.in
         else:
             line = ""
 
-    def write_rescoring_script(self, filename, file_r, files_l):
+    def write_rescoring_script(self, filename, file_r, files_l, file_q):
         """Rescore using Glide SP scoring function"""
         locals().update(self.options)
 

@@ -27,12 +27,12 @@ class DockingConfig(object):
         config.read(args.config_file)
 
         # prepare ligand file
-        file_l = os.path.abspath(args.input_file_l[0])
+        file_l = os.path.abspath(args.input_file_l)
         new_file_l = os.path.basename(file_l)
         pref, ext = os.path.splitext(new_file_l)
         new_file_l = pref + '_uniq' + ext
 
-        # give unique atom names
+        # create a ligand file with unique atom names
         mol2.update_mol2file(file_l, new_file_l, unique=True)
         self.input_file_l = os.path.abspath(new_file_l)
 
@@ -40,10 +40,15 @@ class DockingConfig(object):
         if not os.path.exists(self.input_file_l):
             raise IOError("File %s not found!"%(self.input_file_l))
 
-        self.input_file_r = os.path.abspath(args.input_file_r[0])
+        self.input_file_r = os.path.abspath(args.input_file_r)
+
         # check if receptor file exists
         if not os.path.exists(self.input_file_r):
             raise IOError("File %s not found!"%(self.input_file_r))
+
+        self.charge_file = None
+        if args.charge_file:
+            self.charge_file = os.path.abspath(args.charge_file)
 
         self.docking = setup.DockingSetup(config)
         self.extract_only = args.extract_only
@@ -52,26 +57,29 @@ class DockingConfig(object):
 class Docking(object):
 
     def create_arg_parser(self):
-        parser = argparse.ArgumentParser(description="Run Docking")
+        parser = argparse.ArgumentParser(description="""rundock : dock with multiple softwares --------
+Requires one file for the ligand (1 struct.) and one file for the receptor (1 struct.)""")
 
         parser.add_argument('-l',
             type=str,
             dest='input_file_l',
             required=True,
-            nargs=1,
             help = 'Ligand coordinate file(s): .mol2')
 
         parser.add_argument('-r',
             type=str,
             dest='input_file_r',
             required=True,
-            nargs=1,
             help = 'Receptor coordinate file(s): .pdb')
 
         parser.add_argument('-f',
             dest='config_file',
             required=True,
             help='config file containing docking parameters')
+
+        parser.add_argument('-q',
+            dest='charge_file',
+            help='File with partial charges of non-standard residues')
 
         parser.add_argument('-rescore_only',
             dest='rescore_only',
@@ -145,7 +153,7 @@ class Docking(object):
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.charge_file, minimize=config_d.minimize, \
 cleanup=config_d.cleanup, extract_only=config.extract_only)
 
         self.finalize(config, config_d)

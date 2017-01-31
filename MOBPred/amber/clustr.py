@@ -111,6 +111,8 @@ savepdb p %s\n"""%(file_rl,file_rl)
     with open(filename, 'w') as ff:
         contents ="""source leaprc.ff14SB
 source leaprc.gaff
+loadamberparams frcmod.ionsjc_tip3p # load parameters for monovalent ions
+loadamberparams frcmod.ionslm_1264_tip3p # load parameters for bivalent ions
 LIG = loadmol2 ligref.mol2
 loadamberparams lig.frcmod
 %(linespdb)s

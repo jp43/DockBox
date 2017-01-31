@@ -71,13 +71,15 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
         with open(file_r_out, 'w') as recf:
             for line in tmpf:
                 # check if non-hydrogen atom line
-                if line.startswith(('ATOM','TER')):
+                if line.startswith(('ATOM', 'HETATM', 'TER')):
                     recf.write(line)
             # if last line not TER, write it
             if not line.startswith('TER'):
                 recf.write('TER\n')
 
-    # remove hydrogen with no name recognized by AMBER
+    load_atomic_ions()
+
+    # remove atoms and hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens)
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
@@ -87,11 +89,11 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
 
     nremoved = 0
     removed_lines = []
+
     with open(file_r, 'r') as rf:
         with open('tmp.pdb', 'w') as wf:
             for line in rf:
                 remove_line = False
-
                 if line.startswith('ATOM'): # atom line
                     resname = line[17:20].strip()
                     atom_name = line[12:16].strip()
@@ -101,11 +103,11 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                     # check if N-terminal
                     if chainID not in chainIDs:
                         chainIDs.append(chainID)
-                        is_nterminal = True
+                        is_N_terminal = True
                         resnum_prev = resnum
                     else:
                         if resnum_prev != resnum:
-                            is_nterminal = False
+                            is_N_terminal = False
 
                     # atom (if atom name starts with a digit, correct it)
                     if atom_name[0].isdigit():
@@ -113,7 +115,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
 
                     # check if hydrogen should be removed
                     if atom_name[0] == 'H':
-                        is_hydrogen_from_nterminal = is_nterminal and atom_name == 'H'
+                        is_hydrogen_from_nterminal = is_N_terminal and atom_name == 'H'
                         is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
                         if keep_hydrogens and not is_hydrogen_known:
                             if not is_hydrogen_known:
@@ -134,6 +136,7 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
 
                 if not remove_line:
                     wf.write(line)
+
     #print '\n'.join(removed_lines)
     shutil.move('tmp.pdb', file_r)
     #print "Number of atom lines removed: %s" %nremoved
@@ -169,6 +172,23 @@ def load_PROTON_INFO():
     info['NME'] = []
     return info
 
+def load_atomic_ions():
+    """Load formal charge libraries of monoatomic ions"""
+
+    filename = os.path.dirname(os.path.abspath(__file__)) + '/atomic_ions.cmd'
+    info = {}
+    with open(filename) as ff:
+        for line in ff:
+            if line.startswith('i = createAtom'):
+                charge = float(line.split()[5])
+                is_new_atom = True
+            elif line.startswith('r = createResidue') and is_new_atom:
+                resname = line.split()[3]
+                info[resname] = charge
+            elif not line.strip():
+                is_new_atom = False
+    return info
+
 def prepare_ligand(file_r, file_l, file_rl):
 
     script_name = 'prepare_ligand.sh'
@@ -196,6 +216,9 @@ def prepare_leap_config_file(script_name, file_r, files_l, file_rl):
         with open(script_name, 'w') as leapf:
                 script ="""source leaprc.ff14SB
 source leaprc.gaff
+loadamberparams frcmod.ionsjc_tip3p # load parameters for monovalent ions
+loadamberparams frcmod.ionslm_1264_tip3p # load parameters for bivalent ions
+loadoff atomic_ions.lib
 LIG = loadmol2 lig.mol2
 loadamberparams lig.frcmod
 p = loadPdb %(file_rl)s
@@ -206,6 +229,8 @@ quit\n"""%locals()
     else:
         with open(script_name, 'w') as leapf:
                 script ="""source leaprc.ff14SB
+loadamberparams frcmod.ionsjc_tip3p # load parameters for monovalent ions
+loadamberparams frcmod.ionslm_1264_tip3p # load parameters for bivalent ions
 p = loadPdb %(file_r)s
 saveAmberParm p start.prmtop start.inpcrd
 savePdb p start.pdb
@@ -263,18 +288,6 @@ def prepare_minimization_config_file(script_name, restraint=None):
  imin=1, maxcyc=2000,
  igb=0,
  ncyc=1000,
- ntmin=1,
- ntpr=5,
- cut=12,
- ntb=0,
- %(restraint_lines)s
-&end\n"""%locals()
-        elif restraint == ':LIG & @H=':
-            script ="""Minimization with Cartesian restraints
-&cntrl
- imin=1,
- maxcyc=100,
- igb=0,
  ntmin=1,
  ntpr=5,
  cut=12,
