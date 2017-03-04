@@ -153,8 +153,8 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.charge_file, minimize=config_d.minimize, \
-cleanup=config_d.cleanup, extract_only=config.extract_only)
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.charge_file, minimize=config_d.minimize,\
+constraints=config_d.constraints, cleanup=config_d.cleanup, extract_only=config.extract_only)
 
         self.finalize(config, config_d)
         tcpu2 = time.time()

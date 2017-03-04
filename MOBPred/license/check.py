@@ -36,6 +36,8 @@ done"""% locals()
             filename1 = cmd_s[-1]
         elif exe_cmd == 'prepwizard':
             filename1 = cmd_s[-2]
+        elif exe_cmd == 'ifd':
+            filename1 = cmd_s[-1]
         else:
             raise ValueError("Schrodinger's command %s not recognized!"%exe_cmd)
         splitext_0 = os.path.splitext(filename1)[0]

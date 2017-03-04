@@ -2,8 +2,10 @@ import os
 import sys
 import method
 
+from MOBPred.license import check as chkl
+
 mandatory_settings = ['type']
-known_types = ['distance', 'volume']
+known_types = ['distance', 'volume', 'sasa']
 default_settings = {'type': 'distance', 'residues': None, 'distance_mode': 'cog'}
 
 class Colvar(method.ScoringMethod):
@@ -19,7 +21,7 @@ class Colvar(method.ScoringMethod):
             else:
                 self.options['residues'] = '[' + self.options['residues'] + ']'
 
-    def write_rescoring_script(self, filename, file_r, file_l):
+    def write_rescoring_script(self, filename, file_r, file_l, file_q):
 
         locals().update(self.options)
 
@@ -102,16 +104,49 @@ structconvert -imol2 %(file_l)s -omae lig.mae
 $SCHRODINGER/run volume_calc.py -imae lig.mae > cv.out"""% locals()
                 file.write(script)
 
-    def extract_rescoring_results(self, file_s):
+        elif self.options['type'] == 'sasa':
+            files_l_joined = ' '.join(file_l)
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
+set -e
+cat %(files_l_joined)s > lig.mol2
 
-        with open(file_s, 'a') as sf:
-            try:
-                with open('cv.out', 'r') as ff:
-                    if self.options['type'] == 'distance':
-                        print >> sf, ff.next().strip()
-                    elif self.options['type'] == 'volume':
-                        ff.next()
-                        ff.next()
-                        print >> sf, ff.next().split(',')[1].replace('\n','') 
-            except:
-                print >> sf, 'NaN'
+structconvert -ipdb %(file_r)s -omae rec.mae
+structconvert -imol2 lig.mol2 -omae lig.mae
+
+cat rec.mae lig.mae > complex.mae
+
+# use Schrodinger's utility bindind_sasa.py 
+$SCHRODINGER/run binding_sasa.py complex.mae -f > cv.out
+structconvert -n 2: -imae complex-out_pv.mae -osd lig_out.sdf"""% locals()
+                file.write(script)
+
+    def extract_rescoring_results(self, file_s, nligands=None):
+
+        if self.options['type'] in ['distance', 'volume']:
+            with open(file_s, 'a') as sf:
+                try:
+                    with open('cv.out', 'r') as ff:
+                        if self.options['type'] == 'distance':
+                            print >> sf, ff.next().strip()
+                        elif self.options['type'] == 'volume':
+                            ff.next()
+                            ff.next()
+                            print >> sf, ff.next().split(',')[1].replace('\n','') 
+                except:
+                    print >> sf, 'NaN'
+
+        elif self.options['type'] == 'sasa':
+            with open(file_s, 'w') as sf:
+                try:
+                    with open('lig_out.sdf', 'r') as ff:
+                        is_sasa_line = False
+                        for line in ff:
+                            if line.startswith('> <r_user_sasa_ligand_total_bound>'):
+                                is_sasa_line = True
+                            elif is_sasa_line:
+                                is_sasa_line = False
+                                sf.write(line)
+                except:
+                    for idx in range(nligands):
+                        print >> sf, 'NaN'

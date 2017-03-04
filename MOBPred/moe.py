@@ -26,7 +26,7 @@ class Moe(method.DockingMethod):
         # set box size
         self.options['boxsize_bs'] = '[' + ', '.join(map(str.strip, site[2].split(','))) + ']'
 
-    def write_docking_script(self, filename, file_r, file_l):
+    def write_docking_script(self, filename, file_r, file_l, file_q):
    
         self.write_moe_docking_script('moe_dock.svl')
     
@@ -251,18 +251,63 @@ endfunction;"""% locals()
                             print  >> sf, sdff.next().strip()
             os.remove(sdffile)
     
-    def write_rescoring_script(self, filename, file_r, file_l):
+    def write_rescoring_script(self, filename, file_r, file_l, file_q):
 
         locals().update(self.options)
 
-        convertmol2_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
+        if self.options['rescoring'] == 'prolig':
+            rescoring_cmd = chkl.eval("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig %(file_l)s"%locals(), 'moe') # cmd for docking
+
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
+echo "#svl
+function prolig_Calculate;
+
+global argv;
+function ArgvPull;
+
+local function main[]
+
+    ArgvReset ArgvExpand argv;
+    local [recmdb, ligmdb, outf] = ArgvPull [
+        ['-rec','-lig','-o'],
+        1
+    ];
+    local lk = ReadTriposMOL2 [ligmdb, []];
+
+    // Load pdb
+    local rk = ReadAuto [recmdb, []];
+
+    local itypes = ['hbond', 'metal', 'ionic', 'covalent', 'arene', 'distance'];
+    local iract = prolig_Calculate [itypes, lk, rk, []];
+    //local iract_v = Formulate2DInteractions [lk, rk, []];
+
+    local idx;
+    local interaction_energy = 0.;
+    for idx = 1, length iract(1) loop
+        if iract(1)(idx) == 'distance' then
+            break;
+        else
+            interaction_energy = interaction_energy + iract(4)(idx);
+        endif
+    endloop
+
+    write ['Interaction energy: {f.2} kCal/mol \\n', interaction_energy];
+
+endfunction;" > moe_rescoring.svl
+
+%(rescoring_cmd)s
+""" %locals()
+                file.write(script)
+
+        else:
+            convertmol2_cmd = chkl.eval("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
 db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
+            rescoring_cmd = chkl.eval("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
 
-        rescoring_cmd = chkl.eval("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
-
-        # write vina script
-        with open(filename, 'w') as file:
-            script ="""#!/bin/bash
+            # write vina script
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
 
 %(convertmol2_cmd)s
 
@@ -405,23 +450,40 @@ ArgvReset ArgvExpand argv;
 endfunction;" > moe_rescoring.svl
 
 %(rescoring_cmd)s"""% locals()
-            file.write(script)
+                file.write(script)
 
     def extract_rescoring_results(self, file_s):
 
-        # get SDF to extract scores
-        sdffile = 'lig.sdf'
-        subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
-        with open(file_s, 'a') as sf:
-            if os.path.exists(sdffile):
-                with open(sdffile, 'r') as sdff:
-                    for line in sdff:
-                        if line.startswith("> <S>"):
-                            print >> sf, sdff.next().strip()
-                            break
-                    os.remove(sdffile)
-            else:
-                print >> sf, 'NaN'
+        locals().update(self.options)
+
+        if self.options['rescoring'] == 'prolig': 
+            with open(file_s, 'a') as sf:
+                if os.path.exists('moebatch.log'):
+                    with open('moebatch.log', 'r') as logf:
+                        is_interaction_energy = False
+                        for line in logf:
+                            if line.startswith("Interaction energy:"):
+                                print >> sf, line.split()[-2]
+                                is_interaction_energy = True
+                                break
+                        if not is_interaction_energy:
+                            print >> sf, 'NaN'
+                else:
+                     print >> sf, 'NaN'
+        else:
+            # get SDF to extract scores
+            sdffile = 'lig.sdf'
+            subprocess.check_output(chkl.eval("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
+            with open(file_s, 'a') as sf:
+                if os.path.exists(sdffile):
+                    with open(sdffile, 'r') as sdff:
+                        for line in sdff:
+                            if line.startswith("> <S>"):
+                                print >> sf, sdff.next().strip()
+                                break
+                        os.remove(sdffile)
+                else:
+                    print >> sf, 'NaN'
 
     def cleanup(self):
         pass
@@ -447,7 +509,7 @@ def write_moe_sitefinder_script(filename, file_r, args):
         nsitesmax = str(args.nsitesmax)
     minplb = args.minplb
 
-    # write vina script
+    # write svl script
     with open(filename, 'w') as file:
         script ="""#svl
 

@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 import shutil
 import subprocess
@@ -6,6 +7,8 @@ import argparse
 
 from MOBPred.tools import mol2
 from MOBPred.tools import reader
+
+leap_default_settings = {'solvate': False, 'PBRadii': None, 'forcefield': 'leaprc.ff12SB'}
 
 def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
     """
@@ -79,6 +82,28 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
 
     # remove atoms and hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens)
+
+def run_antechamber(infile, outfile):
+    """ use H++ idea of running antechamber multiple times with bcc's 
+charge method to estimate the appropriate net charge!!"""
+
+    logfile = 'antchmb.log'
+    max_net_charge = 30
+    net_charge = [0]
+    for nc in range(max_net_charge):
+        net_charge.extend([nc+1,-(nc+1)])
+
+    for nc in net_charge:
+        iserror = False
+        subprocess.call('antechamber -i %s -fi mol2 -o %s -fo mol2 -at sybyl -c gas -nc %i -du y -pf y > %s'%(infile, outfile, nc, logfile), shell=True)
+        with open(logfile, 'r') as lf:
+            for line in lf:
+                if 'Warning' in line:
+                    iserror = True
+            if not iserror:
+                break
+    if iserror:
+        raise ValueError("No appropriate net charge was found to run antechamber's bcc charge method")
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
@@ -194,7 +219,7 @@ def prepare_ligand(file_r, file_l, file_rl):
         script ="""#!/bin/bash
 # prepare mol2 file with antechamber
 antechamber -fi mol2 -i %(file_l)s -fo mol2 -o tmp.mol2 -c gas > antchmb.log
-cp tmp.mol2 %(file_l)s
+mv tmp.mol2 %(file_l)s
 parmchk -i %(file_l)s -f mol2 -o lig.frcmod # run parmchk
 
 # prepare complex.pdb
@@ -208,28 +233,44 @@ cat lig.pdb >> %(file_rl)s\n"""%locals()
 
     os.remove(script_name)
 
-def prepare_leap_config_file(script_name, file_r, files_l, file_rl):
+def prepare_leap_config_file(script_name, file_r, file_l, file_rl, **kwargs):
 
-    if files_l:
+    leap_settings = leap_default_settings
+    for key, value in kwargs.items():
+        leap_settings[key] = value
+
+    locals().update(leap_settings)
+
+    if leap_settings['solvate']:
+        lines_solvate = "\nsolvatebox p TIP3PBOX 8"
+    else:
+        lines_solvate = ""
+
+    if leap_settings['PBRadii']:
+        lines_pbradii = "\nset default PBRadii %s"%(leap_settings['PBRadii'])
+    else:
+        lines_pbradii = ""
+
+    if file_l:
         with open(script_name, 'w') as leapf:
-                script ="""source leaprc.ff14SB
+                script ="""source %(forcefield)s
 source leaprc.gaff
-loadamberparams frcmod.ionsjc_tip3p # load parameters for monovalent ions
-loadamberparams frcmod.ionslm_1264_tip3p # load parameters for bivalent ions
 loadoff atomic_ions.lib
-LIG = loadmol2 lig.mol2
-loadamberparams lig.frcmod
-p = loadPdb %(file_rl)s
+loadamberparams frcmod.ionsjc_tip3p
+loadamberparams frcmod.ionslm_1264_tip3p
+LIG = loadmol2 %(file_l)s
+loadamberparams lig.frcmod%(lines_pbradii)s
+p = loadPdb %(file_rl)s%(lines_solvate)s
 saveAmberParm p start.prmtop start.inpcrd
 savePdb p start.pdb
 quit\n"""%locals()
                 leapf.write(script)
     else:
         with open(script_name, 'w') as leapf:
-                script ="""source leaprc.ff14SB
-loadamberparams frcmod.ionsjc_tip3p # load parameters for monovalent ions
-loadamberparams frcmod.ionslm_1264_tip3p # load parameters for bivalent ions
-p = loadPdb %(file_r)s
+                script ="""source %(forcefield)s
+loadamberparams frcmod.ionsjc_tip3p
+loadamberparams frcmod.ionslm_1264_tip3p
+p = loadPdb %(file_r)s%(lines_solvate)s
 saveAmberParm p start.prmtop start.inpcrd
 savePdb p start.pdb
 quit\n"""%locals()
@@ -281,18 +322,44 @@ def prepare_minimization_config_file(script_name, restraint=None):
 
     with open(script_name, 'w') as minf:
         if restraint == ':LIG':
-            script ="""Minimization with Cartesian restraints
+            script ="""In-Vacuo minimization with restraints
 &cntrl
- imin=1, maxcyc=2000,
- igb=0,
+ imin=1, maxcyc=5000,
+ ntb=0,
  ncyc=1000,
  ntmin=1,
  ntpr=5,
- cut=12,
- ntb=0,
+ cut=10.0,
  %(restraint_lines)s
 &end\n"""%locals()
         minf.write(script)
+
+def create_constrained_pdbfile(file_rl):
+
+    with open(file_rl, 'r') as startfile:
+         with open('posres.pdb', 'w') as posresfile:
+
+            for line in startfile:
+                if line.startswith(('ATOM', 'HETATM')):
+
+                    atom_name = line[12:16].strip()
+                    res_name = line[17:20].strip()
+
+                    if 'WAT' in res_name: # water molecules
+                        newline = line[0:30] + '%8.3f'%0.0 + line[38:]
+                    elif 'LIG' in res_name: # atoms of the ligand
+                        if atom_name.startswith(('C', 'N', 'O')):
+                            newline = line[0:30] + '%8.3f'%50.0 + line[38:]
+                        else:
+                            newline = line[0:30] + '%8.3f'%0.0 + line[38:]
+                    else: # atoms of the protein
+                        if atom_name in ['C', 'CA', 'N', 'O']:
+                            newline = line[0:30] + '%8.3f'%50.0 + line[38:]
+                        else:
+                            newline = line[0:30] + '%8.3f'%0.0 + line[38:]
+                else:
+                    newline = line
+                print >> posresfile, newline.replace('\n','')
 
 def prepare_and_minimize(restraints, keep_hydrogens):
 
@@ -320,7 +387,7 @@ def prepare_and_minimize(restraints, keep_hydrogens):
 def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False):
 
     if files_l:
-        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
+        prepare_leap_config_file('leap.in', file_r, 'lig.mol2', 'complex.pdb')
         for idx, file_l in enumerate(files_l):
             shutil.copyfile(file_l, 'lig.mol2')
             # change ligand name to LIG
@@ -352,7 +419,7 @@ def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False
                 mol2.pdb2mol2('lig.out.pdb', mol2file, file_l)
                 mol2.update_mol2file(mol2file, mol2file, ligname=ligname)
     else:
-        prepare_leap_config_file('leap.in', file_r, files_l, 'complex.pdb')
+        prepare_leap_config_file('leap.in', file_r, None, 'complex.pdb')
         prepare_and_minimize(restraints, keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')
 

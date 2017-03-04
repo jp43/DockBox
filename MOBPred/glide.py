@@ -12,7 +12,7 @@ from license import check as chkl
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 
-default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP'}
+default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'use_prepwizard': 'True'}
 
 class Glide(method.DockingMethod):
 
@@ -40,12 +40,22 @@ class Glide(method.DockingMethod):
         if 'tmpdir' in self.options:
             self.tmpdirline = "export SCHRODINGER_TMPDIR=%s"%self.options['tmpdir']
 
+        if self.options['use_prepwizard'].lower() in ['yes', 'true']:
+            self.use_prepwizard = True
+        elif self.options['use_prepwizard'].lower() in ['no', 'false']:
+            self.use_prepwizard = False
+        else:
+            raise ValueError("Value for use_prepwizard non recognized")
+            
     def write_docking_script(self, filename, file_r, file_l, file_q):
         """ Write docking script for glide """
         locals().update(self.options)
 
-        # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-        prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
+        if self.use_prepwizard:
+            # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
+            prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
+        else:
+            prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
 
         # prepare grid and docking cmd
         glide_grid_cmd = chkl.eval("glide grid.in", 'schrodinger')
@@ -127,8 +137,12 @@ PRECISION %(precision)s" > dock.in
 
         files_l_joined = ' '.join(files_l)
 
-        # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-        prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
+        if self.use_prepwizard:
+            # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
+            prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
+        else:
+            prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
+
 
         # prepare grid and scoring cmd
         glide_grid_cmd = chkl.eval("glide grid.in", 'schrodinger') # grid prepare
@@ -171,7 +185,7 @@ PRECISION SP" > dock.in
 %(glide_dock_cmd)s"""% locals()
             file.write(script)
 
-    def extract_rescoring_results(self, filename, nligands):
+    def extract_rescoring_results(self, filename, nligands=None):
         idxs = []
         scores = []
 

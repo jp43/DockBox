@@ -5,6 +5,8 @@ import stat
 import glob
 import subprocess
 
+from MOBPred.tools import mol2
+from MOBPred.amber import minimz
 from MOBPred.license import check as chkl
 
 def prepare_ligand(file_l, flags):
@@ -29,11 +31,13 @@ def generate_3D_structure(file_l, flags):
         raise IOError("Format %s not recognized!"%(ext[1:]))
 
     suffix = (os.path.splitext(file_l)[0]).split('/')[-1]
-    output_file = suffix + ".prep.sdf"
+    maefile = suffix + "_prep.mae"
+    output_file = suffix + "_prep.mol2"
 
     # write ligprep command
     #cmd = chkl.eval("ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -osd %(output_file)s"%locals(), 'schrodinger')
-    cmd = "ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -osd %(output_file)s"%locals()
+    cmd = """ligprep -WAIT %(flags)s %(input_format_flag)s %(file_l)s -omae %(maefile)s
+mol2convert -imae %(maefile)s -omol2 %(output_file)s"""%locals()
 
     script_name = 'run_ligprep.sh'
     with open(script_name, 'w') as file:
@@ -41,21 +45,30 @@ def generate_3D_structure(file_l, flags):
 %(cmd)s"""% locals()
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+
     # execute ligprep
     subprocess.check_output('./' + script_name +" &> ligprep.log", shell=True, executable='/bin/bash')
+    mol2.update_mol2file(output_file, suffix + "_prep_.mol2", ligname='LIG', multi=True)
 
-    ## cleanup directory
-    #for logf in glob.glob(suffix +'*.log'):
-    #   os.remove(logf)
+    nmol2files = len(glob.glob(suffix + "_prep_*.mol2"))
+    output_files = []
 
-    return output_file
+    # assign partial charges using Antechamber
+    for idx in range(nmol2files):
+        mol2file = suffix + "_prep_%i.mol2"%(idx+1)
+        mol2file_tmp = suffix + "_prep_%i_pc.mol2"%(idx+1)
+        minimz.run_antechamber(mol2file, mol2file_tmp)
+        shutil.move(mol2file_tmp, mol2file)
+        output_files.append(mol2file)
+
+    return output_files
 
 def prepare_receptor(file_r, flags):
 
     # find new file name
     new_file_r = os.path.basename(file_r)
     pref, ext = os.path.splitext(new_file_r)
-    new_file_r = pref + '.prep' + ext
+    new_file_r = pref + '_prep' + ext
 
     # write ligprep command
     cmd = chkl.eval("prepwizard -WAIT %(flags)s %(file_r)s %(new_file_r)s"%locals(), 'schrodinger')

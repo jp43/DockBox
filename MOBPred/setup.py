@@ -1,7 +1,8 @@
 import sys
 import subprocess
 
-known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], 'rescoring': ['autodock', 'vina', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
+known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'ifd', 'moe', 'gold'], \
+     'rescoring': ['autodock', 'vina', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
 
 class ConfigSetup(object):
 
@@ -93,6 +94,7 @@ Make sure the program has been installed!'%(exe,program))
         self.nsites = len(site)
 
     def is_yesno_option(self, config, section, option, default=False):
+
         if config.has_option(section, option):
             yesno = config.get(section, option).lower()
             if yesno == 'yes':
@@ -116,3 +118,4 @@ class DockingSetup(ConfigSetup):
 
         self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
         self.minimize = self.is_yesno_option(config, 'DOCKING', 'minimize')
+        self.constraints = self.is_yesno_option(config, 'DOCKING', 'constraints', default=True)

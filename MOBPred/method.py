@@ -1,5 +1,4 @@
 import os
-import sys
 import stat
 import glob
 import shutil
@@ -18,7 +17,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, file_q, minimize=False, cleanup=False, extract_only=False):
+    def run_docking(self, file_r, file_l, file_q, minimize=False, constraints=True, cleanup=False, extract_only=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -58,7 +57,7 @@ class DockingMethod(object):
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
-            self.minimize_extracted_poses(file_r)
+            self.minimize_extracted_poses(file_r, constraints)
         self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
@@ -92,6 +91,10 @@ class DockingMethod(object):
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
 
+        if self.program == 'colvar':
+            if self.options['type'] == 'sasa':
+                files_l = [files_l]
+
         if files_l:
             # iterate over all the poses
             for idx, file_l in enumerate(files_l):
@@ -109,7 +112,7 @@ class DockingMethod(object):
                 # (C) extract docking results
                 if self.program in single_run_programs:
                     nligands = len(files_l[0])
-                    self.extract_rescoring_results('score.out', nligands)
+                    self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
                     self.extract_rescoring_results('score.out')
         else:
@@ -157,7 +160,7 @@ class DockingMethod(object):
 
                 shutil.move('score.tmp.out', file_s)
 
-    def minimize_extracted_poses(self, file_r):
+    def minimize_extracted_poses(self, file_r, constraints):
         """Perform AMBER minimization on extracted poses"""
 
         files_l = []
@@ -168,8 +171,12 @@ class DockingMethod(object):
                 files_l.append(mol2file)
 
         if files_l:
+            if constraints:
+                restraints = ':LIG'
+            else:
+                restraints = None
             # do energy minimization on ligand hydrogens
-            mn.do_minimization(file_r, files_l=files_l, restraints=':LIG', keep_hydrogens=True)
+            mn.do_minimization(file_r, files_l=files_l, restraints=restraints, keep_hydrogens=True)
 
         # extract results from minimization and purge out
         for idx in range(n_files_l):
@@ -178,7 +185,8 @@ class DockingMethod(object):
                 shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
-        #shutil.rmtree('minimz')
+
+        shutil.rmtree('minimz', ignore_errors=True)
 
     def write_rescoring_script(self, script_name, file_r, file_l, file_q):
         pass

@@ -8,7 +8,7 @@ from tools import mol2
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
-'extra_margin': '5.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
+'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
 
 # per default, ligand partial charges are kept as they are in the original .mol2 file
 # however, we might want to generate them using with Chimera. In that case, chimera
@@ -245,19 +245,20 @@ dock6 -i dock6.in"""% locals()
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
     
         # save scores
-        with open('lig_out_scored.mol2', 'r') as ffin:
-            with open(file_s, 'w') as ffout:
-                idx = 0
-                for line in ffin:
-                    if line.startswith('##########    Grid Score:'):
-                        print >> ffout, line.split()[3]
-                        idx += 1
-                    if idx == int(self.options['nposes']):
-                        break 
+        if os.path.isfile('lig_out_scored.mol2'):
+            with open('lig_out_scored.mol2', 'r') as ffin:
+                with open(file_s, 'w') as ffout:
+                    idx = 0
+                    for line in ffin:
+                        if line.startswith('##########    Grid Score:'):
+                            print >> ffout, line.split()[3]
+                            idx += 1
+                        if idx == int(self.options['nposes']):
+                            break 
 
-        # create multiple mol2 files
-        ligname = reader.open('lig_out_scored.mol2').ligname
-        mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
+            # create multiple mol2 files
+            ligname = reader.open('lig_out_scored.mol2').ligname
+            mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
 
     def cleanup(self):
         # remove map files

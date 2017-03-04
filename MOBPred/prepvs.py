@@ -147,11 +147,13 @@ class PrepDocking(object):
         """Cleanup directories used for preparation"""
         # remove existing directories
 
-        for ligdir in glob.glob('lig-prep*'):
-            shutil.rmtree(ligdir)
+        if self.input_file_l:
+            for ligdir in glob.glob('lig-prep*'):
+                shutil.rmtree(ligdir)
 
-        for recdir in glob.glob('rec-prep*'):
-            shutil.rmtree(recdir)
+        if self.input_file_r:
+            for recdir in glob.glob('rec-prep*'):
+                shutil.rmtree(recdir)
 
     def make_dirs(self, root, type, ndirs, index, args):
 
@@ -172,16 +174,17 @@ class PrepDocking(object):
         for idx in range(self.nfiles_l):
             output_mol2files = []
             ligpdir = 'lig-prep' + str(idx+1)
-            suffix, ext = os.path.splitext(glob.glob(ligpdir+'/*.mol2')[0])
-            for idx in range(len(glob.glob(suffix[:-1] + '*.mol2'))):
-                output_mol2files.append(os.path.abspath(suffix[:-1] + '%s.mol2'%(idx+1)))
+            mol2files_dir_l = glob.glob(ligpdir+'/*_prep_*.mol2')
+            suffix, ext = os.path.splitext(mol2files_dir_l[0])
+            for jdx in range(len(mol2files_dir_l)):
+                output_mol2files.append(os.path.abspath(suffix[:-1]+'%s.mol2'%(jdx+1)))
             self.files_prep_l.append(output_mol2files)
 
         # get receptor file names
         self.files_prep_r = []
         for idx in range(self.nfiles_r):
             recpdir = 'rec-prep' + str(idx+1)
-            self.files_prep_r.append(glob.glob(recpdir+'/*.pdb')[0])
+            self.files_prep_r.append(glob.glob(recpdir+'/*_prep.pdb')[0])
 
     def prepare_vs(self, args):
         """Prepare files and directories for Virtual Screening"""
@@ -254,7 +257,9 @@ class PrepDocking(object):
         else:
             raise IOError("Format %s not recognized!"%(ext[1:]))
 
-        # generate multiple .mol2 files using babel
+        # generate multiple .mol2 files using antechamber
+        output_mol2file_model = suffix + '_.mol2' 
+
         output_mol2file_model = suffix + '_.mol2'
         subprocess.check_output('babel %s %s -omol2 %s -m 2>/dev/null'%(input_format_flag, file_l, output_mol2file_model), shell=True, executable='/bin/bash')
 
@@ -282,14 +287,7 @@ class PrepDocking(object):
             os.chdir(ligpdir) # change directory
 
             # (A) Run Schrodinger's ligprep
-            if args.no_ligprep:
-                new_file_l = os.path.basename(file_l)
-                shutil.copyfile(file_l, new_file_l)
-            else:
-                new_file_l = ligprep.prepare_ligand(file_l, args.ligprep_flags)
-
-            # (B) Generate mol2file using babel
-            mol2files = self.generate_mol2file(new_file_l, args)
+            mol2files = ligprep.prepare_ligand(file_l, args.ligprep_flags)
             self.files_prep_l.append(mol2files)
             os.chdir(curdir)
 
@@ -330,6 +328,7 @@ class PrepDocking(object):
 
             self.files_prep_r.append(os.path.abspath(new_file_r))
             os.chdir(curdir)
+
 
     def update_config_file(self, workdir, config_file, ligpdir, recpdir, args):
 
