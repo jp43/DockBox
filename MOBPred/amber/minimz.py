@@ -8,7 +8,7 @@ import argparse
 from MOBPred.tools import mol2
 from MOBPred.tools import reader
 
-leap_default_settings = {'solvate': False, 'PBRadii': None, 'forcefield': 'leaprc.ff12SB'}
+leap_default_settings = {'solvate': False, 'PBRadii': None, 'forcefield': 'leaprc.ff14SB'}
 
 def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False):
     """
@@ -83,7 +83,7 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
     # remove atoms and hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens)
 
-def run_antechamber(infile, outfile):
+def run_antechamber(infile, outfile, at='gaff', c='gas'):
     """ use H++ idea of running antechamber multiple times with bcc's 
 charge method to estimate the appropriate net charge!!"""
 
@@ -95,15 +95,17 @@ charge method to estimate the appropriate net charge!!"""
 
     for nc in net_charge:
         iserror = False
-        subprocess.call('antechamber -i %s -fi mol2 -o %s -fo mol2 -at sybyl -c gas -nc %i -du y -pf y > %s'%(infile, outfile, nc, logfile), shell=True)
+        #print 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
+        subprocess.call('antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals(), shell=True)
         with open(logfile, 'r') as lf:
             for line in lf:
-                if 'Warning' in line:
+                if 'Warning' in line or 'Error' in line:
                     iserror = True
             if not iserror:
+                print "Net charge found: %.1f"%nc
                 break
     if iserror:
-        raise ValueError("No appropriate net charge was found to run antechamber's bcc charge method")
+        raise ValueError("No appropriate net charge was found to run antechamber's %s charge method"%c)
 
 def correct_hydrogen_names(file_r, keep_hydrogens):
 
@@ -123,43 +125,43 @@ def correct_hydrogen_names(file_r, keep_hydrogens):
                     chainID = line[21:22]
                     resnum = line[22:26].strip()
 
-                    # check if N-terminal
-                    if chainID not in chainIDs:
-                        chainIDs.append(chainID)
-                        is_N_terminal = True
-                        resnum_prev = resnum
-                    else:
-                        if resnum_prev != resnum:
-                            is_N_terminal = False
+                    if resname in atoms_info:
+                        # check if N-terminal
+                        if chainID not in chainIDs:
+                            chainIDs.append(chainID)
+                            is_N_terminal = True
+                            resnum_prev = resnum
+                        else:
+                            if resnum_prev != resnum:
+                                is_N_terminal = False
 
-                    # atom (if atom name starts with a digit, correct it)
-                    if atom_name[0].isdigit():
-                        atom_name = atom_name[1:] + atom_name[0]
-
-                    # check if hydrogen should be removed
-                    if atom_name[0] == 'H':
-                        is_hydrogen_from_nterminal = is_N_terminal and atom_name == 'H'
-                        is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
-                        if keep_hydrogens and not is_hydrogen_known:
-                            if not is_hydrogen_known:
+                       # atom (if atom name starts with a digit, correct it)
+                        if atom_name[0].isdigit():
+                            atom_name = atom_name[1:] + atom_name[0]
+ 
+                        # check if hydrogen should be removed
+                        if atom_name[0] == 'H':
+                            is_hydrogen_from_nterminal = is_N_terminal and atom_name == 'H'
+                            is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
+                            if keep_hydrogens and not is_hydrogen_known:
+                                if not is_hydrogen_known:
+                                    remove_line = True
+                                    removed_lines.append(line)
+                                    #print hydrogens_info[resname], atom_name
+                                    nremoved += 1
+                            elif not keep_hydrogens:
+                                remove_line = True
+                                nremoved += 1
+                        # check if non-hydrogen atom should be removed
+                        else:
+                            is_atom_known = atom_name in atoms_info[resname]
+                            if not is_atom_known:
                                 remove_line = True
                                 removed_lines.append(line)
-                                #print hydrogens_info[resname], atom_name
                                 nremoved += 1
-                        elif not keep_hydrogens:
-                            remove_line = True
-                            nremoved += 1
-                    # check if non-hydrogen atom should be removed
-                    else:
-                        is_atom_known = atom_name in atoms_info[resname]
-                        if not is_atom_known:
-                            remove_line = True
-                            removed_lines.append(line)
-                            nremoved += 1
 
                 if not remove_line:
                     wf.write(line)
-
     #print '\n'.join(removed_lines)
     shutil.move('tmp.pdb', file_r)
     #print "Number of atom lines removed: %s" %nremoved
@@ -214,40 +216,23 @@ def load_atomic_ions():
 
 def prepare_ligand(file_r, file_l, file_rl):
 
-    script_name = 'prepare_ligand.sh'
-    with open(script_name, 'w') as ff:
-        script ="""#!/bin/bash
-# prepare mol2 file with antechamber
-antechamber -fi mol2 -i %(file_l)s -fo mol2 -o tmp.mol2 -c gas > antchmb.log
-mv tmp.mol2 %(file_l)s
-parmchk -i %(file_l)s -f mol2 -o lig.frcmod # run parmchk
+    run_antechamber(file_l, 'tmp.mol2', at='gaff', c='gas')
+    shutil.move('tmp.mol2', file_l)
+    subprocess.check_output('parmchk -i %s -f mol2 -o lig.frcmod'%file_l, shell=True, executable='/bin/bash')
+    subprocess.check_output('antechamber -fi mol2 -i %s -fo pdb -o lig.pdb > /dev/null'%file_l, shell=True, executable='/bin/bash')
 
-# prepare complex.pdb
-antechamber -fi mol2 -i %(file_l)s -fo pdb -o lig.pdb > /dev/null # create pdb
-cp %(file_r)s %(file_rl)s
-cat lig.pdb >> %(file_rl)s\n"""%locals()
-        ff.write(script)
+    shutil.copyfile(file_r, file_rl)
+    subprocess.check_output('cat lig.pdb >> %s'%file_rl, shell=True, executable='/bin/bash')
 
-    os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
-    subprocess.check_output('./' + script_name, shell=True, executable='/bin/bash')
+def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB'):
 
-    os.remove(script_name)
-
-def prepare_leap_config_file(script_name, file_r, file_l, file_rl, **kwargs):
-
-    leap_settings = leap_default_settings
-    for key, value in kwargs.items():
-        leap_settings[key] = value
-
-    locals().update(leap_settings)
-
-    if leap_settings['solvate']:
-        lines_solvate = "\nsolvatebox p TIP3PBOX 8"
+    if solvate:
+        lines_solvate = "\nsolvatebox p TIP3PBOX 10"
     else:
         lines_solvate = ""
 
-    if leap_settings['PBRadii']:
-        lines_pbradii = "\nset default PBRadii %s"%(leap_settings['PBRadii'])
+    if PBRadii:
+        lines_pbradii = "\nset default PBRadii %s"%PBRadii
     else:
         lines_pbradii = ""
 
@@ -255,7 +240,6 @@ def prepare_leap_config_file(script_name, file_r, file_l, file_rl, **kwargs):
         with open(script_name, 'w') as leapf:
                 script ="""source %(forcefield)s
 source leaprc.gaff
-loadoff atomic_ions.lib
 loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
 LIG = loadmol2 %(file_l)s
@@ -334,32 +318,22 @@ def prepare_minimization_config_file(script_name, restraint=None):
 &end\n"""%locals()
         minf.write(script)
 
-def create_constrained_pdbfile(file_rl):
+def create_pdbfile_with_restraints(file_rl, file_rst, force=50.0, atoms=[]):
 
     with open(file_rl, 'r') as startfile:
-         with open('posres.pdb', 'w') as posresfile:
-
+         with open(file_rst, 'w') as rstf:
             for line in startfile:
                 if line.startswith(('ATOM', 'HETATM')):
-
-                    atom_name = line[12:16].strip()
-                    res_name = line[17:20].strip()
-
-                    if 'WAT' in res_name: # water molecules
+                    atomnum = line[6:11].strip()
+                    atomname = line[12:16].strip()
+                    resname = line[17:20].strip()
+                    if resname not in ['WAT', 'LIG'] and atomname in ['C', 'CA', 'N', 'O'] and (not atoms or atomnum in atoms):
+                        newline = line[0:30] + '%8.3f'%force + line[38:]
+                    else:
                         newline = line[0:30] + '%8.3f'%0.0 + line[38:]
-                    elif 'LIG' in res_name: # atoms of the ligand
-                        if atom_name.startswith(('C', 'N', 'O')):
-                            newline = line[0:30] + '%8.3f'%50.0 + line[38:]
-                        else:
-                            newline = line[0:30] + '%8.3f'%0.0 + line[38:]
-                    else: # atoms of the protein
-                        if atom_name in ['C', 'CA', 'N', 'O']:
-                            newline = line[0:30] + '%8.3f'%50.0 + line[38:]
-                        else:
-                            newline = line[0:30] + '%8.3f'%0.0 + line[38:]
                 else:
                     newline = line
-                print >> posresfile, newline.replace('\n','')
+                rstf.write(newline)
 
 def prepare_and_minimize(restraints, keep_hydrogens):
 

@@ -131,7 +131,19 @@ class PrepDocking(object):
                 input_file_l.append(os.path.abspath(file_l))
         self.input_file_l = input_file_l
         self.nfiles_l = len(input_file_l)
-            
+
+        # get compounds names
+        names_l = []
+        for file_l in self.input_file_l:
+            basename, ext = os.path.splitext(file_l)
+            with open(file_l) as ff:
+               if ext == '.sdf':
+                   name = ff.next().strip()
+               elif ext == '.smi':
+                   name = ff.next().split()[-1]
+            names_l.append(name) 
+        self.names_l = names_l
+
         # get full names of receptor input files
         input_file_r = []
         if args.input_file_r:
@@ -191,28 +203,28 @@ class PrepDocking(object):
 
         # ligand and receptor files provided
         if self.nfiles_l > 0 and self.nfiles_r > 0:
-            # LIGAND level
-            for idx in range(self.nfiles_l):
-                files_prep_l = self.files_prep_l[idx]
-                ligdir = self.make_dirs('.', 'ligand', self.nfiles_l, idx, args)
-                ligpdir = 'lig-prep%s'%(idx+1)
-                # RECEPTOR level
-                for jdx in range(self.nfiles_r):
-                    recdir = self.make_dirs(ligdir, 'receptor', self.nfiles_r, jdx, args)
-                    # get prepared ligand filename
-                    file_r = self.files_prep_r[jdx]
-                    recpdir = 'rec-prep%s'%(jdx+1)
-                    # ISOMER level
-                    for kdx, file_l in enumerate(files_prep_l):
-                        workdir = self.make_dirs(recdir, 'isomer', self.files_prep_l[idx], kdx, args)
-                        if self.config_file:
-                            self.update_config_file(workdir, args.config_file, ligpdir, recpdir, args)
-                        # copy the files for ligand and receptor in the corresponding working dir
-                        shutil.copyfile(file_l, workdir + '/lig.mol2')
-                        shutil.copyfile(file_r, workdir +'/rec.pdb')
-                        with open(workdir + '/vs.info', 'w') as ff:
-                            print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
-                            print >> ff, 'Location of original receptor file: ' + self.input_file_r[jdx]
+            with open('lig.info', 'w') as infof:
+                infof.write("lig#,ligname,file\n")
+                # LIGAND level
+                for idx in range(self.nfiles_l):
+                    files_prep_l = self.files_prep_l[idx]
+                    ligdir = self.make_dirs('.', 'ligand', self.nfiles_l, idx, args)
+                    ligpdir = 'lig-prep%s'%(idx+1)
+                    # RECEPTOR level
+                    for jdx in range(self.nfiles_r):
+                        recdir = self.make_dirs(ligdir, 'receptor', self.nfiles_r, jdx, args)
+                        # get prepared ligand filename
+                        file_r = self.files_prep_r[jdx]
+                        recpdir = 'rec-prep%s'%(jdx+1)
+                        # ISOMER level
+                        for kdx, file_l in enumerate(files_prep_l):
+                            workdir = self.make_dirs(recdir, 'isomer', self.files_prep_l[idx], kdx, args)
+                            if self.config_file:
+                                self.update_config_file(workdir, args.config_file, ligpdir, recpdir, args)
+                            # copy the files for ligand and receptor in the corresponding working dir
+                            shutil.copyfile(file_l, workdir + '/lig.mol2')
+                            shutil.copyfile(file_r, workdir +'/rec.pdb')
+                    infof.write("%i,%s,%s\n"%(idx+1,self.names_l[idx],self.input_file_l[idx]))
 
         # no ligand files provided
         elif self.nfiles_l == 0 and self.nfiles_r > 0:
@@ -229,17 +241,18 @@ class PrepDocking(object):
 
         # no receptor files provided
         elif self.nfiles_l > 0 and self.nfiles_r == 0:
-            # LIGAND level
-            for idx in range(self.nfiles_l):
-                ligdir = self.make_dirs('.', 'ligand', self.nfiles_l, idx, args)
-                # ISOMER level
-                for kdx, file_l in enumerate(self.files_prep_l[idx]):
-                    workdir = self.make_dirs(ligdir, 'isomer', self.files_prep_l[idx], kdx, args)
-                    if self.config_file:
-                        self.update_config_file(workdir, config_file, recpdir, args)
-                    shutil.copyfile(file_l, workdir + '/lig.mol2')
-                    with open(workdir + '/vs.info', 'w') as ff:
-                        print >> ff, 'Location of original ligand file: ' + self.input_file_l[idx]
+            infof.write("lig#,ligname,file\n")
+            with open('lig.info', 'w') as infof:
+                # LIGAND level
+                for idx in range(self.nfiles_l):
+                    ligdir = self.make_dirs('.', 'ligand', self.nfiles_l, idx, args)
+                    # ISOMER level
+                    for kdx, file_l in enumerate(self.files_prep_l[idx]):
+                        workdir = self.make_dirs(ligdir, 'isomer', self.files_prep_l[idx], kdx, args)
+                        if self.config_file:
+                            self.update_config_file(workdir, config_file, recpdir, args)
+                        shutil.copyfile(file_l, workdir + '/lig.mol2')
+                infof.write("%i,%s,%s\n"%(idx+1,self.names_l[idx],self.input_file_l[idx]))
 
         # no receptor and ligand files provided
         else:
