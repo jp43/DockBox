@@ -94,6 +94,5 @@ class Reader(object):
 
     readline = next
 
-
 class Writer(object):
     pass

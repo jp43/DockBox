@@ -6,10 +6,9 @@ import numpy as np
 import subprocess
 import glob
 import time
+import pandas as pd
 
 from sklearn import preprocessing
-
-import pandas as pd
 from MOBPred.amber import clustr
 
 class DockAnalysis(object):
@@ -158,7 +157,7 @@ class DockAnalysis(object):
         if not args.extract_results_only:
             # performs clustering
             clustr.do_clustering(self.files_r, self.files_l, cutoff=args.rmsd, cleanup=True)
-        self.extract_results('clustr/info.dat', args)
+        self.extract_results('clustering/info.dat', args)
 
         tcpu2 = time.time()
         print "Analysis procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
@@ -203,7 +202,7 @@ class DockAnalysis(object):
                                 for kdx, line in enumerate(sout):
                                     if kdx == self.indices_per_dir[index]:
                                         results[sf].append(float(line.replace('\n','')))
-                        results['file'].append(self.files_l[index])
+                        results['file'].append(os.path.relpath(self.files_l[index]))
 
                 elif line.startswith('#Representative frames:'):
                     rep_structures = map(int, line.split()[2:])
@@ -227,93 +226,69 @@ class DockAnalysis(object):
                     dataset[sf + '_s'] = dataset[sf]
                 else:
                     dataset[sf + '_s'] = preprocessing.scale(dataset[sf].apply(lambda x: x))
-            dataset['score_multi_s'] = dataset[[sf + '_s' for sf in self.scoring_functions]].sum(axis=1)
-            cols = features + [sf + '_s' for sf in self.scoring_functions] + ['score_multi_s']
+            dataset['score_multi'] = dataset[[sf + '_s' for sf in self.scoring_functions]].sum(axis=1)
+            features = features + [sf + '_s' for sf in self.scoring_functions] + ['score_multi']
 
         if hasattr(self, 'rmsd_file'):
-            cols.append('rmsd')
+            features.append('rmsd')
 
         if args.np > 1:
             dataset = dataset[dataset['programs'].apply(lambda x: len(x.split(','))>=args.np)]
 
-        clusters_best_score = {}
-        if self.scoring_functions:
-            f = {'score_multi_s': 'min'}
-            #dataset_big_clusters = dataset[dataset['cluster_idx']<=10]
-            df_groupby = dataset.groupby('cluster_idx')
-            df_clusters = df_groupby.agg(f).reset_index()
-            df_clusters_best_score = df_clusters.sort_values('score_multi_s').head(5)
-            for idx, row in enumerate(df_clusters_best_score.iterrows()):
-                clusters_best_score[int(row[1]['cluster_idx'])] = (idx+1, row[1]['score_multi_s'])
-        cwd = os.getcwd()
+        self.save_dataset('poses.csv', dataset, features)
+        self.select_best_poses('clusters.csv', dataset, features)
 
-        #shutil.rmtree('rep_poses_big_clusters', ignore_errors=True)
-        #os.mkdir('rep_poses_big_clusters')
-
-        shutil.rmtree('rep_poses_best_scores', ignore_errors=True)
-        os.mkdir('rep_poses_best_scores')
-
-        for name, group in dataset.groupby('cluster_idx'):
-            #if int(name) <= 5:
-            #    dirname = 'big_cluster_%s'%int(name)
-            #    shutil.rmtree(dirname, ignore_errors=True)
-            #    os.mkdir(dirname)
-            #    for row in group.iterrows():
-            #        filename = row[1]['file']
-            #        filename_rel = os.path.relpath(filename, cwd)
-            #        filename_rel_l = filename_rel.split('/')
-            #        filename_rel_l.remove('poses')
-            #        filename_rel_r = '/'.join(filename_rel_l[:-1] + ['rec.pdb'])
-            #        new_filename_rel_l = '-'.join(filename_rel_l) 
-            #        new_filename_l = dirname  + '/' + new_filename_rel_l
-            #        shutil.copyfile(filename, new_filename_l)
-            #        if row[1]['is_representative']:
-            #            shutil.copyfile(filename, 'rep_poses_big_clusters/' + new_filename_rel_l)
-            #            if os.path.isfile(filename_rel_r):
-            #                new_filename_rel_l_suf, ext = os.path.splitext(new_filename_rel_l)
-            #                shutil.copyfile(filename_rel_r, 'rep_poses_big_clusters/'+new_filename_rel_l_suf+'.pdb')
-
-            if name in clusters_best_score:
-                dirname = 'cluster_best_score_%s'%clusters_best_score[name][0]
-                shutil.rmtree(dirname, ignore_errors=True)
-                os.mkdir(dirname)
-                min_score_str = "%.3f"%clusters_best_score[name][1]
-
-                for row in group.iterrows():
-                    filename = row[1]['file']
-                    filename_rel = os.path.relpath(filename, cwd)
-                    filename_rel_l = filename_rel.split('/')
-                    filename_rel_l.remove('poses')
-                    filename_rel_r = '/'.join(filename_rel_l[:-1] + ['rec.pdb'])
-
-                    new_filename_rel_l = '-'.join(filename_rel_l)
-                    new_filename_l = dirname  + '/' + new_filename_rel_l
-                    shutil.copyfile(filename, new_filename_l)
-
-                    if clusters_best_score[name][1] == row[1]['score_multi_s']:
-                        shutil.copyfile(filename, dirname + '/rep_pose.mol2')
-                        population = row[1]['population']
-                        programs = ', '.join(row[1]['programs'].split(','))
-                        info = """Directory name: %(dirname)s
-Cluster index: %(name)s
-Population: %(population)s
-Programs: %(programs)s
-Best score: %(min_score_str)s
-Representative pose (rep_pose.mol2): %(filename)s\n"""%locals()
-                        if os.path.isfile(filename_rel_r):
-                            filename_r = os.path.abspath(filename_rel_r)
-                            new_filename_rel_l_suf, ext = os.path.splitext(new_filename_rel_l)
-                            shutil.copyfile(filename_rel_r, dirname + '/rec.pdb')
-                            info += "Receptor file (rec.pdb): %(filename_r)s\n"%locals()
-                        with open(dirname+'/info.dat', 'w') as ff:
-                            ff.write(info)
-
-        if self.scoring_functions:
-            cols_to_format = self.scoring_functions + [sf + '_s' for sf in self.scoring_functions] + ['score_multi_s'] + self.colvar
-            dataset[cols_to_format] = dataset[cols_to_format].applymap(lambda x: '{0:.3f}'.format(x))
-
-        dataset = dataset[cols]
+        dataset = dataset[features]
         dataset.to_csv('poses.csv', index=False)
+
+    def save_dataset(self, filename, dataset, features):
+
+        saved_dataset = dataset.copy()
+
+        # format dataset to make it more user friendly
+        if self.scoring_functions:
+            cols_to_format = self.scoring_functions + [sf + '_s' for sf in self.scoring_functions] + ['score_multi'] + self.colvar
+            saved_dataset[cols_to_format] = saved_dataset[cols_to_format].applymap(lambda x: '{0:.3f}'.format(x))
+
+        saved_dataset = saved_dataset[features]
+        saved_dataset.to_csv(filename, index=False)
+
+    def select_best_poses(self, filename, dataset, features):
+
+        f = {'score_multi': 'min', 'population': 'mean', 'programs': 'min'}
+        clusters = dataset.groupby('cluster_idx').agg(f).reset_index()
+        
+        score_multi_norm = np.exp(-clusters['score_multi']).sum()
+        population_norm = clusters['population'].sum()
+        program_norm = clusters['programs'].apply(lambda x: len(x.split(','))).max()
+
+        clusters['P_score'] = np.exp(-clusters['score_multi'])/score_multi_norm
+        clusters['P_pop'] = clusters['population']/population_norm
+        clusters['P_pro'] = clusters['programs'].apply(lambda x: len(x.split(',')))/program_norm
+        
+        clusters['P'] = clusters['P_score']*clusters['P_pop']*clusters['P_pro']
+        clusters_best_score = clusters.sort_values('P', ascending=False).head(5)['cluster_idx'].values
+
+        # create directories with best poses
+        for kdx, idx in enumerate(clusters_best_score):
+            dirname = 'pose%s'%(kdx+1)
+
+            # remove directory if already exists and make a new one
+            shutil.rmtree(dirname, ignore_errors=True)
+            os.mkdir(dirname)
+
+            selected_cluster = dataset[dataset['cluster_idx']==idx]
+            rep_pose_selected_cluster = selected_cluster[selected_cluster['is_representative']]
+
+            filename_l = rep_pose_selected_cluster['file'].tolist()[0]
+            filename_l_split = filename_l.split('/')
+            filename_r = '/'.join(filename_l_split[:-1] + ['rec.pdb'])
+
+            rep_pose_selected_cluster.to_csv(dirname + '/info.csv', index=False)
+            shutil.copyfile(filename_l, dirname + '/ligand.mol2')
+            shutil.copyfile(filename_r, dirname + '/target.pdb')
+
+        clusters.to_csv(filename, index=False)
 
 if __name__ == '__main__':
     DockAnalysis().run() 

@@ -3,11 +3,6 @@ import sys
 import shutil
 import subprocess
 
-from MolKit import Read
-from PyBabel.atomTypes import AtomHybridization
-
-from babel import ArrangeHydrogens
-
 # recognized sections
 known_section = ['MOLECULE', 'ATOM', 'BOND', 'SUBSTRUCTURE']
 
@@ -278,6 +273,11 @@ def remove_atoms(struct, atomtype):
     return new_struct 
 
 def arrange_hydrogens(inputfile, outputfile):
+
+    from MolKit import Read
+    from PyBabel.atomTypes import AtomHybridization
+
+    from babel import ArrangeHydrogens
 
     mol = Read(inputfile)
     base, ext = os.path.splitext(inputfile)

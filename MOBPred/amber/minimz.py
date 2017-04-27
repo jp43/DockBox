@@ -58,7 +58,7 @@ def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False)
                 recf.write('TER\n')
 
     # prepare receptor
-    prepare_receptor('rec.pdb', file_r, keep_hydrogens)
+    prepare_receptor('rec.pdb', file_r, keep_hydrogens=keep_hydrogens)
 
     if not isinstance(restraints, list):
         restraints = [restraints]
@@ -67,7 +67,7 @@ def do_minimization(file_r, files_l=None, restraints=None, keep_hydrogens=False)
     do_amber_minimization('rec.pdb', files_l, restraints=restraints, keep_hydrogens=keep_hydrogens)
     os.chdir(curdir)
 
-def prepare_receptor(file_r_out, file_r, keep_hydrogens):
+def prepare_receptor(file_r_out, file_r, keep_hydrogens=False):
 
     # only keep atom lines
     with open(file_r, 'r') as tmpf:
@@ -81,7 +81,7 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens):
                 recf.write('TER\n')
 
     # remove atoms and hydrogen with no name recognized by AMBER
-    correct_hydrogen_names(file_r_out, keep_hydrogens)
+    correct_hydrogen_names(file_r_out, keep_hydrogens=keep_hydrogens)
 
 def run_antechamber(infile, outfile, at='gaff', c='gas'):
     """ use H++ idea of running antechamber multiple times with bcc's 
@@ -90,24 +90,34 @@ charge method to estimate the appropriate net charge!!"""
     logfile = 'antchmb.log'
     max_net_charge = 30
     net_charge = [0]
-    for nc in range(max_net_charge):
-        net_charge.extend([nc+1,-(nc+1)])
 
-    for nc in net_charge:
-        iserror = False
-        #print 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
-        subprocess.call('antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals(), shell=True)
-        with open(logfile, 'r') as lf:
-            for line in lf:
-                if 'Warning' in line or 'Error' in line:
-                    iserror = True
-            if not iserror:
-                print "Net charge found: %.1f"%nc
-                break
-    if iserror:
-        raise ValueError("No appropriate net charge was found to run antechamber's %s charge method"%c)
+    if c.lower() != 'none':
+        for nc in range(max_net_charge):
+            net_charge.extend([nc+1,-(nc+1)])
 
-def correct_hydrogen_names(file_r, keep_hydrogens):
+        for nc in net_charge:
+            iserror = False
+            cmd = 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
+            subprocess.call(cmd, shell=True)
+            with open(logfile, 'r') as lf:
+                for line in lf:
+                    line_st = line.strip()
+                    line_sp = line_st.split()
+                    if 'Warning' in line or 'Error' in line:
+                        iserror = True
+                    if line_st.startswith("does not equal"):
+                        nc_suggested = int(float(line_sp[8][1:-1]))
+                        if nc_suggested == nc:
+                            return
+                if not iserror:
+                    break
+        if iserror:
+            raise ValueError("No appropriate net charge was found to run antechamber's %s charge method"%c)
+    else: # do not regenerate charges
+       cmd = 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
+       subprocess.call(cmd, shell=True)
+
+def correct_hydrogen_names(file_r, keep_hydrogens=False):
 
     chainIDs = []
     atoms_info = load_PROTON_INFO()
@@ -214,17 +224,39 @@ def load_atomic_ions():
                 is_new_atom = False
     return info
 
-def prepare_ligand(file_r, file_l, file_rl):
+def prepare_ligand(file_r, file_l, file_rl, charge_method='gas'):
 
-    run_antechamber(file_l, 'tmp.mol2', at='gaff', c='gas')
+    file_l_prefix, ext = os.path.splitext(file_l)
+    file_l_prefix = os.path.basename(file_l_prefix)
+
+    run_antechamber(file_l, 'tmp.mol2', at='gaff', c=charge_method)
     shutil.move('tmp.mol2', file_l)
-    subprocess.check_output('parmchk -i %s -f mol2 -o lig.frcmod'%file_l, shell=True, executable='/bin/bash')
-    subprocess.check_output('antechamber -fi mol2 -i %s -fo pdb -o lig.pdb > /dev/null'%file_l, shell=True, executable='/bin/bash')
+    subprocess.check_output('parmchk -i %s -f mol2 -o %s.frcmod'%(file_l,file_l_prefix), shell=True, executable='/bin/bash')
+    subprocess.check_output('antechamber -fi mol2 -i %s -fo pdb -o %s.pdb > /dev/null'%(file_l,file_l_prefix), shell=True, executable='/bin/bash')
 
     shutil.copyfile(file_r, file_rl)
-    subprocess.check_output('cat lig.pdb >> %s'%file_rl, shell=True, executable='/bin/bash')
+    subprocess.check_output('cat %s.pdb >> %s'%(file_l_prefix, file_rl), shell=True, executable='/bin/bash')
 
-def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB'):
+
+def get_ions_number(logfile, concentration=0.15):
+
+    with open(logfile, 'r') as lf:
+        for line in lf:
+            line_s = line.strip().split()
+            if len(line_s) > 2:
+                if line_s[0] == 'Added' and line_s[2] == 'residues.': 
+                    nresidues = int(line_s[1])
+                    ncl = int(round(nresidues * concentration * 0.0187))
+                    nna = ncl
+            if line.startswith("WARNING: The unperturbed charge"):
+                net_charge = int(round(float(line_s[7])))
+                if net_charge > 0:
+                    ncl += abs(net_charge)
+                elif net_charge < 0:
+                    nna += abs(net_charge)
+    return nna, ncl
+
+def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0):
 
     if solvate:
         lines_solvate = "\nsolvatebox p TIP3PBOX 10"
@@ -236,15 +268,24 @@ def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False
     else:
         lines_pbradii = ""
 
+    lines_ions = ""
+    if nna > 0:
+        lines_ions += "\naddions p Na+ %i"%nna
+    if ncl > 0:
+        lines_ions += "\naddions p Cl- %i"%ncl
+
     if file_l:
+        file_l_prefix, ext = os.path.splitext(file_l)
+        file_l_prefix = os.path.basename(file_l_prefix)
         with open(script_name, 'w') as leapf:
                 script ="""source %(forcefield)s
 source leaprc.gaff
+loadoff atomic_ions.lib
 loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
 LIG = loadmol2 %(file_l)s
-loadamberparams lig.frcmod%(lines_pbradii)s
-p = loadPdb %(file_rl)s%(lines_solvate)s
+loadamberparams %(file_l_prefix)s.frcmod%(lines_pbradii)s
+p = loadPdb %(file_rl)s%(lines_solvate)s%(lines_ions)s
 saveAmberParm p start.prmtop start.inpcrd
 savePdb p start.pdb
 quit\n"""%locals()
@@ -252,9 +293,10 @@ quit\n"""%locals()
     else:
         with open(script_name, 'w') as leapf:
                 script ="""source %(forcefield)s
+loadoff atomic_ions.lib
 loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
-p = loadPdb %(file_r)s%(lines_solvate)s
+p = loadPdb %(file_r)s%(lines_solvate)s%(lines_ions)s
 saveAmberParm p start.prmtop start.inpcrd
 savePdb p start.pdb
 quit\n"""%locals()
@@ -291,7 +333,7 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
             #print is_added_after_tleap
             if is_added_after_tleap:
                 lines_added.append(lines[1][kdx])
-           
+  
     print "Number of atoms added by tleap: %s"%len(lines_added)
     constraints_line = ' | '.join([':%s@%s'%(line[22:26].strip(),line[12:16].strip()) for line in lines_added])
     #return constraints_line
@@ -318,16 +360,15 @@ def prepare_minimization_config_file(script_name, restraint=None):
 &end\n"""%locals()
         minf.write(script)
 
-def create_pdbfile_with_restraints(file_rl, file_rst, force=50.0, atoms=[]):
+def create_pdbfile_with_restraints(file_rl, file_rst, force=50.0):
 
     with open(file_rl, 'r') as startfile:
          with open(file_rst, 'w') as rstf:
             for line in startfile:
                 if line.startswith(('ATOM', 'HETATM')):
-                    atomnum = line[6:11].strip()
                     atomname = line[12:16].strip()
                     resname = line[17:20].strip()
-                    if resname not in ['WAT', 'LIG'] and atomname in ['C', 'CA', 'N', 'O'] and (not atoms or atomnum in atoms):
+                    if resname not in ['WAT', 'LIG'] and atomname in ['C', 'CA', 'N', 'O']:
                         newline = line[0:30] + '%8.3f'%force + line[38:]
                     else:
                         newline = line[0:30] + '%8.3f'%0.0 + line[38:]
@@ -335,7 +376,7 @@ def create_pdbfile_with_restraints(file_rl, file_rst, force=50.0, atoms=[]):
                     newline = line
                 rstf.write(newline)
 
-def prepare_and_minimize(restraints, keep_hydrogens):
+def prepare_and_minimize(restraints, keep_hydrogens=False):
 
     # run tleap
     subprocess.check_output('tleap -f leap.in > /dev/null', shell=True, executable='/bin/bash')
@@ -369,8 +410,10 @@ def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False
             mol2.update_mol2file('lig.mol2', 'lig.mol2', ligname='LIG')
 
             # prepare ligand
-            prepare_ligand(file_r, 'lig.mol2', 'complex.pdb')
-            status = prepare_and_minimize(restraints, keep_hydrogens)
+            # since the charges of the original .mol2 file are eventually kept using pdb2mol2
+            # do not regenerate the charges using antechamber when preparing the ligand
+            prepare_ligand(file_r, 'lig.mol2', 'complex.pdb', charge_method='None')
+            status = prepare_and_minimize(restraints, keep_hydrogens=keep_hydrogens)
 
             if status == 0:
                 is_ligand = False
@@ -394,7 +437,7 @@ def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False
                 mol2.update_mol2file(mol2file, mol2file, ligname=ligname)
     else:
         prepare_leap_config_file('leap.in', file_r, None, 'complex.pdb')
-        prepare_and_minimize(restraints, keep_hydrogens)
+        prepare_and_minimize(restraints, keep_hydrogens=keep_hydrogens)
         shutil.move('complex_out.pdb', 'rec.out.pdb')
 
 def create_arg_parser():
