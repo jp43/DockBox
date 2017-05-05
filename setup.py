@@ -65,7 +65,7 @@ def check_import(pkgname, pkgver):
 setup(name='MOBPredictor',
       packages=['MOBPred', 'MOBPred.amber', 'MOBPred.license', 'MOBPred.tools', 'MOBPred.prep'],
       package_data = {'MOBPred.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-      scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz', 'bin/cluster_dock_poses'],
+      scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz', 'bin/cluster_poses'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',
       long_description=open('README.in').read(),
