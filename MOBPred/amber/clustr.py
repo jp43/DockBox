@@ -7,7 +7,7 @@ import argparse
 import minimz as mn
 from MOBPred.tools import mol2
 
-def do_clustering(files_r, files_l, cutoff=2.0, mode='clustering', cleanup=True):
+def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=None, cleanup=True):
     """
     do_clustering(files_r, files_l=None)
 
@@ -63,7 +63,7 @@ def do_clustering(files_r, files_l, cutoff=2.0, mode='clustering', cleanup=True)
         new_files_receptor.append(new_file_r)
 
     # amber clustering
-    do_amber_clustering(new_files_receptor, files_ligand, cutoff, mode, cleanup=cleanup)
+    do_amber_clustering(new_files_receptor, files_ligand, mode, cutoff=cutoff, nclusters=nclusters, cleanup=cleanup)
     os.chdir(curdir)
 
 def prepare_leap_config_file(filename, files_r, files_l, files_rl, forcefield='leaprc.ff14SB'):
@@ -90,7 +90,7 @@ loadamberparams ligand.frcmod
 quit"""% locals()
         ff.write(contents)
 
-def prepare_cpptraj_config_file(filename, files_rl, cutoff, mode='clustering'):
+def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering'):
 
     lines_trajin = ""
     for file_rl in files_rl:
@@ -102,24 +102,31 @@ def prepare_cpptraj_config_file(filename, files_rl, cutoff, mode='clustering'):
     # write cpptraj config file to cluster frames
     with open(filename, 'w') as file:
         if mode == 'clustering':
+            if cutoff and nclusters:
+                ValueError('Both cutoff value and nclusters provided. Only one of those parameters should be given!')
+            elif cutoff:
+                option = " epsilon %s "%cutoff
+            elif nclusters:
+                option = " clusters %s"%nclusters
+            else:
+                option = ""
+
             contents ="""parm protein-ligand.prmtop
 %(lines_trajin)s
 rms first "@CA,C,N,O & !:LIG"
-cluster ":LIG & !@/H" nofit mass epsilon %(cutoff)s summary summary.dat info info.dat\n"""% locals()
+cluster ":LIG & !@/H" nofit%(option)s summary summary.dat info info.dat\n"""% locals()
             file.write(contents)
         elif mode == 'pca':
             contents ="""parm protein-ligand.prmtop
 %(lines_trajin)s
 createcrd md-trajectories
 run
-crdaction md-trajectories matrix covar name covar :LIG
+crdaction md-trajectories matrix covar name covar :LIG&!@H=
 runanalysis diagmatrix covar out evecs.dat vecs 2 name myEvecs
-crdaction md-trajectories projection md-pca modes myEvecs :LIG out pca.out\n"""% locals()
+crdaction md-trajectories projection md-pca modes myEvecs :LIG&!@H= out pca.out\n"""% locals()
             file.write(contents)
 
-#crdaction md-trajectories rms @CA,C,N,O&!:LIG
-
-def do_amber_clustering(files_r, files_l, cutoff, mode, cleanup=False):
+def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False):
 
     # (A) Prepare ligand and PDB files
     os.mkdir('PDB')
@@ -142,7 +149,7 @@ def do_amber_clustering(files_r, files_l, cutoff, mode, cleanup=False):
     subprocess.check_output('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
 
     # (C) Run cpptraj
-    prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff, mode=mode)
+    prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff=cutoff, nclusters=nclusters, mode=mode)
     subprocess.check_output('cpptraj -i cpptraj.in > cpptraj.log', shell=True, executable='/bin/bash')
 
     if cleanup:
@@ -172,8 +179,14 @@ def create_arg_parser():
     parser.add_argument('-rmsd',
         type=str,
         dest='cutoff',
-        default=2.0,
+        default=None,
         help = 'RMSD cutoff for clustering analysis')
+
+    parser.add_argument('-n',
+        type=str,
+        dest='nclusters',
+        default=None,
+        help = 'Number of clusters for clustering analysis')
 
     parser.add_argument('-mode',
         type=str,
@@ -194,4 +207,4 @@ def run():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    do_clustering(args.files_r, args.files_l, cutoff=args.cutoff, mode=args.mode, cleanup=args.cleanup)
+    do_clustering(args.files_r, args.files_l, mode=args.mode, cutoff=args.cutoff, nclusters=args.nclusters, cleanup=args.cleanup)

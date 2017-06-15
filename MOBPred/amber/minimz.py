@@ -125,6 +125,24 @@ def correct_hydrogen_names(file_r, keep_hydrogens=False):
     nremoved = 0
     removed_lines = []
 
+    chainID = None
+    is_first_residue = True
+    first_residues = []
+
+    # determine which residues are first residues
+    with open(file_r, 'r') as rf:
+        for line in rf:
+            if line.startswith('ATOM'): # atom line
+                resnum = line[22:26].strip()
+
+                if is_first_residue:
+                    first_residues.append(resnum)
+                    is_first_residue = False
+
+            elif line.startswith('TER'):
+                is_first_residue = True
+
+    resnum = ''
     with open(file_r, 'r') as rf:
         with open('tmp.pdb', 'w') as wf:
             for line in rf:
@@ -132,33 +150,24 @@ def correct_hydrogen_names(file_r, keep_hydrogens=False):
                 if line.startswith('ATOM'): # atom line
                     resname = line[17:20].strip()
                     atom_name = line[12:16].strip()
-                    chainID = line[21:22]
+                    chainID = line[21:22].strip()
                     resnum = line[22:26].strip()
 
                     if resname in atoms_info:
-                        # check if N-terminal
-                        if chainID not in chainIDs:
-                            chainIDs.append(chainID)
-                            is_N_terminal = True
-                            resnum_prev = resnum
-                        else:
-                            if resnum_prev != resnum:
-                                is_N_terminal = False
-
                        # atom (if atom name starts with a digit, correct it)
                         if atom_name[0].isdigit():
                             atom_name = atom_name[1:] + atom_name[0]
  
                         # check if hydrogen should be removed
                         if atom_name[0] == 'H':
-                            is_hydrogen_from_nterminal = is_N_terminal and atom_name == 'H'
+                            is_hydrogen_from_nterminal = resnum in first_residues and atom_name == 'H'
                             is_hydrogen_known = atom_name in atoms_info[resname] and not is_hydrogen_from_nterminal
                             if keep_hydrogens and not is_hydrogen_known:
-                                if not is_hydrogen_known:
-                                    remove_line = True
-                                    removed_lines.append(line)
-                                    #print hydrogens_info[resname], atom_name
-                                    nremoved += 1
+                                #print line
+                                remove_line = True
+                                removed_lines.append(line)
+                                #print hydrogens_info[resname], atom_name
+                                nremoved += 1
                             elif not keep_hydrogens:
                                 remove_line = True
                                 nremoved += 1
@@ -256,23 +265,26 @@ def get_ions_number(logfile, concentration=0.15):
                     nna += abs(net_charge)
     return nna, ncl
 
-def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0):
+def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None):
 
+    lines_solvate = ""
     if solvate:
-        lines_solvate = "\nsolvatebox p TIP3PBOX 10"
-    else:
-        lines_solvate = ""
+        lines_solvate = "\nsolvateBox complex TIP3PBOX %.2f %.2f"%(distance,closeness)
 
+    lines_pbradii = ""
     if PBRadii:
         lines_pbradii = "\nset default PBRadii %s"%PBRadii
-    else:
-        lines_pbradii = ""
+
+    remove_lines = ""
+    if remove:
+        for idx in remove:
+            remove_lines += "\nremove complex complex.%i"%idx 
 
     lines_ions = ""
     if nna > 0:
-        lines_ions += "\naddions p Na+ %i"%nna
+        lines_ions += "\naddions complex Na+ %i"%nna
     if ncl > 0:
-        lines_ions += "\naddions p Cl- %i"%ncl
+        lines_ions += "\naddions complex Cl- %i"%ncl
 
     if file_l:
         file_l_prefix, ext = os.path.splitext(file_l)
@@ -285,9 +297,9 @@ loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
 LIG = loadmol2 %(file_l)s
 loadamberparams %(file_l_prefix)s.frcmod%(lines_pbradii)s
-p = loadPdb %(file_rl)s%(lines_solvate)s%(lines_ions)s
-saveAmberParm p start.prmtop start.inpcrd
-savePdb p start.pdb
+complex = loadPdb %(file_rl)s%(lines_solvate)s%(lines_ions)s%(remove_lines)s
+saveAmberParm complex start.prmtop start.inpcrd
+savePdb complex start.pdb
 quit\n"""%locals()
                 leapf.write(script)
     else:
@@ -296,9 +308,9 @@ quit\n"""%locals()
 loadoff atomic_ions.lib
 loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
-p = loadPdb %(file_r)s%(lines_solvate)s%(lines_ions)s
-saveAmberParm p start.prmtop start.inpcrd
-savePdb p start.pdb
+complex = loadPdb %(file_r)s%(lines_solvate)s%(lines_ions)s
+saveAmberParm complex start.prmtop start.inpcrd
+savePdb complex start.pdb
 quit\n"""%locals()
                 leapf.write(script)
 
@@ -341,22 +353,20 @@ def get_restraints_with_kept_hydrogens(pdb_before_leap, pdb_after_leap):
 def prepare_minimization_config_file(script_name, restraint=None):
 
     if restraint:
-        restraint_lines = """ibelly=1,
+        restraint_lines = """\nibelly=1,
  bellymask='%(restraint)s',"""%locals()
     else:
         restraint_lines = ""
 
     with open(script_name, 'w') as minf:
-        if restraint == ':LIG':
-            script ="""In-Vacuo minimization with restraints
+        script ="""In-Vacuo minimization with restraints
 &cntrl
  imin=1, maxcyc=5000,
  ntb=0,
  ncyc=1000,
  ntmin=1,
  ntpr=5,
- cut=10.0,
- %(restraint_lines)s
+ cut=10.0,%(restraint_lines)s
 &end\n"""%locals()
         minf.write(script)
 
@@ -463,6 +473,11 @@ def create_arg_parser():
         default=None,
         help = 'Restraints')
 
+    parser.add_argument('-removeh',
+        dest='removeh',
+        action='store_true',
+        help = 'Remove Hydrogens')
+
     return parser
 
 def run():
@@ -470,4 +485,4 @@ def run():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    do_minimization(args.input_file_r, files_l=args.input_file_l, restraints=args.restraints, keep_hydrogens=False)
+    do_minimization(args.input_file_r, files_l=args.input_file_l, restraints=args.restraints, keep_hydrogens=not args.removeh)
