@@ -17,7 +17,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, file_q, minimize=False, constraints=True, cleanup=False, extract_only=False):
+    def run_docking(self, file_r, file_l, file_q, minimize=False, constraints=True, cleanup=False, extract_only=False, norun=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -45,6 +45,9 @@ class DockingMethod(object):
             script_name = "run_" + self.program + ".sh"
             self.write_docking_script(script_name, file_r, file_l, file_q)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
+
+            if norun:
+                return
 
             try:
                 # try running docking procedure

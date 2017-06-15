@@ -96,6 +96,11 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             default='poses',
             help='Directory containing poses to rescore (should be used with rescore_only option)')
 
+        parser.add_argument('-norun',
+            dest='norun',
+            action='store_true',
+            help='Do not run the scripts for docking (simply generate the files)')
+
         return parser
 
     def finalize(self, config, config_d):
@@ -139,7 +144,9 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
     def run_docking(self, config):
         """Running docking simulations using each program specified..."""
-        tcpu1 = time.time()
+
+        if not args.norun:
+            tcpu1 = time.time()
 
         config_d = config.docking
         # iterate over all the binding sites
@@ -152,11 +159,12 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
                 DockingInstance.run_docking(config.input_file_r, config.input_file_l, config.charge_file, minimize=config_d.minimize,\
-constraints=config_d.constraints, cleanup=config_d.cleanup, extract_only=config.extract_only)
+constraints=config_d.constraints, cleanup=config_d.cleanup, extract_only=config.extract_only, norun=args.norun)
 
-        self.finalize(config, config_d)
-        tcpu2 = time.time()
-        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
+        if not args.norun:
+            self.finalize(config, config_d)
+            tcpu2 = time.time()
+            print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run(self):
 
@@ -171,5 +179,5 @@ constraints=config_d.constraints, cleanup=config_d.cleanup, extract_only=config.
             self.run_docking(config)
 
         # run rescoring
-        if config.rescoring.is_rescoring:
+        if config.rescoring.is_rescoring and not args.norun:
             config.rescoring.run(config.input_file_r, args.posedir, config.charge_file)
