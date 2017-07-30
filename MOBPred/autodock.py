@@ -8,7 +8,7 @@ from tools import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
-default_settings = {'ga_run': '100', 'spacing': '0.238'}
+default_settings = {'ga_run': '100', 'spacing': '0.3'}
 
 class ADBased(method.DockingMethod):
 

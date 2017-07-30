@@ -152,13 +152,14 @@ class PrepDocking(object):
     def prepare_targets(self, args):
 
         files_r = {}
-        for idx, file_r in enumerate(args.input_files_r):
-            label = 'target' + (3-len(str(idx+1)))*'0' + str(idx+1)
-            files_r[label] = {}
-            # check if target file exists
-            if not os.path.exists(file_r):
-                raise ValueError("File %s not found!"%(file_r))
-            files_r[label]['filename'] = os.path.abspath(file_r)
+        if args.input_files_r:
+            for idx, file_r in enumerate(args.input_files_r):
+                label = 'target' + (3-len(str(idx+1)))*'0' + str(idx+1)
+                files_r[label] = {}
+                # check if target file exists
+                if not os.path.exists(file_r):
+                    raise ValueError("File %s not found!"%(file_r))
+                files_r[label]['filename'] = os.path.abspath(file_r)
         self.files_r = files_r
 
     def update_config_file(self, workdir, config_file, label_r, args):

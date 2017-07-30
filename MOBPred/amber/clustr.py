@@ -7,7 +7,10 @@ import argparse
 import minimz as mn
 from MOBPred.tools import mol2
 
-def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=None, cleanup=True):
+default_mask = ':LIG&!@H='
+default_maskfit = '@CA,C,N,O&!:LIG'
+
+def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=None, cleanup=True, mask=default_mask, maskfit=default_maskfit):
     """
     do_clustering(files_r, files_l=None)
 
@@ -63,7 +66,7 @@ def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=No
         new_files_receptor.append(new_file_r)
 
     # amber clustering
-    do_amber_clustering(new_files_receptor, files_ligand, mode, cutoff=cutoff, nclusters=nclusters, cleanup=cleanup)
+    do_amber_clustering(new_files_receptor, files_ligand, mode, cutoff=cutoff, nclusters=nclusters, cleanup=cleanup, mask=mask, maskfit=maskfit)
     os.chdir(curdir)
 
 def prepare_leap_config_file(filename, files_r, files_l, files_rl, forcefield='leaprc.ff14SB'):
@@ -90,7 +93,7 @@ loadamberparams ligand.frcmod
 quit"""% locals()
         ff.write(contents)
 
-def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering'):
+def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering', mask=default_mask, maskfit=default_maskfit):
 
     lines_trajin = ""
     for file_rl in files_rl:
@@ -113,20 +116,28 @@ def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None,
 
             contents ="""parm protein-ligand.prmtop
 %(lines_trajin)s
-rms first "@CA,C,N,O & !:LIG"
-cluster ":LIG & !@/H" nofit%(option)s summary summary.dat info info.dat\n"""% locals()
+rms first %(maskfit)s
+cluster %(mask)s nofit%(option)s summary summary.dat info info.dat\n"""% locals()
             file.write(contents)
         elif mode == 'pca':
             contents ="""parm protein-ligand.prmtop
 %(lines_trajin)s
+rms first %(maskfit)s
 createcrd md-trajectories
 run
-crdaction md-trajectories matrix covar name covar :LIG&!@H=
+crdaction md-trajectories matrix covar name covar %(mask)s
 runanalysis diagmatrix covar out evecs.dat vecs 2 name myEvecs
-crdaction md-trajectories projection md-pca modes myEvecs :LIG&!@H= out pca.out\n"""% locals()
+crdaction md-trajectories projection md-pca modes myEvecs %(mask)s out pca.out\n"""% locals()
+            file.write(contents)
+        elif mode == 'fit':
+            contents ="""parm protein-ligand.prmtop
+%(lines_trajin)s
+rms first %(maskfit)s
+trajout ref.rst restart onlyframes 1
+trajout struct.pdb multi\n"""% locals()
             file.write(contents)
 
-def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False):
+def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=default_mask, maskfit=default_maskfit):
 
     # (A) Prepare ligand and PDB files
     os.mkdir('PDB')
@@ -149,7 +160,7 @@ def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cle
     subprocess.check_output('tleap -f leap.in > leap.log', shell=True, executable='/bin/bash')
 
     # (C) Run cpptraj
-    prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff=cutoff, nclusters=nclusters, mode=mode)
+    prepare_cpptraj_config_file('cpptraj.in', files_rl, cutoff=cutoff, nclusters=nclusters, mode=mode, mask=mask, maskfit=maskfit)
     subprocess.check_output('cpptraj -i cpptraj.in > cpptraj.log', shell=True, executable='/bin/bash')
 
     if cleanup:
@@ -192,13 +203,23 @@ def create_arg_parser():
         type=str,
         dest='mode',
         default='clustering',
-        help = 'Cpptraj mode (clustering, pca)')
+        help = 'Cpptraj mode (clustering, pca, fit)')
 
     parser.add_argument('-cleanup',
         dest='cleanup',
         action='store_true',
         default=False,
         help = 'Remove intermediate files')
+
+    parser.add_argument('-m',
+        dest='mask',
+        default=default_mask,
+        help = 'Mask used for clustering or pca')
+
+    parser.add_argument('-mf',
+        dest='maskfit',
+        default=default_maskfit,
+        help = 'Mask used for fitting prior to clustering or pca')
 
     return parser
 
@@ -207,4 +228,4 @@ def run():
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    do_clustering(args.files_r, args.files_l, mode=args.mode, cutoff=args.cutoff, nclusters=args.nclusters, cleanup=args.cleanup)
+    do_clustering(args.files_r, args.files_l, mode=args.mode, cutoff=args.cutoff, nclusters=args.nclusters, cleanup=args.cleanup, mask=args.mask, maskfit=args.maskfit)

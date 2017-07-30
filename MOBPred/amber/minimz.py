@@ -247,6 +247,14 @@ def prepare_ligand(file_r, file_l, file_rl, charge_method='gas'):
     subprocess.check_output('cat %s.pdb >> %s'%(file_l_prefix, file_rl), shell=True, executable='/bin/bash')
 
 
+def get_nwaters(logfile):
+
+    with open(logfile, 'r') as logf:
+        for line in logf:
+            line_s = line.split()
+            if len(line_s) == 3 and line_s[0] == 'Added' and line_s[-1] == 'residues.':
+                return int(line_s[1])
+
 def get_ions_number(logfile, concentration=0.15):
 
     with open(logfile, 'r') as lf:
