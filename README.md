@@ -1,22 +1,17 @@
 Mode-of-binding Predictor
 =========================
 
-Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking softwares
-(including structure preparation, docking and rescoring). The package is particularly suitable to compare docking
-results obtained from different softwares or combine them in a consensus docking or consensus scoring strategy.
+Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking softwares (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different softwares or combine them in a consensus docking or consensus scoring strategy.
 
-Note that the softwares used for structure preparation or docking are not part of the MOBPred package. Whatever
-software needs to be used, it should be installed separately on the same machine MOBPred is set up.
+Note that the softwares used for structure preparation or docking are not part of the MOBPred package. Whatever software needs to be used, it should be installed separately on the same machine MOBPred is set up.
 
 Below is a list of all the programs which can be used together with MOBPred. 
 
 * Structure preparation/optimization:
 
-  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep)
-used to prepare compounds (generate protonation states, isomers conformers...)
+  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers conformers...)
 
-  * antechamber, prmchk, tleap, sander (AMBER12 or later) used to 
-assign partial charges, minimize structures...
+  * antechamber, prmchk, tleap, sander (AMBER12 or later) used to assign partial charges, minimize structures...
 
   * moebatch (MOE2015) used to identify probable binding sites
 
@@ -37,14 +32,11 @@ assign partial charges, minimize structures...
 Prerequisites
 -------------
 
-Any software intended to be used in conjunction with MOBPred should be installed separetely and should
-work as a standalone program. In addition, make sure the applications mentioned below are in your PATH,
-depending on which docking softwares is used:
+Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking softwares is used:
 
 * Autodock: 
 
-  Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package 
-(http://autodock.scripps.edu/downloads/resources/adt/index_html):
+  Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
   * prepare_ligand4.py, prepare_receptor4.py, prepare_dpf4.py, prepare_gpf4.py, autogrid4, autodock4, babel
 
 * Autodock Vina:
