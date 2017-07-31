@@ -36,22 +36,13 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
 * Autodock: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html): **prepare_ligand4.py**, **prepare_receptor4.py**, **prepare_dpf4.py**, **prepare_gpf4.py**, **autogrid4**, **autodock4**, **babel**
 
-* Autodock Vina:
+* Autodock Vina: **prepare_ligand4.py**, **prepare_receptor4.py**, **vina**, **babel**
 
-  * prepare_ligand4.py, prepare_receptor4.py, vina, babel
+* Glide: All the executables can be found in the Schrodinger package: **prepwizard**, **glide**, **ligprep**, **glide_sort**, **pdbconvert**
 
-* Glide:
+* MOE: **moebatch**
 
-  All the executables can be found in the Schrodinger package:
-  * prepwizard, glide, ligprep, glide_sort, pdbconvert
-
-* MOE:
-
-  * moebatch
-
-* Dock6:
-
-  * chimera, dms, sphgen_cpp, sphere_selector, showbox, grid, dock6
+* Dock6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**
 
 LigPrep
 -------
