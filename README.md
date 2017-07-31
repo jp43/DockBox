@@ -34,10 +34,7 @@ Prerequisites
 
 Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking softwares is used:
 
-* Autodock: 
-
-  Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
-  * prepare_ligand4.py, prepare_receptor4.py, prepare_dpf4.py, prepare_gpf4.py, autogrid4, autodock4, babel
+* Autodock: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html): **prepare_ligand4.py**, **prepare_receptor4.py**, **prepare_dpf4.py**, **prepare_gpf4.py**, **autogrid4**, **autodock4**, **babel**
 
 * Autodock Vina:
 

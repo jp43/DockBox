@@ -12,7 +12,7 @@ from license import check as chkl
 required_programs = ['moebatch']
 
 default_settings = {'placement': 'Triangle Matcher', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
-'maxpose': '10', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
+'maxpose': '5', 'remaxpose': '1', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
 
 class Moe(method.DockingMethod):
 
@@ -211,7 +211,7 @@ ArgvReset ArgvExpand argv;
                 rescoring: '%(rescoring)s',
                 rescoring_opt: [ train : 0 ],
                 dup_refine: 1,
-                remaxpose: %(maxpose)s,
+                remaxpose: %(remaxpose)s,
                 descexpr: '',
                 receptor_mfield: '',
                 ligand_mfield: '',

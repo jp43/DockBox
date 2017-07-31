@@ -68,5 +68,5 @@ setup(name='MOBPredictor',
       scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz', 'bin/cluster_poses'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',
-      long_description=open('README.in').read(),
+      long_description=open('README.md').read(),
 )
