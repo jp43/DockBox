@@ -92,25 +92,71 @@ The Python Distutils are used to build and install MOBPred, so it is fairly simp
 
         python setup.py install
 
-After installation, make sure that the bin folder within your installation directory is included in your PATH. It contains the executables *prepvs*, *rundock* and *runanlz* that are used for virtual screening preparation, docking and docking analysis, respectively.
+After installation, make sure that the bin folder within your installation directory is included to your PATH. It contains the executables *prepvs*, *rundock* and *runanlz* that are used for virtual screening preparation, docking and docking analysis, respectively.
 
 
 Commands
 --------
 
-After including to your PATH the bin folder within your installation, the following commands 
+After including to your PATH the bin folder from your installation, you can use the following commands from any location: 
 
 
 1. prepvs
-    hello
+
+    prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
+
+        prepvs -h
+        usage: prepvs [-h] [-l INPUT_FILES_L [INPUT_FILES_L ...]]
+                      [-r INPUT_FILES_R [INPUT_FILES_R ...]] [-f CONFIG_FILE]
+                      [-lpflags LPFLAGS] [-ligprep] [-site SITE] [-noprep]
+        
+        Prepare files for Docking or Virtual Screening
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -l INPUT_FILES_L [INPUT_FILES_L ...]
+                                Ligand coordinate file(s): .sdf, .smi
+          -r INPUT_FILES_R [INPUT_FILES_R ...]
+                                Receptor coordinate file(s): .pdb
+          -f CONFIG_FILE        config file: .ini
+          -lpflags LPFLAGS      Ligprep (Schrodinger) flags for ligand preparation.
+                                Default: "-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4"
+          -ligprep              Prepare compounds using ligprep
+          -site SITE            Update binding sites info in config file from file
+          -noprep               No structure preparation, update directories and files
+                                only (used debbuging)
 
 2. rundock
+
+    rundock is used to dock and eventually minimize and rescore the poses. When typing "rundock -h" on the command line, the following help message will pop up:
+
+        usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
+                       [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
+                       [-norun]
+        
+        rundock : dock with multiple softwares -------- Requires one file for the
+        ligand (1 struct.) and one file for the receptor (1 struct.)
+        
+        optional arguments:
+          -h, --help       show this help message and exit
+          -l INPUT_FILE_L  Ligand coordinate file(s): .mol2
+          -r INPUT_FILE_R  Receptor coordinate file(s): .pdb
+          -f CONFIG_FILE   config file containing docking parameters
+          -q CHARGE_FILE   File with partial charges of non-standard residues
+          -rescore_only    Run rescoring only
+          -extract_only    Extract structures only (usually used for debugging)
+          -d POSEDIR       Directory containing poses to rescore (should be used with
+                           rescore_only option)
+          -norun           Do not run the scripts for docking (simply generate the
+                           files)
+
+
+   Besides the .mol2 file containing the ligand structure (-l flag) and the .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+
 3. runanlz
 
-Prepvs
-------
-rundock
 
+    runanlz is used to anlyze the docking poses obtained with the rundock command
 
 LigPrep
 -------
