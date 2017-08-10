@@ -27,10 +27,18 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-  * Dock6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
+  * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
 
 Prerequisites
 -------------
+
+Before installing the MOBPred package, make sure that you have the following packages installed:
+
+* NumPy; version 1.4.1 or later
+
+* pandas; version 0.18.1 or later
+
+* AmberTools; version 12 or later
 
 Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking softwares is used:
 
@@ -42,7 +50,49 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
 * MOE: **moebatch**.
 
-* Dock6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
+* DOCK 6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
+
+*Pharmamatrix users*: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
+
+    # Amber 14
+    export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
+    PATH=$AMBERHOME/bin:$PATH
+
+    # AD and ADV
+    PATH=/opt/mgltools/1.5.4:/opt/mgltools/1.5.4/MGLToolsPckgs/AutoDockTools/Utilities24:$PATH
+    PATH=/pmshare/vina/autodock_vina_1_1_2_linux_x86/bin:$PATH
+    PATH=/opt/autodock/4.2.3/bin:$PATH
+
+    # Glide
+    export SCHRODINGER=/nfs/r720-1/preto/tools/schrodinger2015-4
+    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4
+    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4/utilities
+
+    # MOE 2015
+    export MOE=/nfs/r720-1/preto/tools/moe2015
+    PATH=$PATH:/nfs/r720-1/preto/tools/moe2015/bin
+
+    # DOCK 6
+    PATH=$PATH:/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin
+    PATH=$PATH:/nfs/r720-1/preto/tools/dms
+    PATH=$PATH:/nfs/r720-1/preto/tools/src/dock6/bin
+
+    export PATH
+
+Installation
+------------
+
+The Python Distutils are used to build and install MOBPred, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
+
+1. First, make sure that you have NumPy, pandas. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
+
+2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable
+
+3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
+
+    python setup.py install
+
+After installation, make sure that the folder bin inside your installation directory is included in your PATH. It contains the executable "lsdmap" that is used to compute LSDMap.
 
 LigPrep
 -------

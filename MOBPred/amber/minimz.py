@@ -117,6 +117,7 @@ charge method to estimate the appropriate net charge!!"""
        cmd = 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
        subprocess.call(cmd, shell=True)
 
+
 def correct_hydrogen_names(file_r, keep_hydrogens=False):
 
     chainIDs = []
