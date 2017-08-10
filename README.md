@@ -150,8 +150,62 @@ After including to your PATH the bin folder from your installation, you can use 
           -norun           Do not run the scripts for docking (simply generate the
                            files)
 
+    * Mandatory arguments
 
-   Besides the .mol2 file containing the ligand structure (-l flag) and the .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+        Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+
+        **N.B.**: rundock can only be used to run docking and scoring procedures with a single protein and a single ligand. If multiple protein or/and ligand structures need to be used, the "prepvs" command can be used to create folders for each protein-ligand pair (see the above section "prepvs"). 
+
+        * Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses.
+
+        Below is an example of config file that can be used as an input of rundock. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
+
+            [DOCKING]
+            program = autodock, vina, dock, glide, moe, moe1, moe2
+            rescoring = no
+            minimize = yes
+            cleanup = no
+            
+            [AUTODOCK]
+            ga_run = 50
+            spacing = 0.3
+            
+            [VINA]
+            num_modes = 20
+            
+            [DOCK]
+            nposes = 200
+            
+            [GLIDE]
+            poses_per_lig = 200
+            pose_rmsd = 2.0
+            precision = SP
+            use_prepwizard = False
+            
+            [MOE]
+            scoring = London dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [MOE1]
+            scoring = GBVI/WSA dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [MOE2]
+            scoring = Affinity dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [SITE]
+            center = 8.446, 25.365, 4.394
+            boxsize = 30.0, 30.0, 30.0
+
+
+
+    * Optional arguments
+
+    Preferably do not use flags other than -l, -r and -f
 
 3. runanlz
 
