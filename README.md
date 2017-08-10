@@ -65,17 +65,17 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
     # Glide
     export SCHRODINGER=/nfs/r720-1/preto/tools/schrodinger2015-4
-    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4
-    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4/utilities
+    PATH=/nfs/r720-1/preto/tools/schrodinger2015-4:$PATH
+    PATH=/nfs/r720-1/preto/tools/schrodinger2015-4/utilities:$PATH
 
     # MOE 2015
     export MOE=/nfs/r720-1/preto/tools/moe2015
-    PATH=$PATH:/nfs/r720-1/preto/tools/moe2015/bin
+    PATH=/nfs/r720-1/preto/tools/moe2015/bin:$PATH
 
     # DOCK 6
-    PATH=$PATH:/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin
-    PATH=$PATH:/nfs/r720-1/preto/tools/dms
-    PATH=$PATH:/nfs/r720-1/preto/tools/src/dock6/bin
+    PATH=/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin:$PATH
+    PATH=/nfs/r720-1/preto/tools/dms:$PATH
+    PATH=/nfs/r720-1/preto/tools/src/dock6/bin:$PATH
 
     export PATH
 
@@ -84,15 +84,15 @@ Installation
 
 The Python Distutils are used to build and install MOBPred, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
 
-1. First, make sure that you have NumPy, pandas. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
+1. First, make sure that you have the NumPy and pandas modules. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
 
-2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable
+2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable. For pharmamatrix users, see section *prerequisites*.
 
 3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
 
     python setup.py install
 
-After installation, make sure that the folder bin inside your installation directory is included in your PATH. It contains the executable "lsdmap" that is used to compute LSDMap.
+After installation, make sure that the folder bin inside your installation directory is included in your PATH. It contains the executables *prepvs*, *rundock* and *runanlz* that are used for virtual screening preparation, docking and docking analysis, respectively.
 
 LigPrep
 -------
