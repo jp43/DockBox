@@ -90,7 +90,7 @@ The Python Distutils are used to build and install MOBPred, so it is fairly simp
 
 3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
 
-    python setup.py install
+        python setup.py install
 
 After installation, make sure that the bin folder within your installation directory is included in your PATH. It contains the executables *prepvs*, *rundock* and *runanlz* that are used for virtual screening preparation, docking and docking analysis, respectively.
 
