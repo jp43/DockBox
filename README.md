@@ -203,6 +203,10 @@ After including to your PATH the bin folder from your installation, you can use 
 
         * The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
 
+            Keywords
+
+                * programs: specify which are used for docking (autodock, vina, dock6, glide and/or moe can be used) 
+
     * Optional arguments
 
     Preferably do not use flags other than -l, -r and -f
