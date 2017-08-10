@@ -205,7 +205,7 @@ After including to your PATH the bin folder from your installation, you can use 
 
             Keywords
 
-                * programs: specify which are used for docking (autodock, vina, dock6, glide and/or moe can be used) 
+            * programs: specify which are used for docking (autodock, vina, dock6, glide and/or moe can be used) 
 
     * Optional arguments
 
