@@ -201,7 +201,7 @@ After including to your PATH the bin folder from your installation, you can use 
             center = 8.446, 25.365, 4.394
             boxsize = 30.0, 30.0, 30.0
 
-
+        * The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
 
     * Optional arguments
 
