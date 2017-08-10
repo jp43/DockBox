@@ -158,48 +158,48 @@ After including to your PATH the bin folder from your installation, you can use 
 
         **Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
 
-            Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
+        Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
 
-                [DOCKING]
-                program = autodock, vina, dock, glide, moe, moe1, moe2
-                rescoring = no
-                minimize = yes
-                cleanup = no
-                
-                [AUTODOCK]
-                ga_run = 50
-                spacing = 0.3
-                
-                [VINA]
-                num_modes = 20
-                
-                [DOCK]
-                nposes = 200
-                
-                [GLIDE]
-                poses_per_lig = 200
-                pose_rmsd = 2.0
-                precision = SP
-                use_prepwizard = False
-                
-                [MOE]
-                scoring = London dG
-                maxpose = 100
-                remaxpose = 50
-                
-                [MOE1]
-                scoring = GBVI/WSA dG
-                maxpose = 100
-                remaxpose = 50
-                
-                [MOE2]
-                scoring = Affinity dG
-                maxpose = 100
-                remaxpose = 50
-                
-                [SITE]
-                center = 8.446, 25.365, 4.394
-                boxsize = 30.0, 30.0, 30.0
+            [DOCKING]
+            program = autodock, vina, dock, glide, moe, moe1, moe2
+            rescoring = no
+            minimize = yes
+            cleanup = no
+            
+            [AUTODOCK]
+            ga_run = 50
+            spacing = 0.3
+            
+            [VINA]
+            num_modes = 20
+            
+            [DOCK]
+            nposes = 200
+            
+            [GLIDE]
+            poses_per_lig = 200
+            pose_rmsd = 2.0
+            precision = SP
+            use_prepwizard = False
+            
+            [MOE]
+            scoring = London dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [MOE1]
+            scoring = GBVI/WSA dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [MOE2]
+            scoring = Affinity dG
+            maxpose = 100
+            remaxpose = 50
+            
+            [SITE]
+            center = 8.446, 25.365, 4.394
+            boxsize = 30.0, 30.0, 30.0
 
 
 
