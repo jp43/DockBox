@@ -205,7 +205,7 @@ After including to your PATH the bin folder from your installation, you can use 
 
             Keywords
 
-            * programs: specify which are used for docking (autodock, vina, dock6, glide and/or moe can be used) 
+            * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section of the configuration file.
 
     * Optional arguments
 
