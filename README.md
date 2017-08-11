@@ -209,7 +209,9 @@ After including to your PATH the bin folder from your installation, you can use 
 
             * **minimization**: performs minimization on the generated poses (yes or no).
 
-            * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step.
+            * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
+
+            * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
     * Optional arguments
 
