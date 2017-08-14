@@ -156,11 +156,15 @@ After including to your PATH the bin folder from your installation, you can use 
 
         * -r INPUT_FILE_R: *.pdb* file containing the receptor coordinates (only one structure allowed)
 
-        * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config file preparation)
+        * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config the preparation of the config file)
 
     * Optional arguments
 
         Preferably do not use flags other than -l, -r and -f
+
+    Thus, a typical use of *rundock* is done through the following command:
+
+        rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
 3. **runanlz**
 
