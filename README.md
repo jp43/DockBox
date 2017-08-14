@@ -152,11 +152,11 @@ After including to your PATH the bin folder from your installation, you can use 
 
     * Mandatory arguments
 
-    -l INPUT_FILE_L: .mol2 file containing the coordinates of the ligand (only one structure allowed)
+        * -l INPUT_FILE_L: .mol2 file containing the coordinates of the ligand (only one structure allowed)
 
-    -r INPUT_FILE_R: .pdb file containing the receptor coordinates (only one structure allowed)
+        * -r INPUT_FILE_R: .pdb file containing the receptor coordinates (only one structure allowed)
 
-    -f CONFIG_FILE: config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config file preparation)
+        * -f CONFIG_FILE: config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config file preparation)
 
     * Optional arguments
 
