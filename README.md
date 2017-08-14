@@ -197,7 +197,7 @@ Preparing the configuration file for rundock
 
 Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
 
-**N.B.**: *rundock* can only be used to run docking and scoring procedures with single protein and ligand structures. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
+**N.B.**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
 
 **Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
 
