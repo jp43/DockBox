@@ -160,7 +160,7 @@ After including to your PATH the bin folder from your installation, you can use 
 
     * Optional arguments
 
-    Preferably do not use flags other than -l, -r and -f
+        Preferably do not use flags other than -l, -r and -f
 
 3. **runanlz**
 
