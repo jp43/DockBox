@@ -40,7 +40,7 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 * AmberTools; version 12 or later
 
-Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking softwares is used:
+Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking software is used:
 
 * Autodock: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html): **prepare_ligand4.py**, **prepare_receptor4.py**, **prepare_dpf4.py**, **prepare_gpf4.py**, **autogrid4**, **autodock4**, **babel**.
 
@@ -101,7 +101,7 @@ Commands
 After including to your PATH the bin folder from your installation, you can use the following commands from any location: 
 
 
-1. prepvs
+1. **prepvs**
 
     prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
 
@@ -126,7 +126,7 @@ After including to your PATH the bin folder from your installation, you can use 
           -noprep               No structure preparation, update directories and files
                                 only (used debbuging)
 
-2. rundock
+2. **rundock**
 
     rundock is used to dock and eventually minimize and rescore the poses. When typing "rundock -h" on the command line, the following help message will pop up:
 
@@ -152,75 +152,82 @@ After including to your PATH the bin folder from your installation, you can use 
 
     * Mandatory arguments
 
-        Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+    -l INPUT_FILE_L: .mol2 file containing the coordinates of the ligand (only one structure allowed)
 
-        **N.B.**: *rundock* can only be used to run docking and scoring procedures with single protein and ligand structures. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
+    -r INPUT_FILE_R: .pdb file containing the receptor coordinates (only one structure allowed)
 
-        **Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
-
-        Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
-
-            [DOCKING]
-            program = autodock, vina, dock, glide, moe, moe1, moe2
-            rescoring = no
-            minimize = yes
-            cleanup = no
-            
-            [AUTODOCK]
-            ga_run = 50
-            spacing = 0.3
-            
-            [VINA]
-            num_modes = 20
-            
-            [DOCK]
-            nposes = 200
-            
-            [GLIDE]
-            poses_per_lig = 200
-            pose_rmsd = 2.0
-            precision = SP
-            use_prepwizard = False
-            
-            [MOE]
-            scoring = London dG
-            maxpose = 100
-            remaxpose = 50
-            
-            [MOE1]
-            scoring = GBVI/WSA dG
-            maxpose = 100
-            remaxpose = 50
-            
-            [MOE2]
-            scoring = Affinity dG
-            maxpose = 100
-            remaxpose = 50
-            
-            [SITE]
-            center = 8.446, 25.365, 4.394
-            boxsize = 30.0, 30.0, 30.0
-
-        * The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
-
-            Keywords
-
-            * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
-
-            * **minimization**: performs minimization on the generated poses (yes or no).
-
-            * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
-
-            * **cleanup**: specifies if big intermediate files should be removed (yes or no).
+    -f CONFIG_FILE: config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config file preparation)
 
     * Optional arguments
 
     Preferably do not use flags other than -l, -r and -f
 
-3. runanlz
-
+3. **runanlz**
 
     runanlz is used to anlyze the docking poses obtained with the rundock command
+
+
+Preparing the configuration file for rundock
+------------------------------------------
+
+Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+
+**N.B.**: *rundock* can only be used to run docking and scoring procedures with single protein and ligand structures. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
+
+**Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
+
+Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
+
+    [DOCKING]
+    program = autodock, vina, dock, glide, moe, moe1, moe2
+    rescoring = no
+    minimize = yes
+    cleanup = no
+    
+    [AUTODOCK]
+    ga_run = 50
+    spacing = 0.3
+    
+    [VINA]
+    num_modes = 20
+    
+    [DOCK]
+    nposes = 200
+    
+    [GLIDE]
+    poses_per_lig = 200
+    pose_rmsd = 2.0
+    precision = SP
+    use_prepwizard = False
+    
+    [MOE]
+    scoring = London dG
+    maxpose = 100
+    remaxpose = 50
+    
+    [MOE1]
+    scoring = GBVI/WSA dG
+    maxpose = 100
+    remaxpose = 50
+    
+    [MOE2]
+    scoring = Affinity dG
+    maxpose = 100
+    remaxpose = 50
+    
+    [SITE]
+    center = 8.446, 25.365, 4.394
+    boxsize = 30.0, 30.0, 30.0
+
+* The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
+
+    * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+
+    * **minimization**: performs minimization on the generated poses (yes or no).
+
+    * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
+
+    * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
 LigPrep
 -------
