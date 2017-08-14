@@ -156,7 +156,7 @@ After including to your PATH the bin folder from your installation, you can use 
 
         * -r INPUT_FILE_R: *.pdb* file containing the receptor coordinates (only one structure allowed)
 
-        * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about config the preparation of the config file)
+        * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about the preparation of the config file)
 
     * Optional arguments
 
