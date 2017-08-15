@@ -254,6 +254,8 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
+    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example below.
+
 
     Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
 
@@ -282,7 +284,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 
 **Configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares**
 
-Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodoc .
+Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
     [DOCKING]
     site = site1, site2
@@ -318,6 +320,8 @@ Below is another example of configuration file for *rundock* used to dock on two
     [SITE2]
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
+
+* Note that the DOCKING section includes the information about the box to spot the binding site.
 
 
 LigPrep
