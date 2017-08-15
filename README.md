@@ -273,11 +273,51 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     Docking and rescoring options relative to each program are detailed in the section *docking/rescoring options for each software*
 
-* The SITE section includes the information about the box to spot the binding site
+* The SITE section includes the information about the box to spot the binding site.
 
-    *  **center**: x, y, z coordinates of the center of the binding box (in Å)
+    *  **center**: x, y, z coordinates of the center of the binding box (in Å).
 
     *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
+
+
+**Configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares**
+
+Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodoc .
+
+    [DOCKING]
+    site = site1, site2
+    program = autodock, vina, dock, glide
+    rescoring = yes
+    minimize = yes
+    cleanup = yes
+    
+    [RESCORING]
+    program = dsx, autodock, vina
+    
+    [DSX]
+    pot_dir = /pmshare/jordane/CSD_potentials/DSX_CSD_Potentials_v0511/csd_pot_0511/
+    other_flags = -T0 1.0 -T1 1.0 -T3 1.0 -j
+    
+    [AUTODOCK]
+    ga_run = 20
+    spacing = 0.4
+    
+    [VINA]
+    num_modes = 20
+    
+    [DOCK]
+    nposes = 20
+    
+    [GLIDE]
+    poses_per_lig = 20
+    
+    [SITE1]
+    center = 75.5, 80.0, 31.0
+    boxsize = 40.0, 40.0, 40.0
+    
+    [SITE2]
+    center = 75.5, 40.0, 50.0
+    boxsize = 40.0, 40.0, 40.0
 
 
 LigPrep
