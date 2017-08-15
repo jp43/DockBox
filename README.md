@@ -310,17 +310,16 @@ Steps:
         -- One reasonable conformation should be fine, the docking program will explore other conformations
         -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
 
-  Software    |    Docking    |  Rescoring  |
-------------- | ------------- | ------------|
-| :---------- |:-------------:| -----------:|
-   Autodock   |      Yes      |     Yes     |
-    Dock 6    |      Yes      |     No      |
- DrugScore X  |      No       |     Yes     |
-    Glide     |      Yes      |     Yes     |
-     Gold     |      Yes      |     No      |
- Induced Fit  |      Yes      |     No      |
-     MOE      |      Yes      |     Yes     |
-     Vina     |      Yes      |     Yes     |
+|    Software   |    Docking    |   Rescoring  |
+| :-----------  |:-------------:| ------------:|
+|   Autodock    |      Yes      |      Yes     |
+|    Dock 6     |      Yes      |      No      |
+|  DrugScore X  |      No       |      Yes     |
+|     Glide     |      Yes      |      Yes     |
+|     Gold      |      Yes      |      No      |
+|  Induced Fit  |      Yes      |      No      |
+|     MOE       |      Yes      |      Yes     |
+|     Vina      |      Yes      |      Yes     |
 
 
 Autodock
