@@ -254,6 +254,23 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
+
+<center>
+
+|    Software   |    Docking    |   Rescoring   |
+| :-----------  |:-------------:|:-------------:|
+|   Autodock    |      Yes      |      Yes      |
+|    Dock 6     |      Yes      |      No       |
+|  DrugScore X  |      No       |      Yes      |
+|     Glide     |      Yes      |      Yes      |
+|     Gold      |      Yes      |      No       |
+|  Induced Fit  |      Yes      |      No       |
+|     MOE       |      Yes      |      Yes      |
+|     Vina      |      Yes      |      Yes      |
+
+</center>
+
+
 LigPrep
 -------
 
@@ -310,16 +327,6 @@ Steps:
         -- One reasonable conformation should be fine, the docking program will explore other conformations
         -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
 
-|    Software   |    Docking    |   Rescoring   |
-| :-----------  |:-------------:|:-------------:|
-|   Autodock    |      Yes      |      Yes      |
-|    Dock 6     |      Yes      |      No       |
-|  DrugScore X  |      No       |      Yes      |
-|     Glide     |      Yes      |      Yes      |
-|     Gold      |      Yes      |      No       |
-|  Induced Fit  |      Yes      |      No       |
-|     MOE       |      Yes      |      Yes      |
-|     Vina      |      Yes      |      Yes      |
 
 
 Autodock
