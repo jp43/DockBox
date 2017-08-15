@@ -248,27 +248,22 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
+    |    Software   |    Docking    |   Rescoring   |
+    | :-----------  |:-------------:|:-------------:|
+    |   Autodock    |      Yes      |      Yes      |
+    |    Dock 6     |      Yes      |      No       |
+    |  DrugScore X  |      No       |      Yes      |
+    |     Glide     |      Yes      |      Yes      |
+    |     Gold      |      Yes      |      No       |
+    |  Induced Fit  |      Yes      |      No       |
+    |     MOE       |      Yes      |      Yes      |
+    |     Vina      |      Yes      |      Yes      |
+
     * **minimization**: performs minimization on the generated poses (yes or no).
 
     * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
 
     * **cleanup**: specifies if big intermediate files should be removed (yes or no).
-
-
-<center>
-
-|    Software   |    Docking    |   Rescoring   |
-| :-----------  |:-------------:|:-------------:|
-|   Autodock    |      Yes      |      Yes      |
-|    Dock 6     |      Yes      |      No       |
-|  DrugScore X  |      No       |      Yes      |
-|     Glide     |      Yes      |      Yes      |
-|     Gold      |      Yes      |      No       |
-|  Induced Fit  |      Yes      |      No       |
-|     MOE       |      Yes      |      Yes      |
-|     Vina      |      Yes      |      Yes      |
-
-</center>
 
 
 LigPrep
