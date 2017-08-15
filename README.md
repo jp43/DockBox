@@ -248,6 +248,9 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
+    Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring. 
+
+
     |    Software   |    Docking    |   Rescoring   |
     | :-----------  |:-------------:|:-------------:|
     |   Autodock    |      Yes      |      Yes      |
@@ -258,6 +261,8 @@ Below is an example of configuration file that can be used as an input of *rundo
     |  Induced Fit  |      Yes      |      No       |
     |     MOE       |      Yes      |      Yes      |
     |     Vina      |      Yes      |      Yes      |
+
+
 
     * **minimization**: performs minimization on the generated poses (yes or no).
 
