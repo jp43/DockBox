@@ -246,7 +246,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 
 * The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
 
-    * **programs**: specifies the softwares which are used for docking (autodock, vina, dock6, glide and/or moe). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+    * **programs**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
     * **minimization**: performs minimization on the generated poses (yes or no).
 
@@ -270,6 +270,14 @@ Below is an example of configuration file that can be used as an input of *rundo
     |    MMGBSA     |      No       |      No       |
     |     Vina      |      Yes      |      Yes      |
 
+
+    Docking and rescoring options relative to each program are detailed in the section *docking/rescoring options for each software*
+
+* The SITE section includes the information about the box to spot the binding site
+
+    *  **center**: x, y, z coordinates of the center of the binding box (in Å)
+
+    *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
 
 
 LigPrep
