@@ -340,4 +340,3 @@ parameters
 
 * DOCKING_METHOD = confgen ensure flexible docking
 
-
