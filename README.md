@@ -193,7 +193,7 @@ After including to your PATH the bin folder from your installation, you can use 
 
 
 Preparing the configuration file for rundock
-------------------------------------------
+--------------------------------------------
 
 Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
 
@@ -310,11 +310,34 @@ Steps:
         -- One reasonable conformation should be fine, the docking program will explore other conformations
         -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
 
+  Software    |    Docking    |  Rescoring  |
+------------- | ------------- | ------------|
+| :---------- |:-------------:| -----------:|
+   Autodock   |      Yes      |     Yes     |
+    Dock 6    |      Yes      |     No      |
+ DrugScore X  |      No       |     Yes     |
+    Glide     |      Yes      |     Yes     |
+     Gold     |      Yes      |     No      |
+ Induced Fit  |      Yes      |     No      |
+     MOE      |      Yes      |     Yes     |
+     Vina     |      Yes      |     Yes     |
+
+
+Autodock
+--------
+
+
+Autodock Vina
+-------------
+
+
 Glide
------ 
+-----
 
 parameters
 * outerbox: box within which the grids are calculated. This is also the box within which all the ligand atoms must be contained. The maximum size of the enclosing box is 50Å.
 * innerbox: box explored by the ligand center (restricted to a cube whose sides cannot be longer than 40Å)
 
 * DOCKING_METHOD = confgen ensure flexible docking
+
+
