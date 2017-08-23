@@ -7,7 +7,7 @@ Note that the softwares used for structure preparation or docking are not part o
 
 Below is a list of all the programs which can be used together with MOBPred. 
 
-* Structure preparation/optimization:
+* **Structure preparation/optimization**:
 
   * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
 
@@ -17,7 +17,7 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * Open Babel (http://openbabel.org/wiki/Main_Page)
 
-* Docking:
+* **Docking**:
 
   * Autodock (http://autodock.scripps.edu)
 
@@ -33,7 +33,7 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-* Scoring:
+* **Scoring**:
 
   * Autodock (http://autodock.scripps.edu) 
 
@@ -43,7 +43,7 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * Glide (https://www.schrodinger.com/glide)
 
-  * MOE2015::GBVI/WSA dG, Affinity dG, London dG,... (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
+  * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 Table of contents
 =================
