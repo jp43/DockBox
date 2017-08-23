@@ -71,17 +71,22 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software is to be used:
 
-* **Autodock**: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html): **prepare_ligand4.py**, **prepare_receptor4.py**, **prepare_dpf4.py**, **prepare_gpf4.py**, **autogrid4**, **autodock4**
+* **Autodock**: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
+  * autodock4
+  * autogrid4
+  * babel
+  * prepare_dpf4.py
+  * prepare_gpf4.py
   * prepare_ligand4.py
   * prepare_receptor4.py
-  * prepare_gpf4.py
-  * prepare_dpf4.py
-  * autogrid4
-  * autodock4
-  * babel
 
-* Autodock Vina: **prepare_ligand4.py**, **prepare_receptor4.py**, **vina**, **babel**.
+* **Autodock Vina**: 
+
+  * babel
+  * prepare_ligand4.py
+  * prepare_receptor4.py
+  * vina
 
 * DOCK 6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
 
