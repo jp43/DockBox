@@ -3,7 +3,7 @@ Mode-of-binding Predictor
 
 Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking softwares (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different softwares or combine them in a consensus docking or consensus scoring strategy.
 
-Note that the softwares that can be used by MOBPred are not part of the current repository. Whatever software needs to be used, it should be installed separately on the same machine MOBPred is set up.
+Note that the softwares that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be installed separately on the same machine MOBPred is set up.
 
 Below is a list of all the programs which can be used together with MOBPred. 
 
