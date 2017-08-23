@@ -41,11 +41,9 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
 
-  * Glide SP (https://www.schrodinger.com/glide)
+  * Glide (https://www.schrodinger.com/glide)
 
   * MOE2015::GBVI/WSA dG, Affinity dG, London dG,... (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
-
-  * single-frame MMPBSA (http://ambermd.org)
 
 
 Prerequisites
@@ -59,17 +57,23 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 * AmberTools; version 12 or later
 
-Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking software is used:
+Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software is to be used:
 
 * Autodock: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html): **prepare_ligand4.py**, **prepare_receptor4.py**, **prepare_dpf4.py**, **prepare_gpf4.py**, **autogrid4**, **autodock4**, **babel**.
 
 * Autodock Vina: **prepare_ligand4.py**, **prepare_receptor4.py**, **vina**, **babel**.
 
+* DOCK 6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
+
+* DSX: **dsx**
+
 * Glide: All the executables can be found in the Schrodinger package: **prepwizard**, **glide**, **ligprep**, **glide_sort**, **pdbconvert**.
 
-* MOE: **moebatch**.
+* Gold: **gold_auto**
 
-* DOCK 6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
+* Induced Fit: All the executables can be found in the Schrodinger package: **prepwizard**, **ifd**
+
+* MOE: **moebatch**.
 
 *Pharmamatrix users*: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
 
@@ -288,7 +292,6 @@ Below is an example of configuration file that can be used as an input of *rundo
     |     Gold      |      Yes      |      No       |
     |  Induced Fit  |      Yes      |      No       |
     |     MOE       |      Yes      |      Yes      |
-    |    MMGBSA     |      No       |      Yes      |
     |     Vina      |      Yes      |      Yes      |
 
 
@@ -340,8 +343,10 @@ Below is another example of configuration file for *rundock* used to dock on two
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
 
-* Note that the DOCKING section includes the information about the box to spot the binding site.
+* Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
 
+Output of rundock
+-----------------
 
 LigPrep
 -------
