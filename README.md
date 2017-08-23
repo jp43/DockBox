@@ -10,27 +10,18 @@ Below is a list of all the programs which can be used together with MOBPred.
 * **Structure preparation/optimization**:
 
   * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
-
   * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers, conformers...)
-
   * moebatch (MOE2015) used to identify probable binding sites
-
   * Open Babel (http://openbabel.org/wiki/Main_Page)
 
 * **Docking**:
 
   * Autodock (http://autodock.scripps.edu)
-
   * Autodock Vina (http://autodock.scripps.edu)
-
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
-
   * Glide (https://www.schrodinger.com/glide)
-
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
-
   * Induced Fit (https://www.schrodinger.com/induced-fit)
-
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 * **Scoring**:
