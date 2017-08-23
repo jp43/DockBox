@@ -288,7 +288,7 @@ Below is an example of configuration file that can be used as an input of *rundo
     |     Gold      |      Yes      |      No       |
     |  Induced Fit  |      Yes      |      No       |
     |     MOE       |      Yes      |      Yes      |
-    |    MMGBSA     |      No       |      No       |
+    |    MMGBSA     |      No       |      Yes      |
     |     Vina      |      Yes      |      Yes      |
 
 
