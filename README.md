@@ -115,7 +115,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
 * **MOE2015**:
   * moebatch
 
-***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
+***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
 
     # Amber 14
     export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
@@ -131,7 +131,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
     PATH=/nfs/r720-1/preto/tools/schrodinger2015-4:$PATH
     PATH=/nfs/r720-1/preto/tools/schrodinger2015-4/utilities:$PATH
 
-    # MOE 2015
+    # MOE2015
     export MOE=/nfs/r720-1/preto/tools/moe2015
     PATH=/nfs/r720-1/preto/tools/moe2015/bin:$PATH
 
