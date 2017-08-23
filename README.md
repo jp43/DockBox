@@ -69,9 +69,9 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
 * Glide: All the executables can be found in the Schrodinger package: **prepwizard**, **glide**, **ligprep**, **glide_sort**, **pdbconvert**.
 
-* Gold: **gold_auto**
+* Gold: **gold_auto**.
 
-* Induced Fit: All the executables can be found in the Schrodinger package: **prepwizard**, **ifd**
+* Induced Fit: All the executables can be found in the Schrodinger package: **prepwizard**, **ifd**.
 
 * MOE: **moebatch**.
 
