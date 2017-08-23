@@ -220,7 +220,7 @@ Preparing the configuration file for rundock
 
 Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
 
-**N.B.**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
+**Note**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
 
 **Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
 
@@ -345,6 +345,104 @@ Below is another example of configuration file for *rundock* used to dock on two
 
 * Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
 
+
+**Docking/scoring options relative to each software**
+
+Below is a list of all the options per software that can be specified in the configuration file.
+
+* Autodock (docking/scoring method)
+
+    * ga_run (default: 100): number of autodock runs = targeted number of final poses
+
+    * spacing (default: 0.3): grid spacing
+
+
+    **Note 1**: the partial charges of the ligand are obtained from the Gasteiger method using the AutodockTools command *prepare_ligand4.py*
+
+    **Note 2**: the number of energy evalutations *ga_num_evals* is automatically calculated from the number of torsions angles in the ligand structure via the formula:
+
+        ga_num_evals = min(25000000, 987500 * n_torsion_angles + 125000)
+
+    **Note 3**: As is usually the case for Autodock, non polar hydrogens in the ligand structure are removed prior to docking in order to properly use the Autodock force field. Once the docking has been performed, nonpolar hydrogens are reattributed in a way consistent with the input structure. Unless the *minimize* option in the configuration file is set to *yes*, no minimization is performed on those hydrogens.
+
+    **Note 4** Final poses are extracted from the .dlg file using Open Babel via the following command:
+
+        babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
+
+* Autodock Vina (docking/scoring method)
+
+    * cpu (default: 1)
+
+    * energy_range (default: 3)
+
+    * num_modes (default: 9): targeted number of final poses
+
+    **Note 1**: the partial charges of the ligand are obtained from the Gasteiger method using the AutodockTools command *prepare_ligand4.py*
+
+    **Note 2**: As is usually the case for Autodock Vina, non polar hydrogens in the ligand structure are removed prior to docking in order to properly use the Autodock force field. Once the docking has been performed, nonpolar hydrogens are reattributed in a way consistent with the input structure. Unless the *minimize* option in the configuration file is set to *yes*, no minimization is performed on those hydrogens.
+
+
+* DOCK 6 (docking method)
+
+    * attractive_exponent (default: 6)
+
+    * extra_margin (default: 2.0)
+
+    * grid_spacing (default: 0.3)
+
+    * maximum_sphere_radius (default: 4.0)
+
+    * max_orientations (default: 10000)
+
+    * minimum_sphere_radius (default: 1.4)
+
+    * nposes (default: 20): targeted number of final poses
+
+    * num_scored_conformers (default 5000)
+
+    * probe_radius (default: 1.4)
+
+    * repulsive_exponent (default: 12)
+
+
+* DSX (scoring method)
+
+
+* Glide (docking/scoring)
+
+    * pose_rmsd (default: 0.5):
+
+    * poses_per_lig (default: 10): targeted number of final poses
+
+    * precision (default: SP):
+
+    * use_prepwizard (default: True):
+
+* GOLD
+
+    * nposes (default: 20)
+
+* MOE
+
+    * gtest (default: 0.01)
+
+    * maxpose (default: 5)
+
+    * placement (default: Triangle Matcher)
+
+    * placement_maxpose (default: 250)
+
+    * placement_nsample (default: 10)
+
+    * remaxpose (default: 1)
+
+    * rescoring (default: GBVI/WSA dG)
+
+    * scoring (default: London dG)
+
+
+
+
 Output of rundock
 -----------------
 
@@ -408,6 +506,8 @@ Steps:
 
 Autodock
 --------
+
+'ga_run': '100', 'spacing': '0.3'
 
 
 Autodock Vina
