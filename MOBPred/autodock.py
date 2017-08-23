@@ -71,7 +71,7 @@ if lines_to_be_removed:
 import shutil
 from tempfile import mkstemp
 
-from MOBPred.amber.minimz import load_atomic_ions
+from MOBPred.amber.ambertools import load_atomic_ions
 
 # first all residues are supposed to be recognized
 are_unrecognized_residues = False

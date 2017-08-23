@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import argparse
 
-import minimz as mn
+import ambertools as ambt
 from MOBPred.tools import mol2
 
 default_mask = ':LIG&!@H='
@@ -62,7 +62,7 @@ def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=No
     for idx, file_r in enumerate(files_receptor):
         new_file_r = 'protein-%s.pdb'%idx
         # prepare receptor
-        mn.prepare_receptor(new_file_r, file_r, False)
+        ambt.prepare_receptor(new_file_r, file_r, False)
         new_files_receptor.append(new_file_r)
 
     # amber clustering
@@ -114,13 +114,13 @@ def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None,
             else:
                 option = ""
 
-            contents ="""parm protein-ligand.prmtop
+            contents = """parm protein-ligand.prmtop
 %(lines_trajin)s
 rms first %(maskfit)s
 cluster %(mask)s nofit%(option)s summary summary.dat info info.dat\n"""% locals()
             file.write(contents)
         elif mode == 'pca':
-            contents ="""parm protein-ligand.prmtop
+            contents = """parm protein-ligand.prmtop
 %(lines_trajin)s
 rms first %(maskfit)s
 createcrd md-trajectories
@@ -130,12 +130,17 @@ runanalysis diagmatrix covar out evecs.dat vecs 2 name myEvecs
 crdaction md-trajectories projection md-pca modes myEvecs %(mask)s out pca.out\n"""% locals()
             file.write(contents)
         elif mode == 'fit':
-            contents ="""parm protein-ligand.prmtop
+            contents = """parm protein-ligand.prmtop
 %(lines_trajin)s
 rms first %(maskfit)s
 trajout ref.rst restart onlyframes 1
 trajout struct.pdb multi\n"""% locals()
             file.write(contents)
+        elif mode == 'rmsd'
+            contents = """parm protein-ligand.prmtop
+%(lines_trajin)s
+rms first %(maskfit)s
+rms %(mask)s nofit%(option)s summary summary.dat info info.dat
 
 def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=default_mask, maskfit=default_maskfit):
 
@@ -149,7 +154,7 @@ def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cle
         else:
             file_r = files_r[0]
         file_rl = 'PDB/protein-ligand-%s.pdb'%(idx+1)
-        mn.prepare_ligand(file_r, 'ligand.mol2', file_rl)
+        ambt.prepare_ligand(file_r, 'ligand.mol2', file_rl)
         files_rl.append(file_rl)
         os.remove(file_r)
         if idx == 0:

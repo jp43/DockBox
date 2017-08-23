@@ -9,9 +9,9 @@ Below is a list of all the programs which can be used together with MOBPred.
 
 * Structure preparation/optimization:
 
-  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers conformers...)
+  * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
 
-  * antechamber, prmchk, tleap, sander (AMBER12 or later) used to assign partial charges, minimize structures...
+  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers conformers...)
 
   * moebatch (MOE2015) used to identify probable binding sites
 
@@ -23,11 +23,30 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * Autodock Vina (http://autodock.scripps.edu)
 
+  * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
+
   * Glide (https://www.schrodinger.com/glide)
+
+  * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
+
+  * Induced Fit (https://www.schrodinger.com/induced-fit)
 
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-  * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
+* Scoring:
+
+  * Autodock (http://autodock.scripps.edu) 
+
+  * Autodock Vina (http://autodock.scripps.edu)
+
+  * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
+
+  * Glide SP (https://www.schrodinger.com/glide)
+
+  * MOE2015::GBVI/WSA dG, Affinity dG, London dG,... (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
+
+  * single-frame MMPBSA (http://ambermd.org)
+
 
 Prerequisites
 -------------
@@ -254,7 +273,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 
     * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
-    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example below.
+    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares.
 
 
     Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
@@ -264,7 +283,7 @@ Below is an example of configuration file that can be used as an input of *rundo
     | :-----------  |:-------------:|:-------------:|
     |   Autodock    |      Yes      |      Yes      |
     |    Dock 6     |      Yes      |      No       |
-    |  DrugScore X  |      No       |      Yes      |
+    |     DSX       |      No       |      Yes      |
     |     Glide     |      Yes      |      Yes      |
     |     Gold      |      Yes      |      No       |
     |  Induced Fit  |      Yes      |      No       |
