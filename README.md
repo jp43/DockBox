@@ -11,7 +11,7 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
 
-  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers conformers...)
+  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers, conformers...)
 
   * moebatch (MOE2015) used to identify probable binding sites
 
@@ -69,9 +69,9 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 * AmberTools; version 12 or later
 
-Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software is to be used:
+Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
-* **Autodock**: Babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
+* **Autodock**: babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
   * autodock4
   * autogrid4
@@ -102,7 +102,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
   * dsx (symbolic link to dsx_linux_64.lnx or similar executables)
 
-* **Glide**: All the executables can be found in the Schrodinger package:
+* **Glide**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
 
   * glide
   * glide_sort
@@ -114,12 +114,12 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
   * gold_auto
 
-* **Induced Fit**: All the executables can be found in the Schrodinger package: 
+* **Induced Fit**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com): 
 
   * ifd
   * prepwizard
 
-* *MOE*:
+* **MOE2015**:
 
   * moebatch
 
