@@ -27,13 +27,9 @@ Below is a list of all the programs which can be used together with MOBPred.
 * **Scoring**:
 
   * Autodock (http://autodock.scripps.edu) 
-
   * Autodock Vina (http://autodock.scripps.edu)
-
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
-
   * Glide (https://www.schrodinger.com/glide)
-
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 Table of contents
