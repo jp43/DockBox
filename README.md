@@ -45,9 +45,20 @@ Below is a list of all the programs which can be used together with MOBPred.
 
   * MOE2015::GBVI/WSA dG, Affinity dG, London dG,... (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
+Table of contents
+=================
+
+  * [Mode-of-binding Predictor](#mode-of-binding-predictor)
+  * [Table of contents](#table-of-contents)
+  * [Prerequisites](#installation)
+  * [Installation](#installation)
+  * [Commands] (#commands)
+    * [prepvs](#prepvs)
+    * [rundock](#rundock)
+    * [runanlz](#runanlz)
 
 Prerequisites
--------------
+=============
 
 Before installing the MOBPred package, make sure that you have the following packages installed:
 
@@ -103,7 +114,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
     export PATH
 
 Installation
-------------
+============
 
 The Python Distutils are used to build and install MOBPred, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
 
@@ -119,110 +130,114 @@ After installation, make sure that the bin folder within your installation direc
 
 
 Commands
---------
+========
 
 After including to your PATH the bin folder from your installation, you can use the following commands from any location: 
 
 
-1. **prepvs**
+prepvs
+------
 
-    prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
+prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
 
-        prepvs -h
-        usage: prepvs [-h] [-l INPUT_FILES_L [INPUT_FILES_L ...]]
-                      [-r INPUT_FILES_R [INPUT_FILES_R ...]] [-f CONFIG_FILE]
-                      [-lpflags LPFLAGS] [-ligprep] [-site SITE] [-noprep]
-        
-        Prepare files for Docking or Virtual Screening
-        
-        optional arguments:
-          -h, --help            show this help message and exit
-          -l INPUT_FILES_L [INPUT_FILES_L ...]
-                                Ligand coordinate file(s): .sdf, .smi
-          -r INPUT_FILES_R [INPUT_FILES_R ...]
-                                Receptor coordinate file(s): .pdb
-          -f CONFIG_FILE        config file: .ini
-          -lpflags LPFLAGS      Ligprep (Schrodinger) flags for ligand preparation.
-                                Default: "-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4"
-          -ligprep              Prepare compounds using ligprep
-          -site SITE            Update binding sites info in config file from file
-          -noprep               No structure preparation, update directories and files
-                                only (used debbuging)
+    prepvs -h
+    usage: prepvs [-h] [-l INPUT_FILES_L [INPUT_FILES_L ...]]
+                  [-r INPUT_FILES_R [INPUT_FILES_R ...]] [-f CONFIG_FILE]
+                  [-lpflags LPFLAGS] [-ligprep] [-site SITE] [-noprep]
+    
+    Prepare files for Docking or Virtual Screening
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -l INPUT_FILES_L [INPUT_FILES_L ...]
+                            Ligand coordinate file(s): .sdf, .smi
+      -r INPUT_FILES_R [INPUT_FILES_R ...]
+                            Receptor coordinate file(s): .pdb
+      -f CONFIG_FILE        config file: .ini
+      -lpflags LPFLAGS      Ligprep (Schrodinger) flags for ligand preparation.
+                            Default: "-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4"
+      -ligprep              Prepare compounds using ligprep
+      -site SITE            Update binding sites info in config file from file
+      -noprep               No structure preparation, update directories and files
+                            only (used debbuging)
 
-2. **rundock**
+rundock
+-------
 
-    rundock is used to dock and eventually minimize and rescore the poses. When typing "rundock -h" on the command line, the following help message will pop up:
+rundock is used to dock and eventually minimize and rescore the poses. When typing "rundock -h" on the command line, the following help message will pop up:
 
-        usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
-                       [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
-                       [-norun]
-        
-        rundock : dock with multiple softwares -------- Requires one file for the
-        ligand (1 struct.) and one file for the receptor (1 struct.)
-        
-        optional arguments:
-          -h, --help       show this help message and exit
-          -l INPUT_FILE_L  Ligand coordinate file(s): .mol2
-          -r INPUT_FILE_R  Receptor coordinate file(s): .pdb
-          -f CONFIG_FILE   config file containing docking parameters
-          -q CHARGE_FILE   File with partial charges of non-standard residues
-          -rescore_only    Run rescoring only
-          -extract_only    Extract structures only (usually used for debugging)
-          -d POSEDIR       Directory containing poses to rescore (should be used with
-                           rescore_only option)
-          -norun           Do not run the scripts for docking (simply generate the
-                           files)
+    usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
+                   [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
+                   [-norun]
+    
+    rundock : dock with multiple softwares -------- Requires one file for the
+    ligand (1 struct.) and one file for the receptor (1 struct.)
+    
+    optional arguments:
+      -h, --help       show this help message and exit
+      -l INPUT_FILE_L  Ligand coordinate file(s): .mol2
+      -r INPUT_FILE_R  Receptor coordinate file(s): .pdb
+      -f CONFIG_FILE   config file containing docking parameters
+      -q CHARGE_FILE   File with partial charges of non-standard residues
+      -rescore_only    Run rescoring only
+      -extract_only    Extract structures only (usually used for debugging)
+      -d POSEDIR       Directory containing poses to rescore (should be used with
+                       rescore_only option)
+      -norun           Do not run the scripts for docking (simply generate the
+                       files)
 
-    * Mandatory arguments
+* Mandatory arguments
 
-        * -l INPUT_FILE_L: *.mol2* file containing the coordinates of the ligand (only one structure allowed)
+    * -l INPUT_FILE_L: *.mol2* file containing the coordinates of the ligand (only one structure allowed)
 
-        * -r INPUT_FILE_R: *.pdb* file containing the receptor coordinates (only one structure allowed)
+    * -r INPUT_FILE_R: *.pdb* file containing the receptor coordinates (only one structure allowed)
 
-        * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about the preparation of the config file)
+    * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about the preparation of the config file)
 
-    * Optional arguments
+* Optional arguments
 
-        Preferably do not use flags other than -l, -r and -f
+    Preferably do not use flags other than -l, -r and -f
 
-    Thus, a typical use of *rundock* is done through the following command:
+Thus, a typical use of *rundock* is done through the following command:
 
-        rundock -f config.ini -r receptor.pdb -l ligand.mol2
+    rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
-3. **runanlz**
+runanlz
+-------
 
-    runanlz is used to anlyze the docking poses obtained with the rundock command. A consensus strategy is performed through clustering analysis, analysis of the scores obtained during the rescoring phase. When typing "runanlz -h" on the command line, the following help message will pop up:
+runanlz is used to anlyze the docking poses obtained with the rundock command. A consensus strategy is performed through clustering analysis, analysis of the scores obtained during the rescoring phase. When typing "runanlz -h" on the command line, the following help message will pop up:
 
-        usage: runanlz [-h] [-w DIRS [DIRS ...]] [-rmsd RMSD]
-                       [-instances INSTANCES [INSTANCES ...]] [-np NP]
-                       [-s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]]
-                       [-colvar COLVAR [COLVAR ...]] [-extract_only] [-cleanup]
-                       [-add_rmsd RMSD_FILE]
-        
-        Run docking analysis
-        
-        optional arguments:
-          -h, --help            show this help message and exit
-          -w DIRS [DIRS ...]    Working directories used for analysis
-          -rmsd RMSD            RMSD cutoff for clustering. Default: 2.0
-          -instances INSTANCES [INSTANCES ...]
-                                Choose instances to be used for consensus docking
-          -np NP                Keep only clusters predicted by at least np softwares)
-          -s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]
-          -colvar COLVAR [COLVAR ...]
-          -extract_only         Extract results only!!!!
-          -cleanup              Cleanup intermediate files
-          -add_rmsd RMSD_FILE
+    usage: runanlz [-h] [-w DIRS [DIRS ...]] [-rmsd RMSD]
+                   [-instances INSTANCES [INSTANCES ...]] [-np NP]
+                   [-s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]]
+                   [-colvar COLVAR [COLVAR ...]] [-extract_only] [-cleanup]
+                   [-add_rmsd RMSD_FILE]
+    
+    Run docking analysis
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -w DIRS [DIRS ...]    Working directories used for analysis
+      -rmsd RMSD            RMSD cutoff for clustering. Default: 2.0
+      -instances INSTANCES [INSTANCES ...]
+                            Choose instances to be used for consensus docking
+      -np NP                Keep only clusters predicted by at least np softwares)
+      -s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]
+      -colvar COLVAR [COLVAR ...]
+      -extract_only         Extract results only!!!!
+      -cleanup              Cleanup intermediate files
+      -add_rmsd RMSD_FILE
 
 
 Preparing the configuration file for rundock
---------------------------------------------
+============================================
 
 Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
 
 **Note**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
 
-**Configuration to dock with multiple softwares on a single binding site and eventually minimize the poses**
+Docking with multiple softwares on a single binding site and minimize the poses
+-------------------------------------------------------------------------------
 
 Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
 
@@ -304,7 +319,8 @@ Below is an example of configuration file that can be used as an input of *rundo
     *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
 
 
-**Configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares**
+Docking on multiple binding site, minimize and rescore the poses with multiple softwares
+----------------------------------------------------------------------------------------
 
 Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
@@ -346,7 +362,8 @@ Below is another example of configuration file for *rundock* used to dock on two
 * Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
 
 
-**Docking/scoring options relative to each software**
+Docking/scoring options relative to each software
+-------------------------------------------------
 
 Below is a list of all the options per software that can be specified in the configuration file.
 
@@ -443,9 +460,6 @@ Below is a list of all the options per software that can be specified in the con
 
 
 
-Output of rundock
------------------
-
 LigPrep
 -------
 
@@ -502,16 +516,6 @@ Steps:
         -- One reasonable conformation should be fine, the docking program will explore other conformations
         -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
 
-
-
-Autodock
---------
-
-'ga_run': '100', 'spacing': '0.3'
-
-
-Autodock Vina
--------------
 
 
 Glide
