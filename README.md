@@ -52,7 +52,7 @@ Table of contents
   * [Table of contents](#table-of-contents)
   * [Prerequisites](#installation)
   * [Installation](#installation)
-  * [Commands] (#commands)
+  * [Commands](#commands)
     * [prepvs](#prepvs)
     * [rundock](#rundock)
     * [runanlz](#runanlz)
