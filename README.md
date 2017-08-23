@@ -88,19 +88,42 @@ Any software intended to be used in conjunction with MOBPred should be installed
   * prepare_receptor4.py
   * vina
 
-* DOCK 6: **chimera**, **dms**, **sphgen_cpp**, **sphere_selector**, **showbox**, **grid**, **dock6**.
+* **DOCK 6**:
 
-* DSX: **dsx**
+  * chimera (http://www.cgl.ucsf.edu/chimera)
+  * dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
+  * dock6
+  * grid
+  * showbox
+  * sphere_selector
+  * sphgen_cpp
 
-* Glide: All the executables can be found in the Schrodinger package: **prepwizard**, **glide**, **ligprep**, **glide_sort**, **pdbconvert**.
+* **DSX**:
 
-* Gold: **gold_auto**.
+  * dsx (symbolic link to dsx_linux_64.lnx or similar excutables)
 
-* Induced Fit: All the executables can be found in the Schrodinger package: **prepwizard**, **ifd**.
+* **Glide**: All the executables can be found in the Schrodinger package:
 
-* MOE: **moebatch**.
+  * glide
+  * glide_sort
+  * ligprep
+  * pdbconvert
+  * prepwizard
 
-*Pharmamatrix users*: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
+* **Gold**:
+
+  * gold_auto
+
+* **Induced Fit**: All the executables can be found in the Schrodinger package: 
+
+  * prepwizard
+  * ifd
+
+* *MOE*:
+
+  * moebatch
+
+***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
 
     # Amber 14
     export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
