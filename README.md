@@ -72,7 +72,6 @@ Before installing the MOBPred package, make sure that you have the following pac
 Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
 * **Autodock**: babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
-
   * autodock4
   * autogrid4
   * babel
@@ -82,14 +81,12 @@ Any software intended to be used in conjunction with MOBPred should be installed
   * prepare_receptor4.py
 
 * **Autodock Vina**: 
-
   * babel
   * prepare_ligand4.py
   * prepare_receptor4.py
   * vina
 
 * **DOCK 6**:
-
   * chimera (http://www.cgl.ucsf.edu/chimera)
   * dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
   * dock6
@@ -99,11 +96,9 @@ Any software intended to be used in conjunction with MOBPred should be installed
   * sphgen_cpp
 
 * **DSX**:
-
   * dsx (symbolic link to dsx_linux_64.lnx or similar executables)
 
 * **Glide**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
-
   * glide
   * glide_sort
   * ligprep
@@ -111,16 +106,13 @@ Any software intended to be used in conjunction with MOBPred should be installed
   * prepwizard
 
 * **Gold**:
-
   * gold_auto
 
 * **Induced Fit**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com): 
-
   * ifd
   * prepwizard
 
 * **MOE2015**:
-
   * moebatch
 
 ***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how the PATH environment variable can be updated to include Autodock, Vina, Glide, MOE, DOCK 6:
