@@ -48,14 +48,15 @@ Below is a list of all the programs which can be used together with MOBPred.
 Table of contents
 =================
 
-  * [Mode-of-binding Predictor](#mode-of-binding-predictor)
-  * [Table of contents](#table-of-contents)
   * [Prerequisites](#installation)
   * [Installation](#installation)
   * [Commands](#commands)
     * [prepvs](#prepvs)
     * [rundock](#rundock)
     * [runanlz](#runanlz)
+  * [Preparing the configuration file for rundock](#preparing-the-configuration-file-for-rundock)
+    * [Docking with multiple softwares and minimizing the poses](#docking-with-multiple-softwares-on-a-single-binding-site-and-minimize-the-poses)
+
 
 Prerequisites
 =============
