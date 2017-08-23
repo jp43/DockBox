@@ -41,9 +41,10 @@ Table of contents
     * [prepvs](#prepvs)
     * [rundock](#rundock)
     * [runanlz](#runanlz)
-  * [Preparing the configuration file for rundock](#preparing-the-configuration-file-for-rundock)
-    * [Docking with multiple softwares and minimizing the poses](#docking-with-multiple-softwares-on-a-single-binding-site-and-minimize-the-poses)
-
+  * [Preparing the rundock config file](#preparing-the-rundock-config-file)
+    * [General sections](#general-sections)
+    * [Sections relative to each software](#sections-relative-to-each-software)
+    * [Examples]
 
 Prerequisites
 =============
@@ -245,12 +246,59 @@ runanlz is used to anlyze the docking poses obtained with the rundock command. A
       -add_rmsd RMSD_FILE
 
 
-Preparing the configuration file for rundock
-============================================
+Preparing the rundock config file
+=================================
 
 Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
 
-**Note**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section *prepvs*). 
+**Note**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section prepvs). 
+
+General sections
+----------------
+
+* The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
+
+    * **programs**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+
+    * **minimization**: performs minimization on the generated poses (yes or no).
+
+    * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
+
+    * **cleanup**: specifies if big intermediate files should be removed (yes or no).
+
+    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares.
+
+
+    Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
+
+
+    |    Software   |    Docking    |   Rescoring   |
+    | :-----------  |:-------------:|:-------------:|
+    |   Autodock    |      Yes      |      Yes      |
+    |    Dock 6     |      Yes      |      No       |
+    |     DSX       |      No       |      Yes      |
+    |     Glide     |      Yes      |      Yes      |
+    |     Gold      |      Yes      |      No       |
+    |  Induced Fit  |      Yes      |      No       |
+    |     MOE       |      Yes      |      Yes      |
+    |     Vina      |      Yes      |      Yes      |
+
+    Docking and rescoring options relative to each program are detailed in the section *docking/rescoring options for each software*
+
+* The SITE section includes the information about the box to spot the binding site.
+
+    *  **center**: x, y, z coordinates of the center of the binding box (in Å).
+
+    *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
+
+
+
+
+Sections relative to each software
+----------------------------------
+
+Examples
+--------
 
 Docking with multiple softwares on a single binding site and minimize the poses
 -------------------------------------------------------------------------------
@@ -298,41 +346,6 @@ Below is an example of configuration file that can be used as an input of *rundo
     center = 8.446, 25.365, 4.394
     boxsize = 30.0, 30.0, 30.0
 
-* The DOCKING section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the keyword *programs*.
-
-    * **programs**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the AUTODOCK section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the above example, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
-
-    * **minimization**: performs minimization on the generated poses (yes or no).
-
-    * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
-
-    * **cleanup**: specifies if big intermediate files should be removed (yes or no).
-
-    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares.
-
-
-    Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
-
-
-    |    Software   |    Docking    |   Rescoring   |
-    | :-----------  |:-------------:|:-------------:|
-    |   Autodock    |      Yes      |      Yes      |
-    |    Dock 6     |      Yes      |      No       |
-    |     DSX       |      No       |      Yes      |
-    |     Glide     |      Yes      |      Yes      |
-    |     Gold      |      Yes      |      No       |
-    |  Induced Fit  |      Yes      |      No       |
-    |     MOE       |      Yes      |      Yes      |
-    |     Vina      |      Yes      |      Yes      |
-
-
-    Docking and rescoring options relative to each program are detailed in the section *docking/rescoring options for each software*
-
-* The SITE section includes the information about the box to spot the binding site.
-
-    *  **center**: x, y, z coordinates of the center of the binding box (in Å).
-
-    *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
 
 
 Docking on multiple binding site, minimize and rescore the poses with multiple softwares
