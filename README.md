@@ -383,7 +383,7 @@ Docking/scoring options relative to each software
 
 Below is a list of all the options per software that can be specified in the configuration file.
 
-* Autodock (docking/scoring method)
+* **Autodock** (docking/scoring method)
 
     * ga_run (default: 100): number of autodock runs = targeted number of final poses
     * spacing (default: 0.3): grid spacing
@@ -400,12 +400,10 @@ Below is a list of all the options per software that can be specified in the con
 
         babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
 
-* Autodock Vina (docking/scoring method)
+* **Autodock Vina** (docking/scoring method)
 
     * cpu (default: 1)
-
     * energy_range (default: 3)
-
     * num_modes (default: 9): targeted number of final poses
 
     **Note 1**: the partial charges of the ligand are obtained from the Gasteiger method using the AutodockTools command *prepare_ligand4.py*
@@ -413,65 +411,42 @@ Below is a list of all the options per software that can be specified in the con
     **Note 2**: As is usually the case for Autodock Vina, non polar hydrogens in the ligand structure are removed prior to docking in order to properly use the Autodock force field. Once the docking has been performed, nonpolar hydrogens are reattributed in a way consistent with the input structure. Unless the *minimize* option in the configuration file is set to *yes*, no minimization is performed on those hydrogens.
 
 
-* DOCK 6 (docking method)
+* **DOCK 6** (docking method)
 
     * attractive_exponent (default: 6)
-
     * extra_margin (default: 2.0)
-
     * grid_spacing (default: 0.3)
-
     * maximum_sphere_radius (default: 4.0)
-
     * max_orientations (default: 10000)
-
     * minimum_sphere_radius (default: 1.4)
-
     * nposes (default: 20): targeted number of final poses
-
     * num_scored_conformers (default 5000)
-
     * probe_radius (default: 1.4)
-
     * repulsive_exponent (default: 12)
 
+* **DSX** (scoring method)
 
-* DSX (scoring method)
-
-
-* Glide (docking/scoring)
+* **Glide** (docking/scoring)
 
     * pose_rmsd (default: 0.5):
-
     * poses_per_lig (default: 10): targeted number of final poses
-
     * precision (default: SP):
-
     * use_prepwizard (default: True):
 
-* GOLD
+* **GOLD**
 
     * nposes (default: 20)
 
-* MOE
+* **MOE**
 
     * gtest (default: 0.01)
-
     * maxpose (default: 5)
-
     * placement (default: Triangle Matcher)
-
     * placement_maxpose (default: 250)
-
     * placement_nsample (default: 10)
-
     * remaxpose (default: 1)
-
     * rescoring (default: GBVI/WSA dG)
-
     * scoring (default: London dG)
-
-
 
 
 LigPrep
