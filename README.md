@@ -35,7 +35,7 @@ Below is a list of all the programs which can be used together with MOBPred.
 Table of contents
 =================
 
-  * [Prerequisites](#installation)
+  * [Prerequisites](#prerequisites)
   * [Installation](#installation)
   * [Commands](#commands)
     * [prepvs](#prepvs)
