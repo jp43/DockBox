@@ -3,14 +3,14 @@ Mode-of-binding Predictor
 
 Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking softwares (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different softwares or combine them in a consensus docking or consensus scoring strategy.
 
-Note that the softwares that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be installed separately on the same machine MOBPred is set up.
+Note that the softwares that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine MOBPred is set up.
 
 Below is a list of all the programs which can be used together with MOBPred. 
 
 * **Structure preparation/optimization**:
 
   * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
-  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers, conformers...)
+  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers, conformers,...)
   * moebatch (MOE2015) used to identify probable binding sites
   * Open Babel (http://openbabel.org/wiki/Main_Page)
 
@@ -59,7 +59,7 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
-* **Autodock**: babel and autodock4 set aside, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
+* **Autodock**: except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
   * autodock4
   * autogrid4
   * babel
@@ -103,7 +103,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
 * **MOE2015**:
   * moebatch
 
-***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have been already installed. Here is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
+***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have already been installed. Below is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
 
     # Amber 14
     export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
@@ -137,19 +137,19 @@ The Python Distutils are used to build and install MOBPred, so it is fairly simp
 
 1. First, make sure that you have the NumPy and pandas modules. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
 
-2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable. For pharmamatrix users, see section *prerequisites*.
+2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable. For pharmamatrix users, see section **prerequisites**.
 
 3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
 
         python setup.py install
 
-After installation, make sure that the bin folder within your installation directory is included to your PATH. It contains the executables *prepvs*, *rundock* and *runanlz* that are used for virtual screening preparation, docking and docking analysis, respectively.
+After installation, make sure that the bin folder within your installation directory is accessible via your PATH variable. It contains the executables **prepvs**, **rundock** and **runanlz** that are used for virtual screening preparation, docking and docking analysis, respectively.
 
 
 Commands
 ========
 
-After including to your PATH the bin folder from your installation, you can use the following commands from any location: 
+After adding the bin folder of your installation directory to your PATH variable, the following commands can run from any directory: 
 
 
 prepvs

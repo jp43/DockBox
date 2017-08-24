@@ -136,11 +136,6 @@ rms first %(maskfit)s
 trajout ref.rst restart onlyframes 1
 trajout struct.pdb multi\n"""% locals()
             file.write(contents)
-        elif mode == 'rmsd'
-            contents = """parm protein-ligand.prmtop
-%(lines_trajin)s
-rms first %(maskfit)s
-rms %(mask)s nofit%(option)s summary summary.dat info info.dat
 
 def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=default_mask, maskfit=default_maskfit):
 
