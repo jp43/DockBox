@@ -149,13 +149,13 @@ After installation, make sure that the bin folder within your installation direc
 Commands
 ========
 
-After adding the bin folder of your installation directory to your PATH variable, the following commands can run from any directory: 
+After adding the bin folder of your installation directory to your PATH variable, the following commands can be run: 
 
 
 prepvs
 ------
 
-prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
+prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one folder per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
 
     prepvs -h
     usage: prepvs [-h] [-l INPUT_FILES_L [INPUT_FILES_L ...]]
@@ -181,7 +181,7 @@ prepvs is used to prepare the ligand structures (carried out with Schrodinger's 
 rundock
 -------
 
-rundock is used to dock and eventually minimize and rescore the poses. When typing "rundock -h" on the command line, the following help message will pop up:
+rundock is used to dock a ligand to a protein structure and eventually minimize and rescore the output poses. When typing "rundock -h" on the command line, the following help message will pop up:
 
     usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
                    [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
@@ -205,24 +205,24 @@ rundock is used to dock and eventually minimize and rescore the poses. When typi
 
 * Mandatory arguments
 
-    * -l INPUT_FILE_L: *.mol2* file containing the coordinates of the ligand (only one structure allowed)
+    * -l INPUT_FILE_L: **.mol2** file containing the coordinates of the ligand (only one structure allowed)
 
-    * -r INPUT_FILE_R: *.pdb* file containing the receptor coordinates (only one structure allowed)
+    * -r INPUT_FILE_R: **.pdb** file containing the receptor coordinates (only one structure allowed)
 
-    * -f CONFIG_FILE: *.ini* config file containing docking parameters (see the section *preparing the configuration file for rundock* to know more about the preparation of the config file)
+    * -f CONFIG_FILE: **.ini** configuration file containing the docking parameters (see the section **preparing the rundock configuration file**)
 
 * Optional arguments
 
-    Preferably do not use flags other than -l, -r and -f
+    Preferably do not use any flags other than -l, -r and -f
 
-Thus, a typical use of *rundock* is done through the following command:
+Thus, a typical use of **rundock** is done through the following command:
 
     rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
 runanlz
 -------
 
-runanlz is used to anlyze the docking poses obtained with the rundock command. A consensus strategy is performed through clustering analysis, analysis of the scores obtained during the rescoring phase. When typing "runanlz -h" on the command line, the following help message will pop up:
+runanlz is used to analyze the output docking poses obtained after running **rundock**. A consensus strategy is carried out from clustering analysis, analysis of the scores obtained during the rescoring phase of **rundock**. When typing "runanlz -h" on the command line, the following help message will pop up:
 
     usage: runanlz [-h] [-w DIRS [DIRS ...]] [-rmsd RMSD]
                    [-instances INSTANCES [INSTANCES ...]] [-np NP]
@@ -246,12 +246,18 @@ runanlz is used to anlyze the docking poses obtained with the rundock command. A
       -add_rmsd RMSD_FILE
 
 
-Preparing the rundock config file
-=================================
+Preparing the rundock configuration file
+========================================
 
-Besides one .mol2 file containing the ligand structure (-l flag) and one .pdb file containing the receptor structure (-r flag), rundock requires another mandatory input file, namely, a configuration file (-f flag) where all the parameters needed for the docking procedure are specified.
+Besides one **.mol2** file containing the ligand structure (-l flag) and one **.pdb** file containing the receptor structure (-r flag), running **rundock** requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
 
-**Note**: *rundock* can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the *prepvs* command can be used to create folders for each protein-ligand pair (see the above section prepvs). 
+**Note**: **rundock** can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the **prepvs** command can be used to create folders for each protein-ligand pair (see the above section **prepvs**). 
+
+The configuration file should be of the .ini. format. (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections. Each section name appears on a line by itself, in square brackets ("[" and "]"). 
+Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Every key has a name (name of the option) and a value (value of the option), delimited by an equals sign (=).
+
+
+
 
 General sections
 ----------------
