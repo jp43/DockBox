@@ -253,7 +253,7 @@ Besides one **.mol2** file containing the ligand structure (-l flag) and one **.
 
 **Note**: **rundock** can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the **prepvs** command can be used to create folders for each protein-ligand pair (see the above section **prepvs**). 
 
-The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should a name (name of the option) and a value (value of the option), delimited by an equals sign (=).
+The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
 An typical example of .ini file:
 
