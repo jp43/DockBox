@@ -255,15 +255,43 @@ Besides one **.mol2** file containing the ligand structure (-l flag) and one **.
 
 The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
-An typical example of .ini file:
+Below is an example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
-    [SECTION1]
-    option1 = value1
-    option2 = value2
+    [DOCKING]
+    site = site1, site2
+    program = autodock, vina, dock, glide
+    rescoring = yes
+    minimize = yes
+    cleanup = yes
+    
+    [RESCORING]
+    program = dsx, autodock, vina
+    
+    [DSX]
+    pot_dir = /pmshare/jordane/CSD_potentials/DSX_CSD_Potentials_v0511/csd_pot_0511/
+    other_flags = -T0 1.0 -T1 1.0 -T3 1.0 -j
+    
+    [AUTODOCK]
+    ga_run = 20
+    spacing = 0.4
+    
+    [VINA]
+    num_modes = 20
+    
+    [DOCK]
+    nposes = 20
+    
+    [GLIDE]
+    poses_per_lig = 20
+    
+    [SITE1]
+    center = 75.5, 80.0, 31.0
+    boxsize = 40.0, 40.0, 40.0
+    
+    [SITE2]
+    center = 75.5, 40.0, 50.0
+    boxsize = 40.0, 40.0, 40.0
 
-    [SECTION2]
-    option3 = value3
-    option4 = value4
 
 
 General sections
