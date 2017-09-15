@@ -46,7 +46,7 @@ class Reader(object):
         try:
             natoms = int(self.file.next())
         except StopIteration:
-            raise GroError("File ended unexpectedly when reading number of atoms.")
+            raise PDBError("File ended unexpectedly when reading number of atoms.")
 
         for atom in it.izip(xrange(natoms), self.file):
             pass
@@ -54,7 +54,7 @@ class Reader(object):
         try:
             self.file.next()
         except StopIteration:
-            raise GroError("File ended unexpectedly when reading box line.")
+            raise PDBError("File ended unexpectedly when reading box line.")
         return None
 
 
@@ -82,7 +82,7 @@ class Reader(object):
                 config = self.next()
                 configs.append(config)
         else:
-            raise GroError("invalid number of arguments to readlines")
+            raise PDBError("invalid number of arguments to readlines")
 
         return np.array(configs)
 

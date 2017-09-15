@@ -3,6 +3,8 @@ import sys
 import shutil
 import subprocess
 
+from MOBPred.tools import reader
+
 def get_nwaters(logfile):
 
     with open(logfile, 'r') as logf:
@@ -247,6 +249,9 @@ def run_antechamber(infile, outfile, at='gaff', c='gas'):
     """ use H++ idea of running antechamber multiple times with bcc's 
 charge method to estimate the appropriate net charge!!"""
 
+    suffix, ext = os.path.splitext(infile)
+    ext = ext[1:]
+
     logfile = 'antchmb.log'
     max_net_charge = 30
     net_charge = [0]
@@ -257,7 +262,8 @@ charge method to estimate the appropriate net charge!!"""
 
         for nc in net_charge:
             iserror = False
-            cmd = 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
+            cmd = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
+            #print cmd
             subprocess.call(cmd, shell=True)
             with open(logfile, 'r') as lf:
                 for line in lf:
@@ -274,42 +280,65 @@ charge method to estimate the appropriate net charge!!"""
         if iserror:
             raise ValueError("No appropriate net charge was found to run antechamber's %s charge method"%c)
     else: # do not regenerate charges
-       cmd = 'antechamber -i %(infile)s -fi mol2 -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
-       subprocess.call(cmd, shell=True)
+       cmd = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
+       subprocess.check_output(cmd, shell=True)
 
-def prepare_leap_config_file(script_name, file_r, file_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None):
+def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None, labels_l=['LIG'], model='TIP3P'):
 
-    lines_solvate = ""
+    solvation_line = ""
+    pbradii_lines = ""
+    add_ions_lines = ""
+    remove_water_lines = ""
+    ligand_lines = ""
+    ions_libraries_lines = ""
+
+    tip3p_models = ['TIP3P', 'TIP3PF', 'POL3', 'QSPCFW']
+    tip4p_models = ['TIP4P', 'TIP4PEW']
+    spc_models = ['QSPCFW', 'SPC', 'SPCFW']
+
     if solvate:
-        lines_solvate = "\nsolvateBox complex TIP3PBOX %.2f %.2f"%(distance,closeness)
+        boxtype = model.upper() + 'BOX'
+        solvation_line = "\nsolvateBox complex %s %.2f %.2f"%(boxtype,distance,closeness)
 
-    lines_pbradii = ""
+        if nna > 0:
+            add_ions_lines += "\naddions complex Na+ %i"%nna
+        if ncl > 0:
+            add_ions_lines += "\naddions complex Cl- %i"%ncl
+
+        if model.upper() in tip3p_models:
+            suffix_ions_libraries = 'tip3p'
+        elif model.upper() in tip4p_models:
+            suffix_ions_libraries = 'tip4pew'
+        elif model.upper() in spc_models:
+            suffix_ions_libraries = 'spce'
+        else:
+            raise ValueError('Solvent model %s unknown, should be one of !'% \
+(model,', '.joined(tip3p_models + tip4p_models + spc_models)))
+
     if PBRadii:
-        lines_pbradii = "\nset default PBRadii %s"%PBRadii
+        pbradii_lines = "\nset default PBRadii %s"%PBRadii
 
-    remove_lines = ""
     if remove:
         for idx in remove:
-            remove_lines += "\nremove complex complex.%i"%idx
+            remove_water_lines += "\nremove complex complex.%i"%idx
 
-    lines_ions = ""
-    if nna > 0:
-        lines_ions += "\naddions complex Na+ %i"%nna
-    if ncl > 0:
-        lines_ions += "\naddions complex Cl- %i"%ncl
-
-    if file_l:
-        file_l_prefix, ext = os.path.splitext(file_l)
-        file_l_prefix = os.path.basename(file_l_prefix)
+    # loadoff atomic_ions.lib
+    if files_l:
+        if isinstance(files_l, basestring):
+            files_l = [files_l]
+        if len(files_l) != len(labels_l):
+            raise ValueError("Ligand names provided should be the same number as the number of ligands")
+        for idx, file_l in enumerate(files_l):
+            file_l_prefix, ext = os.path.splitext(file_l)
+            file_l_prefix = os.path.basename(file_l_prefix)
+            name = labels_l[idx]
+            ligand_lines += "\n%(name)s = loadmol2 %(file_l)s\nloadamberparams %(file_l_prefix)s.frcmod"%locals()
         with open(script_name, 'w') as leapf:
                 script ="""source %(forcefield)s
 source leaprc.gaff
-loadoff atomic_ions.lib
-loadamberparams frcmod.ionsjc_tip3p
-loadamberparams frcmod.ionslm_1264_tip3p
-LIG = loadmol2 %(file_l)s
-loadamberparams %(file_l_prefix)s.frcmod%(lines_pbradii)s
-complex = loadPdb %(file_rl)s%(lines_solvate)s%(lines_ions)s%(remove_lines)s
+loadamberparams frcmod.ionsjc_%(suffix_ions_libraries)s
+loadamberparams frcmod.ionslm_1264_%(suffix_ions_libraries)s%(ligand_lines)s%(pbradii_lines)s
+complex = loadPdb %(file_rl)s%(solvation_line)s%(add_ions_lines)s%(remove_water_lines)s
 saveAmberParm complex start.prmtop start.inpcrd
 savePdb complex start.pdb
 quit\n"""%locals()
@@ -318,9 +347,9 @@ quit\n"""%locals()
         with open(script_name, 'w') as leapf:
                 script ="""source %(forcefield)s
 loadoff atomic_ions.lib
-loadamberparams frcmod.ionsjc_tip3p
-loadamberparams frcmod.ionslm_1264_tip3p
-complex = loadPdb %(file_r)s%(lines_solvate)s%(lines_ions)s
+loadamberparams frcmod.ionsjc_%(suffix_ions_libraries)s
+loadamberparams frcmod.ionslm_1264_%(suffix_ions_libraries)s%(pbradii_lines)s
+complex = loadPdb %(file_r)s%(solvation_line)s%(add_ions_lines)s
 saveAmberParm complex start.prmtop start.inpcrd
 savePdb complex start.pdb
 quit\n"""%locals()
@@ -342,15 +371,31 @@ def prepare_receptor(file_r_out, file_r, keep_hydrogens=False):
     # remove atoms and hydrogen with no name recognized by AMBER
     correct_hydrogen_names(file_r_out, keep_hydrogens=keep_hydrogens)
 
-def prepare_ligand(file_r, file_l, file_rl, charge_method='gas'):
+def prepare_ligand(file_r, files_l, file_rl, charge_method='gas'):
 
-    file_l_prefix, ext = os.path.splitext(file_l)
-    file_l_prefix = os.path.basename(file_l_prefix)
+    if isinstance(files_l, basestring):
+        files_l = [files_l]
 
-    run_antechamber(file_l, 'tmp.mol2', at='gaff', c=charge_method)
-    shutil.move('tmp.mol2', file_l)
-    subprocess.check_output('parmchk -i %s -f mol2 -o %s.frcmod'%(file_l,file_l_prefix), shell=True, executable='/bin/bash')
-    subprocess.check_output('antechamber -fi mol2 -i %s -fo pdb -o %s.pdb > /dev/null'%(file_l,file_l_prefix), shell=True, executable='/bin/bash')
+    mol2files_l = []
 
     shutil.copyfile(file_r, file_rl)
-    subprocess.check_output('cat %s.pdb >> %s'%(file_l_prefix, file_rl), shell=True, executable='/bin/bash')
+    for file_l in files_l:
+        file_l_prefix, ext = os.path.splitext(file_l)
+        file_l_prefix = os.path.basename(file_l_prefix)
+
+        mol2file = file_l_prefix + '.mol2'
+
+        run_antechamber(file_l, 'tmp.mol2', at='gaff', c=charge_method)
+        shutil.move('tmp.mol2', mol2file)
+        subprocess.check_output('parmchk -i %s -f mol2 -o %s.frcmod'%(mol2file, file_l_prefix), shell=True, executable='/bin/bash')
+        subprocess.check_output('antechamber -i %s -fi mol2 -o %s.pdb -fo pdb > /dev/null'%(mol2file, file_l_prefix), shell=True, executable='/bin/bash')
+
+        mol2files_l.append(mol2file)
+        with open(file_rl, 'a') as ffrl:
+            with open(file_l_prefix + '.pdb', 'r') as ffl:
+                for line in ffl:
+                    if line.startswith(('ATOM', 'HETATM')):
+                        ffrl.write(line)
+            ffrl.write('TER\n')
+
+    return mol2files_l

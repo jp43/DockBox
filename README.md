@@ -255,7 +255,7 @@ Besides one **.mol2** file containing the ligand structure (-l flag) and one **.
 
 The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
-Below is an example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
+Below is an example of configuration file used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
     [DOCKING]
     site = site1, site2
@@ -293,7 +293,6 @@ Below is an example of configuration file for *rundock* used to dock on two bind
     boxsize = 40.0, 40.0, 40.0
 
 
-
 General sections
 ----------------
 
@@ -326,14 +325,16 @@ General sections
 
     Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
 
-* The **SITE** section includes the information about the box to spot the binding site.
+* The **SITE** section includes the information about the box to spot the binding site. The keys are the following:
 
     *  **center**: x, y, z coordinates of the center of the binding box (in Å).
 
     *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
 
 
-* The **RESCORING** section
+* The **RESCORING** section has only one key specifying the programs used to rescore:
+
+    *  **program**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
 Docking/scoring options relative to each software
 -------------------------------------------------
