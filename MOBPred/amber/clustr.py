@@ -137,10 +137,15 @@ trajout ref.rst restart onlyframes 1
 trajout struct.pdb multi\n"""% locals()
             file.write(contents)
         elif mode == 'rmsd2d':
+            lines_rms = ""
+            for idx, file_rl in enumerate(files_rl):
+                jdx = idx + 1
+                lines_rms += """reference %(file_rl)s [ref%(jdx)s]
+rms ref [ref%(jdx)s] %(maskfit)s 
+rms ref [ref%(jdx)s] %(mask)s nofit out rmsd_%(jdx)s.txt\n""" %locals()
             contents = """parm protein-ligand.prmtop
 %(lines_trajin)s
-rms first %(maskfit)s
-rms2d %(mask)s nofit out rmsd.gnu\n"""% locals()
+%(lines_rms)s"""% locals()
             file.write(contents)
 
 def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=default_mask, maskfit=default_maskfit):

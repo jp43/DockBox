@@ -314,6 +314,8 @@ def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=Fals
         else:
             raise ValueError('Solvent model %s unknown, should be one of !'% \
 (model,', '.joined(tip3p_models + tip4p_models + spc_models)))
+    else:
+        suffix_ions_libraries = 'tip3p'
 
     if PBRadii:
         pbradii_lines = "\nset default PBRadii %s"%PBRadii
