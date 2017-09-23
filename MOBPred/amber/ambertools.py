@@ -177,6 +177,29 @@ def load_atomic_ions():
                 is_new_atom = False
     return info
 
+
+def get_ligand_name(filename):
+
+    # finding ligand name...
+    prefix, ext = os.path.splitext(filename)
+
+    r_ligand = reader.open(filename)
+    struct = r_ligand.next()
+    if ext == '.pdb':
+        idxname = 2
+    elif ext == '.mol2':
+        idxname = 7
+    else:
+        raise ValueError('File format for file_l should be .pdb or .mol2!')
+    names = [row[idxname] for row in struct['ATOM']]
+    name = list(set(names))
+
+    if len(name) != 1:
+        raise IOError('More than one ligand found in file %s'%file_l)
+    else:
+        name = name[0]
+    return name
+
 def correct_hydrogen_names(file_r, keep_hydrogens=False):
 
     chainIDs = []
@@ -386,8 +409,8 @@ def prepare_ligand(file_r, files_l, file_rl, charge_method='gas'):
         file_l_prefix = os.path.basename(file_l_prefix)
 
         mol2file = file_l_prefix + '.mol2'
-
         run_antechamber(file_l, 'tmp.mol2', at='gaff', c=charge_method)
+
         shutil.move('tmp.mol2', mol2file)
         subprocess.check_output('parmchk -i %s -f mol2 -o %s.frcmod'%(mol2file, file_l_prefix), shell=True, executable='/bin/bash')
         subprocess.check_output('antechamber -i %s -fi mol2 -o %s.pdb -fo pdb > /dev/null'%(mol2file, file_l_prefix), shell=True, executable='/bin/bash')
