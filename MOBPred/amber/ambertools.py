@@ -13,10 +13,13 @@ def get_nwaters(logfile):
             if len(line_s) == 3 and line_s[0] == 'Added' and line_s[-1] == 'residues.':
                 return int(line_s[1])
 
-def get_removed_waters(nwaters_tgt, boxsize, step=0.01, ntries=5):
+def get_removed_waters(file_r, files_l, file_c, nwaters_tgt, boxsize, step=0.01, ntries=5):
+
+    if not files_l:
+        file_c = file_r
 
     # determine the number of solute residues
-    nsolutes = int(subprocess.check_output("echo `cpptraj -p complex.pdb -mr '*' | awk '{print NF - 1;}'`", shell=True))
+    nsolutes = int(subprocess.check_output("echo `cpptraj -p %(file_c)s -mr '*' | awk '{print NF - 1;}'`"%locals(), shell=True))
 
     print "Targeted number of water residues:", nwaters_tgt
     print "Number of residues found for solute:", nsolutes
@@ -31,7 +34,7 @@ def get_removed_waters(nwaters_tgt, boxsize, step=0.01, ntries=5):
         c = 1.0
         lastdiff = 1e10
         while True:
-            prepare_leap_config_file('leap.in', 'protein.pdb', 'ligand.mol2', 'complex.pdb', solvate=True, distance=d, closeness=c)
+            prepare_leap_config_file('leap.in', file_r, files_l, file_c, solvate=True, distance=d, closeness=c)
             subprocess.check_output('tleap -f leap.in > leap.log', shell=True)
             nwaters = get_nwaters('leap.log')
             diff = nwaters - nwaters_tgt
@@ -157,7 +160,8 @@ def load_PROTON_INFO():
         if resname not in no_h_residues:
             info[resname].append('H')
 
-    info['NME'] = []
+    info['ACE'] = ['CH3', 'C', 'O', 'HT1', 'HT2', 'HT3']
+    info['NME'] = ['CH3', 'C', 'N', 'HT1', 'HT2', 'HT3', 'H']
     return info
 
 def load_atomic_ions():
