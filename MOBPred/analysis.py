@@ -156,7 +156,7 @@ class DockAnalysis(object):
 
         if not args.extract_results_only:
             # performs clustering
-            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.rmsd, cleanup=True)
+            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.rmsd, cleanup=True, mask='', maskfit='')
         self.extract_results('clustering/info.dat', args)
 
         tcpu2 = time.time()

@@ -131,14 +131,7 @@ class PrepDocking(object):
                    name_l = ff.next().split()[-1]
             files_l[label]['name'] = name_l
 
-            if not args.noprep:
-                dir_l = 'ligprep/' + label
-                os.mkdir(dir_l)
-                os.chdir(dir_l)
-                files_l_mol2 = ligprep.prepare_ligand(files_l[label]['filename'], args.lpflags)
-                files_l[label]['isomers'] = files_l_mol2
-                os.chdir(curdir)
-            else:
+            if args.noprep:
                 dir_l = 'ligprep/' + label
                 files_l_mol2 = glob(dir_l+'/*_prep_*.mol2')
                 suffix, ext = os.path.splitext(files_l_mol2[0])
@@ -146,6 +139,13 @@ class PrepDocking(object):
                 for jdx in range(len(files_l_mol2)):
                     files_l_mol2_s.append(os.path.abspath(suffix[:-1]+'%s.mol2'%(jdx+1)))
                 files_l[label]['isomers'] = files_l_mol2_s
+            else:
+                dir_l = 'ligprep/' + label
+                os.mkdir(dir_l)
+                os.chdir(dir_l)
+                files_l_mol2 = ligprep.prepare_ligand(files_l[label]['filename'], args.lpflags)
+                files_l[label]['isomers'] = files_l_mol2
+                os.chdir(curdir)
 
         self.files_l = files_l
 

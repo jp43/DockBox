@@ -4,13 +4,10 @@ import shutil
 import subprocess
 import argparse
 
-import ambertools as ambt
+import ambertools
 from MOBPred.tools import mol2
 
-default_mask = ':LIG&!@H='
-default_maskfit = '@CA,C,N,O&!:LIG'
-
-def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=None, cleanup=True, mask=default_mask, maskfit=default_maskfit):
+def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=None, cleanup=True, mask=None, maskfit=None):
     """
     do_clustering(files_r, files_l=None)
 
@@ -21,9 +18,6 @@ def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=No
     files_r: filenames for receptor (.pdb)
     files_l: list of filenames (.mol2) for ligand, when ligand-protein complex
 
-    Steps
-    -----
-    antechamber, parmchk (ligand-protein complex) 
 """
     # get current directory
     curdir = os.getcwd()
@@ -33,40 +27,36 @@ def do_clustering(files_r, files_l, mode='clustering', cutoff=None, nclusters=No
     shutil.rmtree(workdir, ignore_errors=True)
     os.mkdir(workdir)
 
-    # get full path of receptor files
-    if len(files_r) == 1:
-        nfiles_l = len(files_l)
-        files_receptor = [os.path.abspath(files_r[0]) for idx in range(nfiles_l)]
-    else:
-        files_receptor = []
-        for file_r in files_r:
-            files_receptor.append(os.path.abspath(file_r))
-
     # get full path of ligand files
     if len(files_l) > 2:
-        files_ligand = []
-        for file_l in files_l:
-            files_ligand.append(os.path.abspath(file_l))
+        files_l = [os.path.abspath(file_l) for file_l in files_l]
     else:
         raise ValueError('At least 2 ligand files are required for clustering')
 
+    # get full path of receptor files
+    if len(files_r) == 1:
+        nfiles_l = len(files_l)
+        files_r = [os.path.abspath(files_r[0]) for idx in range(nfiles_l)]
+    else:
+        files_r = [os.path.abspath(file_r) for file_r in files_r]
+
     # Check if same number of receptors and ligands 
-    if len(files_receptor) != len(files_ligand):
+    if len(files_r) != len(files_l):
         raise ValueError('Number of receptors and ligands should be the same!')
 
     # change working directory
     os.chdir(workdir)
 
-    new_files_receptor = []
+    new_files_r = []
     # prepare receptors
-    for idx, file_r in enumerate(files_receptor):
+    for idx, file_r in enumerate(files_r):
         new_file_r = 'protein-%s.pdb'%idx
         # prepare receptor
-        ambt.prepare_receptor(new_file_r, file_r, False)
-        new_files_receptor.append(new_file_r)
+        ambertools.prepare_receptor(new_file_r, file_r)
+        new_files_r.append(new_file_r)
 
     # amber clustering
-    do_amber_clustering(new_files_receptor, files_ligand, mode, cutoff=cutoff, nclusters=nclusters, cleanup=cleanup, mask=mask, maskfit=maskfit)
+    do_amber_clustering(new_files_r, files_l, mode, cutoff=cutoff, nclusters=nclusters, cleanup=cleanup, mask=mask, maskfit=maskfit)
     os.chdir(curdir)
 
 def prepare_leap_config_file(filename, files_r, files_l, files_rl, forcefield='leaprc.ff14SB'):
@@ -81,19 +71,21 @@ savepdb p %s\n"""%(file_rl,file_rl)
             linespdb += """p = loadPdb %s
 savepdb p %s\n"""%(file_rl,file_rl)
 
+    name = ambertools.get_ligand_name(files_l[0])
+
     linespdb = linespdb[:-1]
     with open(filename, 'w') as ff:
         contents ="""source %(forcefield)s
 source leaprc.gaff
 loadamberparams frcmod.ionsjc_tip3p
 loadamberparams frcmod.ionslm_1264_tip3p
-LIG = loadmol2 ligand_ref.mol2
+%(name)s = loadmol2 ligand.mol2
 loadamberparams ligand.frcmod
 %(linespdb)s
 quit"""% locals()
         ff.write(contents)
 
-def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering', mask=default_mask, maskfit=default_maskfit):
+def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering', mask=None, maskfit=None):
 
     lines_trajin = ""
     for file_rl in files_rl:
@@ -136,7 +128,7 @@ rms first %(maskfit)s
 trajout ref.rst restart onlyframes 1
 trajout struct.pdb multi\n"""% locals()
             file.write(contents)
-        elif mode == 'rmsd2d':
+        elif mode == 'rmsd':
             lines_rms = ""
             for idx, file_rl in enumerate(files_rl):
                 jdx = idx + 1
@@ -148,23 +140,27 @@ rms ref [ref%(jdx)s] %(mask)s nofit out rmsd_%(jdx)s.txt\n""" %locals()
 %(lines_rms)s"""% locals()
             file.write(contents)
 
-def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=default_mask, maskfit=default_maskfit):
+def do_amber_clustering(files_r, files_l, mode, cutoff=None, nclusters=None, cleanup=False, mask=None, maskfit=None):
 
     # (A) Prepare ligand and PDB files
     os.mkdir('PDB')
     files_rl = []
     for idx, file_l in enumerate(files_l):
-        mol2.update_mol2file(file_l, 'ligand.mol2', ligname='LIG')
-        if len(files_r) != 1:
-            file_r = files_r[idx]
-        else:
-            file_r = files_r[0]
+        file_r = files_r[idx]
         file_rl = 'PDB/protein-ligand-%s.pdb'%(idx+1)
-        ambt.prepare_ligand(file_r, 'ligand.mol2', file_rl)
+        shutil.copyfile(file_l, 'ligand.mol2')
+        ambertools.prepare_ligand(file_r, 'ligand.mol2', file_rl)
         files_rl.append(file_rl)
         os.remove(file_r)
         if idx == 0:
-            shutil.copyfile('ligand.mol2','ligand_ref.mol2')
+            shutil.copyfile('ligand.mol2', 'ligand_ref.mol2')
+
+    if not mask or not maskfit:
+        ligname = ambertools.get_ligand_name('ligand_ref.mol2')
+        if not mask:
+            mask = ':%s&!@H='%ligname
+        if not maskfit:
+            maskfit = '@CA,C,N,O&!:%s'%ligname 
 
     # (B) Run tleap
     prepare_leap_config_file('leap.in', files_r, files_l, files_rl)
@@ -214,7 +210,7 @@ def create_arg_parser():
         type=str,
         dest='mode',
         default='clustering',
-        help = 'Cpptraj mode (clustering, pca, fit)')
+        help = 'Cpptraj mode (clustering, pca, fit, rmsd)')
 
     parser.add_argument('-cleanup',
         dest='cleanup',
@@ -224,12 +220,12 @@ def create_arg_parser():
 
     parser.add_argument('-m',
         dest='mask',
-        default=default_mask,
+        default='',
         help = 'Mask used for clustering or pca')
 
     parser.add_argument('-mf',
         dest='maskfit',
-        default=default_maskfit,
+        default='',
         help = 'Mask used for fitting prior to clustering or pca')
 
     return parser

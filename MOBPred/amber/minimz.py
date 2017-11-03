@@ -114,14 +114,15 @@ def prepare_and_minimize(restraints, keep_hydrogens=False):
 def do_amber_minimization(file_r, files_l, restraints=None, keep_hydrogens=False):
 
     if files_l:
-        ambt.prepare_leap_config_file('leap.in', file_r, 'lig.mol2', 'complex.pdb')
-
         for idx, file_l in enumerate(files_l):
             shutil.copyfile(file_l, 'lig.mol2')
 
             # change ligand name to LIG
             ligname = reader.open('lig.mol2').ligname
             mol2.update_mol2file('lig.mol2', 'lig.mol2', ligname='LIG')
+
+            if idx == 0:
+                ambt.prepare_leap_config_file('leap.in', file_r, 'lig.mol2', 'complex.pdb')
 
             # since the charges of the original .mol2 file are eventually kept using pdb2mol2
             # do not regenerate the charges using antechamber when preparing the ligand

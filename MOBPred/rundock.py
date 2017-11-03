@@ -142,7 +142,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
         # copy receptor in folder
         shutil.copyfile(config.input_file_r, resultdir+'/rec.pdb')
 
-    def run_docking(self, config):
+    def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
 
         if not args.norun:
@@ -176,7 +176,7 @@ constraints=config_d.constraints, cleanup=config_d.cleanup, extract_only=config.
 
         # run docking
         if not config.rescoring.rescore_only:
-            self.run_docking(config)
+            self.run_docking(config, args)
 
         # run rescoring
         if config.rescoring.is_rescoring and not args.norun:

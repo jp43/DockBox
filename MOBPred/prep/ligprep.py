@@ -6,7 +6,7 @@ import glob
 import subprocess
 
 from MOBPred.tools import mol2
-from MOBPred.amber import ambertools as ambt
+from MOBPred.amber import ambertools
 from MOBPred.license import check as chkl
 
 def prepare_ligand(file_l, flags):
@@ -45,9 +45,12 @@ mol2convert -imae %(maefile)s -omol2 %(output_file)s"""%locals()
         file.write(script)
     os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-    # execute ligprep
-    subprocess.check_output('./' + script_name +" &> ligprep.log", shell=True, executable='/bin/bash')
-    mol2.update_mol2file(output_file, suffix + "_prep_.mol2", ligname='LIG', multi=True)
+    # try execute ligprep
+    try:
+        subprocess.check_output('./' + script_name +" &> ligprep.log", shell=True, executable='/bin/bash')
+        mol2.update_mol2file(output_file, suffix + "_prep_.mol2", ligname='LIG', multi=True)
+    except subprocess.CalledProcessError:
+        pass
 
     nmol2files = len(glob.glob(suffix + "_prep_*.mol2"))
     output_files = []
@@ -56,7 +59,7 @@ mol2convert -imae %(maefile)s -omol2 %(output_file)s"""%locals()
     for idx in range(nmol2files):
         mol2file = suffix + "_prep_%i.mol2"%(idx+1)
         mol2file_tmp = suffix + "_prep_%i_pc.mol2"%(idx+1)
-        ambt.run_antechamber(mol2file, mol2file_tmp, at='sybyl')
+        ambertools.run_antechamber(mol2file, mol2file_tmp, at='sybyl')
         shutil.move(mol2file_tmp, mol2file)
         output_files.append(os.path.abspath(mol2file))
 

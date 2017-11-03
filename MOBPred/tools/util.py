@@ -9,5 +9,3 @@ def center_of_geometry(coords):
     cog = cog / num_atom
     return cog
 
-
-

@@ -310,8 +310,8 @@ charge method to estimate the appropriate net charge!!"""
        cmd = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
        subprocess.check_output(cmd, shell=True)
 
-def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None, labels_l=['LIG'], model='TIP3P'):
-
+def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None, model='TIP3P'):
+ 
     solvation_line = ""
     pbradii_lines = ""
     add_ions_lines = ""
@@ -355,15 +355,13 @@ def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=Fals
     if files_l:
         if isinstance(files_l, basestring):
             files_l = [files_l]
-        if len(files_l) != len(labels_l):
-            raise ValueError("Ligand names provided should be the same number as the number of ligands")
         for idx, file_l in enumerate(files_l):
             file_l_prefix, ext = os.path.splitext(file_l)
             file_l_prefix = os.path.basename(file_l_prefix)
-            name = labels_l[idx]
+            name = get_ligand_name(file_l)
             ligand_lines += "\n%(name)s = loadmol2 %(file_l)s\nloadamberparams %(file_l_prefix)s.frcmod"%locals()
         with open(script_name, 'w') as leapf:
-                script ="""source %(forcefield)s
+            script ="""source %(forcefield)s
 source leaprc.gaff
 loadamberparams frcmod.ionsjc_%(suffix_ions_libraries)s
 loadamberparams frcmod.ionslm_1264_%(suffix_ions_libraries)s%(ligand_lines)s%(pbradii_lines)s
@@ -371,10 +369,10 @@ complex = loadPdb %(file_rl)s%(solvation_line)s%(add_ions_lines)s%(remove_water_
 saveAmberParm complex start.prmtop start.inpcrd
 savePdb complex start.pdb
 quit\n"""%locals()
-                leapf.write(script)
+            leapf.write(script)
     else:
         with open(script_name, 'w') as leapf:
-                script ="""source %(forcefield)s
+            script ="""source %(forcefield)s
 loadoff atomic_ions.lib
 loadamberparams frcmod.ionsjc_%(suffix_ions_libraries)s
 loadamberparams frcmod.ionslm_1264_%(suffix_ions_libraries)s%(pbradii_lines)s
@@ -382,7 +380,7 @@ complex = loadPdb %(file_r)s%(solvation_line)s%(add_ions_lines)s
 saveAmberParm complex start.prmtop start.inpcrd
 savePdb complex start.pdb
 quit\n"""%locals()
-                leapf.write(script)
+            leapf.write(script)
 
 def prepare_receptor(file_r_out, file_r, keep_hydrogens=False):
 
