@@ -68,53 +68,29 @@ def get_removed_waters(file_r, files_l, file_c, nwaters_tgt, boxsize, step=0.01,
     removed_waters = [nsolutes + nwaters_best - diff_best + idx + 1 for idx in range(diff_best)]
     return removed_waters, dbest, cbest
 
-def create_pdbfile_with_restraints(file_rl, file_rst, force=50.0):
+def get_solvent_mask(pdbfile, residues='WAT'):
 
-    with open(file_rl, 'r') as startfile:
-         with open(file_rst, 'w') as rstf:
-            for line in startfile:
-                if line.startswith(('ATOM', 'HETATM')):
-                    atomname = line[12:16].strip()
-                    resname = line[17:20].strip()
-                    if resname not in ['WAT', 'LIG'] and atomname in ['C', 'CA', 'N', 'O']:
-                        newline = line[0:30] + '%8.3f'%force + line[38:]
-                    else:
-                        newline = line[0:30] + '%8.3f'%0.0 + line[38:]
-                else:
-                    newline = line
-                rstf.write(newline)
+    solvent_residues = map(str.strip, residues.split(','))
 
-def get_masks(pdbfile, ligname='LIG'):
-
-    proton_info = load_PROTON_INFO()
-
-    resnum_prot = None
-    resnum_wat = None
-    resnum_lig = None
+    # set residue numbers
+    resnum = None
     with open(pdbfile) as pdbf:
         for line in pdbf:
             if line.startswith(('ATOM', 'HETATM')):
                 resname = line[17:20].strip()
-                if resname == ligname and not resnum_lig:
-                    resnum_lig = line[22:27].strip()
-                elif resname == 'WAT':
-                    if not resnum_wat:
-                        resnum_wat_in = line[22:27].strip()
-                    resnum_wat = line[22:27].strip()
-                elif resname in proton_info:
-                    if not resnum_prot:
-                        resnum_prot_in = line[22:27].strip()
-                    resnum_prot = line[22:27].strip()
+                if resname in solvent_residues:
+                    if not resnum:
+                        resnum_in = line[22:27].strip()
+                    resnum = line[22:27].strip()
 
-    resnum_wat_fin = resnum_wat
-    resnum_prot_fin = resnum_prot
-    mask_wat = ':%s-%s'%(resnum_wat_in,resnum_wat_fin)
-    mask_prot = ':%s-%s'%(resnum_prot_in,resnum_prot_fin)
-    mask_lig = ':%s'%resnum_lig
+    resnum_fin = resnum
+    solvent_mask = ':%s-%s'%(resnum_in, resnum_fin)
 
-    return mask_prot, mask_lig, mask_wat
+    return solvent_mask
 
 def get_ions_number(logfile, concentration=0.15):
+
+    # Nions = Cions * Nwater * 1/55.5 where 55.5 M is the concentration of pure water
 
     with open(logfile, 'r') as lf:
         for line in lf:
@@ -122,7 +98,7 @@ def get_ions_number(logfile, concentration=0.15):
             if len(line_s) > 2:
                 if line_s[0] == 'Added' and line_s[2] == 'residues.':
                     nresidues = int(line_s[1])
-                    ncl = int(round(nresidues * concentration * 0.0187))
+                    ncl = int(round(nresidues * concentration / 55.5))
                     nna = ncl
             if line.startswith("WARNING: The unperturbed charge"):
                 net_charge = int(round(float(line_s[7])))
@@ -272,14 +248,13 @@ def correct_hydrogen_names(file_r, keep_hydrogens=False):
     shutil.move('tmp.pdb', file_r)
     #print "Number of atom lines removed: %s" %nremoved
 
-def run_antechamber(infile, outfile, at='gaff', c='gas'):
+def run_antechamber(infile, outfile, at='gaff', c='gas', logfile='antechamber.log'):
     """ use H++ idea of running antechamber multiple times with bcc's 
 charge method to estimate the appropriate net charge!!"""
 
     suffix, ext = os.path.splitext(infile)
     ext = ext[1:]
 
-    logfile = 'antchmb.log'
     max_net_charge = 30
     net_charge = [0]
 
@@ -289,9 +264,9 @@ charge method to estimate the appropriate net charge!!"""
 
         for nc in net_charge:
             iserror = False
-            cmd = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y > %(logfile)s'%locals()
-            #print cmd
-            subprocess.call(cmd, shell=True)
+            command = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -c %(c)s -nc %(nc)s -du y -pf y >> %(logfile)s'%locals()
+            subprocess.check_call('echo "# command used: %(command)s" > %(logfile)s'%locals(), shell=True) # print command in logfile
+            subprocess.check_call(command, shell=True)
             with open(logfile, 'r') as lf:
                 for line in lf:
                     line_st = line.strip()
@@ -307,8 +282,8 @@ charge method to estimate the appropriate net charge!!"""
         if iserror:
             raise ValueError("No appropriate net charge was found to run antechamber's %s charge method"%c)
     else: # do not regenerate charges
-       cmd = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
-       subprocess.check_output(cmd, shell=True)
+       command = 'antechamber -i %(infile)s -fi %(ext)s -o %(outfile)s -fo mol2 -at %(at)s -du y -pf y > %(logfile)s'%locals()
+       subprocess.check_output(command, shell=True)
 
 def prepare_leap_config_file(script_name, file_r, files_l, file_rl, solvate=False, PBRadii=None, forcefield='leaprc.ff14SB', nna=0, ncl=0, distance=10.0, closeness=1.0, remove=None, model='TIP3P'):
  

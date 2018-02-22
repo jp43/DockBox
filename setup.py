@@ -63,7 +63,7 @@ def check_import(pkgname, pkgver):
     globals()[pkgname] = mod
 
 setup(name='MOBPredictor',
-      packages=['MOBPred', 'MOBPred.amber', 'MOBPred.license', 'MOBPred.tools', 'MOBPred.prep'],
+      packages=['MOBPred', 'MOBPred.amber', 'MOBPred.license', 'MOBPred.tools'],
       package_data = {'MOBPred.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
       scripts = ['bin/rundock', 'bin/prepvs', 'bin/runanlz', 'bin/minimz', 'bin/cluster_poses'],
       license='LICENSE.txt',

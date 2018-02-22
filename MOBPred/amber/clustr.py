@@ -85,7 +85,7 @@ loadamberparams ligand.frcmod
 quit"""% locals()
         ff.write(contents)
 
-def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering', mask=None, maskfit=None):
+def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None, mode='clustering', mask=None, maskfit=None, prmtop='protein-ligand.prmtop'):
 
     lines_trajin = ""
     for file_rl in files_rl:
@@ -106,13 +106,13 @@ def prepare_cpptraj_config_file(filename, files_rl, cutoff=None, nclusters=None,
             else:
                 option = ""
 
-            contents = """parm protein-ligand.prmtop
+            contents = """parm %(prmtop)s
 %(lines_trajin)s
 rms first %(maskfit)s
 cluster %(mask)s nofit%(option)s summary summary.dat info info.dat\n"""% locals()
             file.write(contents)
         elif mode == 'pca':
-            contents = """parm protein-ligand.prmtop
+            contents = """parm %(prmtop)s
 %(lines_trajin)s
 rms first %(maskfit)s
 createcrd md-trajectories
@@ -122,7 +122,7 @@ runanalysis diagmatrix covar out evecs.dat vecs 2 name myEvecs
 crdaction md-trajectories projection md-pca modes myEvecs %(mask)s out pca.out\n"""% locals()
             file.write(contents)
         elif mode == 'fit':
-            contents = """parm protein-ligand.prmtop
+            contents = """parm %(prmtop)s
 %(lines_trajin)s
 rms first %(maskfit)s
 trajout ref.rst restart onlyframes 1
