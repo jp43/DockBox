@@ -7,7 +7,7 @@ import subprocess
 import socket
 import method
 
-from license import check as chkl
+import license
 
 required_programs = ['prepwizard', 'ifd', 'ligprep', 'pdbconvert']
 
@@ -32,15 +32,14 @@ class Ifd(method.DockingMethod):
         if 'tmpdir' in self.options:
             self.tmpdirline = "export SCHRODINGER_TMPDIR=%s"%self.options['tmpdir']
 
-
     def write_docking_script(self, filename, file_r, file_l, file_q):
 
         locals().update(self.options)
 
-        prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
+        prepwizard_cmd = license.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
 
         hostname = socket.gethostname()
-        ifd_cmd = chkl.eval("ifd -WAIT -SUBHOST %(hostname)s -NPRIMECPU 1 -NGLIDECPU 1 dock.inp"%locals(), 'schrodinger')
+        ifd_cmd = license.eval("ifd -WAIT -SUBHOST %(hostname)s -NPRIMECPU 1 -NGLIDECPU 1 dock.inp"%locals(), 'schrodinger')
 
         tmpdirline = self.tmpdirline
 

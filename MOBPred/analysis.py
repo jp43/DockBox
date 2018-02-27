@@ -9,7 +9,7 @@ import time
 import pandas as pd
 
 from sklearn import preprocessing
-from MOBPred.amber import clustr
+from mdtools.amber import clustr
 
 class DockAnalysis(object):
 

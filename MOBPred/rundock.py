@@ -11,7 +11,8 @@ import time
 
 import setup
 import rescoring
-from tools import mol2
+
+from mdtools.utility import mol2
 
 class DockingConfig(object):
 

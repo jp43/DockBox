@@ -2,15 +2,15 @@ import os
 import glob
 import method
 
-from tools import reader
-from tools import mol2
+from tools.utility import reader
+from tools.utility import mol2
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
 'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
 
-# per default, ligand partial charges are kept as they are in the original .mol2 file
+# per default, ligand partial charges are kept as they are in the original .mol2 file 
 # however, we might want to generate them using with Chimera. In that case, chimera
 # works like antechamber, use simply addcharge nonstd :LIG net-charge method am1
 # before writing the mol2 file where net-charge should be computed by running 

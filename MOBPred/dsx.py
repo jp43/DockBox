@@ -1,7 +1,8 @@
 import os
 import sys
 import method
-from tools import mol2
+
+from mdtools.utility import mol2
 
 required_programs = ['dsx']
 

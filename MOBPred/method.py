@@ -4,8 +4,8 @@ import glob
 import shutil
 import subprocess
 
-from amber import minimz as mn
-from tools import mol2 as mol2t
+from mdtools.amber import minimz
+from mdtools.utility import mol2
 
 class DockingMethod(object):
 
@@ -141,7 +141,7 @@ class DockingMethod(object):
         out_of_range_idxs = []
         for jdx, file_l in enumerate(files_l):
             isout = False
-            coords = mol2t.get_coordinates(file_l)
+            coords = mol2.get_coordinates(file_l)
             for coord in coords:
                 for idx, xyz in enumerate(coord):
                     # check if the pose is out of the box
@@ -179,7 +179,7 @@ class DockingMethod(object):
             else:
                 restraints = None
             # do energy minimization on ligand hydrogens
-            mn.do_minimization(file_r, files_l=files_l, restraints=restraints, keep_hydrogens=True)
+            minimz.do_minimization(file_r, files_l=files_l, restraints=restraints, keep_hydrogens=True)
 
         # extract results from minimization and purge out
         for idx in range(n_files_l):

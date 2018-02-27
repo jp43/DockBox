@@ -3,12 +3,13 @@ import sys
 import glob
 import shutil
 import subprocess
-
 import numpy as np
+
 import method
-from tools import reader
-from tools import mol2
-from license import check as chkl
+import license
+
+from mdtools.utility import reader
+from mdtools.utility import mol2
 
 required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
 
@@ -53,13 +54,13 @@ class Glide(method.DockingMethod):
 
         if self.use_prepwizard:
             # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-            prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
+            prepwizard_cmd = license.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
         else:
             prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
 
         # prepare grid and docking cmd
-        glide_grid_cmd = chkl.eval("glide grid.in", 'schrodinger')
-        glide_dock_cmd = chkl.eval("glide dock.in", 'schrodinger')
+        glide_grid_cmd = license.eval("glide grid.in", 'schrodinger')
+        glide_dock_cmd = license.eval("glide dock.in", 'schrodinger')
 
         tmpdirline = self.tmpdirline
     
@@ -139,14 +140,14 @@ PRECISION %(precision)s" > dock.in
 
         if self.use_prepwizard:
             # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-            prepwizard_cmd = chkl.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
+            prepwizard_cmd = license.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
         else:
             prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
 
 
         # prepare grid and scoring cmd
-        glide_grid_cmd = chkl.eval("glide grid.in", 'schrodinger') # grid prepare
-        glide_dock_cmd = chkl.eval("glide dock.in", 'schrodinger') # docking command
+        glide_grid_cmd = license.eval("glide grid.in", 'schrodinger') # grid prepare
+        glide_dock_cmd = license.eval("glide dock.in", 'schrodinger') # docking command
         tmpdirline = self.tmpdirline
 
         with open(filename, 'w') as file:

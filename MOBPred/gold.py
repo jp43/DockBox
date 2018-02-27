@@ -5,9 +5,10 @@ import shutil
 import subprocess
 
 import method
-from tools import reader
-from tools import mol2
-from license import check as chkl
+import license
+
+from mdtools.utility import reader
+from mdtools.utility import mol2
 
 required_programs = ['gold_auto']
 
@@ -30,7 +31,7 @@ class Gold(method.DockingMethod):
 
         locals().update(self.options)
 
-        dock_cmd = chkl.eval("gold_auto gold.conf", 'gold') # cmd for docking
+        dock_cmd = license.eval("gold_auto gold.conf", 'gold') # cmd for docking
 
         # write autodock script
         with open(filename, 'w') as file:
