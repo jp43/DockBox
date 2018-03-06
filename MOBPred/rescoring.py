@@ -34,7 +34,7 @@ class Rescoring(object):
         else:
             return default
 
-    def run(self, file_r, posedir, file_q):
+    def run(self, file_r, posedir):
         """Run rescoring on docking poses"""
     
         tcpu1 = time.time()
@@ -46,7 +46,8 @@ class Rescoring(object):
         else:
             with open(posedir+'/info.dat') as inff:
                 nposes = inff.next()
-                nposes = map(int, nposes.strip().split())
+                nposes = nposes[1:] # the first character is a # sign
+                nposes = map(int, nposes.split(','))
 
         curdir = os.getcwd()
         workdir = 'rescoring'
@@ -77,7 +78,7 @@ class Rescoring(object):
                 DockingClass = getattr(sys.modules[program], program.capitalize())
 
                 DockingInstance = DockingClass(instance, site, options)
-                outputfile = DockingInstance.run_rescoring(file_r, files_l, file_q)
+                outputfile = DockingInstance.run_rescoring(file_r, files_l)
 
                 # cat output in file (cat instead of copying because of the binding sites)
                 subprocess.check_output('cat %s >> %s'%(outputfile,name+'.score'), shell=True, executable='/bin/bash')

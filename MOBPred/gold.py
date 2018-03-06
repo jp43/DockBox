@@ -31,7 +31,7 @@ class Gold(method.DockingMethod):
 
         locals().update(self.options)
 
-        dock_cmd = license.eval("gold_auto gold.conf", 'gold') # cmd for docking
+        dock_cmd = license.wrap_command("gold_auto gold.conf", 'gold') # cmd for docking
 
         # write autodock script
         with open(filename, 'w') as file:

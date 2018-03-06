@@ -32,7 +32,7 @@ class Ifd(method.DockingMethod):
         if 'tmpdir' in self.options:
             self.tmpdirline = "export SCHRODINGER_TMPDIR=%s"%self.options['tmpdir']
 
-    def write_docking_script(self, filename, file_r, file_l, file_q):
+    def write_docking_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
 

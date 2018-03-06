@@ -48,19 +48,19 @@ class Glide(method.DockingMethod):
         else:
             raise ValueError("Value for use_prepwizard non recognized")
             
-    def write_docking_script(self, filename, file_r, file_l, file_q):
+    def write_docking_script(self, filename, file_r, file_l):
         """ Write docking script for glide """
         locals().update(self.options)
 
         if self.use_prepwizard:
             # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-            prepwizard_cmd = license.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
+            prepwizard_cmd = license.wrap_command("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')    
         else:
             prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
 
         # prepare grid and docking cmd
-        glide_grid_cmd = license.eval("glide grid.in", 'schrodinger')
-        glide_dock_cmd = license.eval("glide dock.in", 'schrodinger')
+        glide_grid_cmd = license.wrap_command("glide grid.in", 'schrodinger')
+        glide_dock_cmd = license.wrap_command("glide dock.in", 'schrodinger')
 
         tmpdirline = self.tmpdirline
     
@@ -132,7 +132,7 @@ PRECISION %(precision)s" > dock.in
         else:
             line = ""
 
-    def write_rescoring_script(self, filename, file_r, files_l, file_q):
+    def write_rescoring_script(self, filename, file_r, files_l):
         """Rescore using Glide SP scoring function"""
         locals().update(self.options)
 
@@ -140,14 +140,14 @@ PRECISION %(precision)s" > dock.in
 
         if self.use_prepwizard:
             # prepare protein cmd (the protein structure is already assumed to be minimized/protonated with prepwizard)
-            prepwizard_cmd = license.eval("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
+            prepwizard_cmd = license.wrap_command("prepwizard -fix %(file_r)s target.mae"%locals(), 'schrodinger')
         else:
             prepwizard_cmd = "structconvert -ipdb %(file_r)s -omae target.mae"%locals()
 
 
         # prepare grid and scoring cmd
-        glide_grid_cmd = license.eval("glide grid.in", 'schrodinger') # grid prepare
-        glide_dock_cmd = license.eval("glide dock.in", 'schrodinger') # docking command
+        glide_grid_cmd = license.wrap_command("glide grid.in", 'schrodinger') # grid prepare
+        glide_dock_cmd = license.wrap_command("glide dock.in", 'schrodinger') # docking command
         tmpdirline = self.tmpdirline
 
         with open(filename, 'w') as file:

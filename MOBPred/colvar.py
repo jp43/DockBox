@@ -21,7 +21,7 @@ class Colvar(method.ScoringMethod):
             else:
                 self.options['residues'] = '[' + self.options['residues'] + ']'
 
-    def write_rescoring_script(self, filename, file_r, file_l, file_q):
+    def write_rescoring_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
 

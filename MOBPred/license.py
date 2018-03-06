@@ -3,7 +3,7 @@ import os
 import time
 import subprocess
 
-def eval(cmd, prgm):
+def wrap_command(cmd, prgm):
 
     exe = os.path.abspath(__file__)
     if exe[-1] == 'c':

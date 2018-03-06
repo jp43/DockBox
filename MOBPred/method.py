@@ -1,6 +1,6 @@
 import os
 import stat
-import glob
+from glob import glob
 import shutil
 import subprocess
 
@@ -17,7 +17,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, file_q, minimize=False, constraints=True, cleanup=False, extract_only=False, norun=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False, prepare_only=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -43,10 +43,10 @@ class DockingMethod(object):
 
             # (A) run docking
             script_name = "run_" + self.program + ".sh"
-            self.write_docking_script(script_name, file_r, file_l, file_q)
+            self.write_docking_script(script_name, file_r, file_l)
             os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
-            if norun:
+            if prepare_only:
                 return
 
             try:
@@ -58,9 +58,10 @@ class DockingMethod(object):
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
 
+
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
-            self.minimize_extracted_poses(file_r, constraints)
+            self.minimize_extracted_poses(file_r, cleanup=cleanup)
         self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
@@ -70,7 +71,7 @@ class DockingMethod(object):
         os.chdir(curdir)
         print "Docking with %s done."%self.program.capitalize()
 
-    def run_rescoring(self, file_r, files_l, file_q):
+    def run_rescoring(self, file_r, files_l):
         """Rescore multiple ligands on one receptor"""
 
         single_run_programs = ['glide']
@@ -103,7 +104,7 @@ class DockingMethod(object):
             for idx, file_l in enumerate(files_l):
                 # (A) write script
                 script_name = "run_scoring_" + self.program + ".sh"
-                self.write_rescoring_script(script_name, file_r, file_l, file_q)
+                self.write_rescoring_script(script_name, file_r, file_l)
                 os.chmod(script_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IXUSR)
 
                 # (B) run scoring method
@@ -125,15 +126,22 @@ class DockingMethod(object):
         os.chdir(curdir)
         return scordir + '/score.out'
 
-    def remove_out_of_range_poses(self, file_s):
-        """Get rid off poses which were predicted outside the box"""
+    def get_output_files_l(self):
+
+        nfiles_l = len(glob('lig-*.mol2'))
 
         files_l = []
-        n_files_l = len(glob.glob('lig-*.mol2'))
-        for idx in range(n_files_l):
+        for idx in range(nfiles_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
             if os.path.isfile(mol2file):
                 files_l.append(mol2file)
+
+        return files_l
+
+    def remove_out_of_range_poses(self, file_s):
+        """Get rid off poses which were predicted outside the box"""
+
+        files_l = self.get_output_files_l()
 
         center = map(float, self.site[1].split(','))
         boxsize = map(float, self.site[2].split(','))
@@ -142,7 +150,7 @@ class DockingMethod(object):
         for jdx, file_l in enumerate(files_l):
             isout = False
             coords = mol2.get_coordinates(file_l)
-            for coord in coords:
+            for kdx, coord in enumerate(coords):
                 for idx, xyz in enumerate(coord):
                     # check if the pose is out of the box
                     if abs(float(xyz)-center[idx]) > boxsize[idx]*1./2:
@@ -163,41 +171,34 @@ class DockingMethod(object):
 
                 shutil.move('score.tmp.out', file_s)
 
-    def minimize_extracted_poses(self, file_r, constraints):
+    def minimize_extracted_poses(self, file_r, cleanup=False):
         """Perform AMBER minimization on extracted poses"""
 
-        files_l = []
-        n_files_l = len(glob.glob('lig-*.mol2'))
-        for idx in range(n_files_l):
-            mol2file = 'lig-%s.mol2'%(idx+1)
-            if os.path.isfile(mol2file):
-                files_l.append(mol2file)
+        files_l = self.get_output_files_l()
+        nfiles_l = len(files_l)
 
         if files_l:
-            if constraints:
-                restraints = ':LIG'
-            else:
-                restraints = None
             # do energy minimization on ligand hydrogens
-            minimz.do_minimization(file_r, files_l=files_l, restraints=restraints, keep_hydrogens=True)
+            minimz.do_minimization(file_r, files_l=files_l, keep_hydrogens=True)
 
         # extract results from minimization and purge out
-        for idx in range(n_files_l):
-            mol2file = 'lig-%s.out.mol2'%(idx+1)
+        for idx in range(nfiles_l):
+            mol2file = 'lig-%s-out.mol2'%(idx+1)
             if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
                 shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
 
-        shutil.rmtree('minimz', ignore_errors=True)
+        if cleanup:
+            shutil.rmtree('minimz', ignore_errors=True)
 
-    def write_rescoring_script(self, script_name, file_r, file_l, file_q):
+    def write_rescoring_script(self, script_name, file_r, file_l):
         pass
 
     def extract_rescoring_results(self, filename):
         pass
 
-    def write_docking_script(self, script_name, file_r, file_l, file_q):
+    def write_docking_script(self, script_name, file_r, file_l):
         pass
 
     def extract_docking_results(self, file_r, file_l, file_s, input_file_r):
@@ -208,7 +209,7 @@ class DockingMethod(object):
 
 class ScoringMethod(DockingMethod):
 
-    def run_docking(self, file_r, file_l, file_q, minimize=False, cleanup=False, extract_only=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False):
         pass
 
     def remove_out_of_range_poses(self, file_s):

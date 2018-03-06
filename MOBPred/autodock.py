@@ -13,8 +13,8 @@ default_settings = {'ga_run': '100', 'spacing': '0.3'}
 
 class ADBased(method.DockingMethod):
 
-    def write_rescoring_script(self, filename, file_r, file_l, file_q):
-        self.write_docking_script(filename, file_r, file_l, file_q, rescoring=True)
+    def write_rescoring_script(self, filename, file_r, file_l):
+        self.write_docking_script(filename, file_r, file_l, rescoring=True)
 
     def update_output_mol2files(self, sample=None):
         # number of mol2 files generated
@@ -72,7 +72,7 @@ if lines_to_be_removed:
 import shutil
 from tempfile import mkstemp
 
-from MOBPred.amber.ambertools import load_atomic_ions
+from mdtools.amber.ambertools import load_atomic_ions
 
 # first all residues are supposed to be recognized
 are_unrecognized_residues = False
@@ -88,7 +88,6 @@ with open('prepare_receptor4.log', 'r') as logf:
             non_standard_residues.append(resname)
 
 if are_unrecognized_residues:
-
     if len(sys.argv) > 2:
        # if some atoms are not recognized, we look if a file with charges has been specified
         mode = 'custom'
@@ -174,17 +173,14 @@ class Autodock(ADBased):
             if name in options:
                 self.autodock_options[name] = options[name]
 
-    def write_docking_script(self, filename, file_r, file_l, file_q, rescoring=False):
+    def write_docking_script(self, filename, file_r, file_l, rescoring=False):
 
         # create flags with specified options for autogrid and autodock
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
         autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autodock_options.iteritems()])
 
-        self.write_check_lig_pdbqt_script()
-        self.write_check_nonstd_residues_script()
-
-        file_q_str = ''
-        if file_q: file_q_str = str(file_q)
+        #self.write_check_lig_pdbqt_script()
+        #self.write_check_nonstd_residues_script()
 
         if not rescoring:
             if 'ga_num_evals' not in self.options:
@@ -205,13 +201,11 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
 set -e
 # generate .pdbqt files
 
-# ligand
+# prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_lig_pdbqt.py lig.pdbqt
 
-# receptor
+# prepare receptor
 prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
-python check_nonstd_residues.py target.pdbqt %(file_q_str)s
 
 # run autogrid
 prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
@@ -232,11 +226,9 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_lig_pdbqt.py lig.pdbqt
 
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log
-  python check_nonstd_residues.py target.pdbqt %(file_q_str)s
 fi
 
 # run autogrid

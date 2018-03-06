@@ -118,4 +118,3 @@ class DockingSetup(ConfigSetup):
 
         self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
         self.minimize = self.is_yesno_option(config, 'DOCKING', 'minimize')
-        self.constraints = self.is_yesno_option(config, 'DOCKING', 'constraints', default=True)

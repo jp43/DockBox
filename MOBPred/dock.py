@@ -2,8 +2,8 @@ import os
 import glob
 import method
 
-from tools.utility import reader
-from tools.utility import mol2
+from mdtools.utility import reader
+from mdtools.utility import mol2
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
 
@@ -75,14 +75,12 @@ shutil.move(abs_path, sys.argv[1])"""
             file.write(script)
 
 
-    def write_docking_script(self, filename, file_r, file_l, file_q):
+    def write_docking_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
         self.write_shift_coordinates_script()
 
         charges_update_lines = ""
-        if file_q:
-            charges_update_lines += "python check_nonstd_residues.py target.mol2 %s"%str(file_q)
 
         # write autodock script
         with open(filename, 'w') as file:

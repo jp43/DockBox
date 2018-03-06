@@ -10,7 +10,7 @@ default_settings = {'pot_dir': None, 'other_flags': None}
 
 class Dsx(method.ScoringMethod):
 
-    def write_rescoring_script(self, filename, file_r, file_l, file_q):
+    def write_rescoring_script(self, filename, file_r, file_l):
 
         locals().update(self.options)
 
