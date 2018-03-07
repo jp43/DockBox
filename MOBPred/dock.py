@@ -273,14 +273,14 @@ dock6 -i dock6.in"""% locals()
         with open('shift_lig_coords.py', 'w') as file:
             script ="""import sys
 import numpy as np
-from MOBPred.tools import mol2 as mol2t
+from mdtools.utility import mol2
 
 # read mol2 file
-mol2 = sys.argv[1]
-newmol2 = sys.argv[2]
+mol2file = sys.argv[1]
+new_mol2file = sys.argv[2]
 center = map(float,(sys.argv[3]).split())
 
-coords = np.array(mol2t.get_coordinates(mol2))
+coords = np.array(mol2.get_coordinates(mol2file))
 
 def center_of_geometry(coords):
     cog = np.array([0.0, 0.0, 0.0])
@@ -294,8 +294,8 @@ cog = center_of_geometry(coords)
 coords = coords - (cog - center)
 
 idx = 0
-with open(newmol2, 'w') as nmol2f:
-    with open(mol2, 'r') as mol2f:
+with open(new_mol2file, 'w') as nmol2f:
+    with open(mol2file, 'r') as mol2f:
         is_structure = False
         for line in mol2f:
             if line.startswith('@<TRIPOS>ATOM'):
