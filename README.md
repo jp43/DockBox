@@ -107,26 +107,26 @@ Any software intended to be used in conjunction with MOBPred should be installed
 
     # Amber 14
     export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
-    PATH=$AMBERHOME/bin:$PATH
+    PATH=$PATH:$AMBERHOME/bin
 
     # AD and ADV
-    PATH=/opt/mgltools/1.5.4:/opt/mgltools/1.5.4/MGLToolsPckgs/AutoDockTools/Utilities24:$PATH
-    PATH=/pmshare/vina/autodock_vina_1_1_2_linux_x86/bin:$PATH
-    PATH=/opt/autodock/4.2.3/bin:$PATH
+    PATH=$PATH:/opt/mgltools/1.5.4:/opt/mgltools/1.5.4/MGLToolsPckgs/AutoDockTools/Utilities24
+    PATH=$PATH:/pmshare/vina/autodock_vina_1_1_2_linux_x86/bin
+    PATH=$PATH:/opt/autodock/4.2.3/bin
 
     # Glide
     export SCHRODINGER=/nfs/r720-1/preto/tools/schrodinger2015-4
-    PATH=/nfs/r720-1/preto/tools/schrodinger2015-4:$PATH
-    PATH=/nfs/r720-1/preto/tools/schrodinger2015-4/utilities:$PATH
+    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4
+    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4/utilities
 
     # MOE2015
     export MOE=/nfs/r720-1/preto/tools/moe2015
-    PATH=/nfs/r720-1/preto/tools/moe2015/bin:$PATH
+    PATH=$PATH:/nfs/r720-1/preto/tools/moe2015/bin
 
     # DOCK 6
-    PATH=/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin:$PATH
-    PATH=/nfs/r720-1/preto/tools/dms:$PATH
-    PATH=/nfs/r720-1/preto/tools/src/dock6/bin:$PATH
+    PATH=$PATH:/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin
+    PATH=$PATH:/nfs/r720-1/preto/tools/dms
+    PATH=$PATH:/nfs/r720-1/preto/tools/src/dock6/bin
 
     export PATH
 
