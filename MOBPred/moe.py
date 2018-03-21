@@ -12,7 +12,7 @@ from mdtools.utility import mol2
 required_programs = ['moebatch']
 
 default_settings = {'placement': 'Triangle Matcher', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
-'maxpose': '5', 'remaxpose': '1', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
+'maxpose': '30', 'remaxpose': '5', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
 
 class Moe(method.DockingMethod):
 
