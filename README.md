@@ -126,7 +126,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
     # DOCK 6
     PATH=$PATH:/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin
     PATH=$PATH:/nfs/r720-1/preto/tools/dms
-    PATH=$PATH:/nfs/r720-1/preto/tools/src/dock6/bin
+    PATH=$PATH:/nfs/r720-1/preto/src/dock6/bin
 
     export PATH
 
