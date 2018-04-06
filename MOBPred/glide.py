@@ -212,5 +212,3 @@ PRECISION SP" > dock.in
             for sc in scores:
                 print >> ffout, sc
 
-    def cleanup(self):
-        pass

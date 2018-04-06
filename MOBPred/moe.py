@@ -485,9 +485,6 @@ endfunction;" > moe_rescoring.svl
                 else:
                     print >> sf, 'NaN'
 
-    def cleanup(self):
-        pass
-
 def write_sitefinder_script(filename, file_r, args):
     
     write_moe_sitefinder_script('sitefinder.svl', file_r, args)

@@ -1,7 +1,7 @@
 import os
-import glob
 import method
 
+from glob import glob
 from mdtools.utility import reader
 from mdtools.utility import mol2
 
@@ -260,7 +260,7 @@ dock6 -i dock6.in"""% locals()
 
     def cleanup(self):
         # remove map files
-        for ff in glob.glob('grid*'):
+        for ff in glob('grid*'):
             os.remove(ff)
 
         filenames = ['selected_spheres.sph', 'target_noH.ms']

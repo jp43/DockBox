@@ -100,6 +100,3 @@ vina --score_only --config vina.config > vina.out"""% locals()
         for ff in filenames:
             if os.path.isfile(ff):
                 os.remove(ff)
-  
-    def cleanup(self):
-        pass

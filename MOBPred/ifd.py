@@ -1,6 +1,5 @@
 import os
 import sys
-import glob
 import shutil
 import glide
 import subprocess
@@ -159,6 +158,3 @@ STAGE SCORING
 
 def extract_docking_results(config):
     sys.exit()
-
-def cleanup(config):
-    pass

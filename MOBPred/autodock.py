@@ -1,10 +1,10 @@
 import os
 import sys
 import subprocess
-import glob
 import shutil
 import method
 
+from glob import glob
 from mdtools.utility import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
@@ -18,7 +18,7 @@ class ADBased(method.DockingMethod):
 
     def update_output_mol2files(self, sample=None):
         # number of mol2 files generated
-        n_files_l = len(glob.glob('lig-*.mol2'))
+        n_files_l = len(glob('lig-*.mol2'))
 
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
@@ -287,8 +287,8 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 
     def cleanup(self):
         # remove map files
-        for ff in glob.glob('*map*'):
+        for ff in glob('*map*'):
             os.remove(ff)
 
-        for ff in glob.glob('*pdbqt'):
+        for ff in glob('*pdbqt'):
             os.remove(ff)

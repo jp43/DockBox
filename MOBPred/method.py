@@ -119,6 +119,10 @@ class DockingMethod(object):
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
                     self.extract_rescoring_results('score.out')
+
+            # (D) remove intermediate files if required
+            if cleanup:
+                self.cleanup()
         else:
             # if no files provided, create an empty score.out file
             open('score.out', 'w').close()

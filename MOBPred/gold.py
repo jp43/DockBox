@@ -1,12 +1,12 @@
 import os
 import sys
-import glob
 import shutil
 import subprocess
 
 import method
 import license
 
+from glob import glob
 from mdtools.utility import reader
 from mdtools.utility import mol2
 
@@ -117,14 +117,7 @@ protein_datafile = %(file_r)s" > gold.conf
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
-        #for mol2file in (glob.glob('ranked_*.mol2'):
-        #    os.remove(mol2file)
-
-        for idx, mol2file in enumerate(sorted(glob.glob('gold_soln_*_m1_*.mol2'))):
+        for idx, mol2file in enumerate(sorted(glob('gold_soln_*_m1_*.mol2'))):
             output_mol2file = 'lig-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, output_mol2file, remove='LP')
-        #    os.remove(mol2file)
-
-    def cleanup(self):
-        pass
 
