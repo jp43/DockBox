@@ -1,11 +1,11 @@
 Mode-of-binding Predictor
 =========================
 
-Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking softwares (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different softwares or combine them in a consensus docking or consensus scoring strategy.
+Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking software (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different software or combine them in a consensus docking or consensus scoring strategy.
 
-Note that the softwares that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine MOBPred is set up.
+Note that the software that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine MOBPred is set up.
 
-Below is a list of all the programs which can be used together with MOBPred. 
+Below is a list of all the programs which can be used by MOBPred. 
 
 * **Structure preparation/optimization**:
 
@@ -103,7 +103,7 @@ Any software intended to be used in conjunction with MOBPred should be installed
 * **MOE2015**:
   * moebatch
 
-***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking softwares mentioned above have already been installed. Below is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
+***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking programs mentioned above have already been installed. Below is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
 
     # Amber 14
     export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
@@ -137,7 +137,7 @@ The Python Distutils are used to build and install MOBPred, so it is fairly simp
 
 1. First, make sure that you have the NumPy and pandas modules. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
 
-2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...)  are accessible through your PATH variable. For pharmamatrix users, see section **prerequisites**.
+2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...) are accessible through your PATH variable. For pharmamatrix users, see section **prerequisites**.
 
 3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
 
