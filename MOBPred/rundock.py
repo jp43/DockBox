@@ -9,10 +9,12 @@ import ConfigParser
 import time
 import pandas as pd
 from glob import glob
+import subprocess
 
 from mdtools.utility import mol2
 
 import setup
+
 import rescoring
 
 class DockingConfig(object):
@@ -47,8 +49,67 @@ class DockingConfig(object):
             raise IOError("File %s not found!"%(self.input_file_r))
 
         self.docking = setup.DockingSetup(config)
-        self.extract_only = args.extract_only
-        self.rescoring = rescoring.Rescoring(config, args)
+        self.rescoring = setup.RescoringSetup(config)
+
+class Rescoring(object):
+
+    def run_rescoring(self, config, args):
+        """Run rescoring on docking poses"""
+
+        tcpu1 = time.time()
+
+        file_r = config.input_file_r
+        config_r = config.rescoring
+        posedir = args.posedir
+
+        print "Starting rescoring..."
+
+        # look for results folder
+        if not os.path.isdir(posedir):
+            raise IOError('no folder %s found!'%posedir)
+        else:
+            with open(posedir+'/info.dat') as inff:
+                nposes = inff.next()
+                nposes = nposes[1:] # the first character is a # sign
+                nposes = map(int, nposes.split(','))
+
+        curdir = os.getcwd()
+        workdir = 'rescoring'
+        if not os.path.exists(workdir):
+            os.mkdir(workdir)
+
+        os.chdir(workdir)
+        # iterate over rescoring instances
+        for instance, program, options in config_r.instances:
+
+            # possibility of renaming the folder and output file 
+            if 'name' in options:
+                name = options['name']
+            else:
+                name = instance
+
+            # remove old scoring file
+            if os.path.isfile(name+'.score'):
+                os.remove(name+'.score')
+
+            for kdx in range(len(config_r.site)):
+                site = config_r.site['site'+str(kdx+1)]
+
+                # get complex filenames
+                files_l = [os.path.abspath('../'+posedir+'/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
+
+                # get docking class
+                DockingClass = getattr(sys.modules[program], program.capitalize())
+
+                DockingInstance = DockingClass(instance, site, options)
+                outputfile = DockingInstance.run_rescoring(file_r, files_l)
+
+                # cat output in file (cat instead of copying because of the binding sites)
+                subprocess.check_output('cat %s >> %s'%(outputfile,name+'.score'), shell=True, executable='/bin/bash')
+
+        os.chdir(curdir)
+        tcpu2 = time.time()
+        print "Rescoring done. Total time needed: %i s" %(tcpu2-tcpu1)
 
 class Docking(object):
 
@@ -78,12 +139,6 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             default='poses',
             help='Directory containing poses to rescore (should be used with rescore_only option)')
 
-        parser.add_argument('-extract_only',
-            dest='extract_only',
-            action='store_true',
-            default=False,
-            help='Extract structures only (usually used for debugging purposes)')
-
         parser.add_argument('-prepare_only',
             dest='prepare_only',
             action='store_true',
@@ -97,8 +152,10 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
         return parser
 
-    def finalize(self, config, config_d):
+    def finalize(self, config):
         """create directory containing all the poses found!"""
+
+        config_d = config.docking
 
         resultdir = 'poses'
         shutil.rmtree(resultdir, ignore_errors=True)
@@ -123,18 +180,19 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 for filename in glob(instdir+'/lig-*.mol2'):
                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
                 poses_idxs = sorted(poses_idxs)
-                idx = -1
+                nposes_idxs = len(poses_idxs)
+
                 for idx, pose_idx in enumerate(poses_idxs):
                     shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, resultdir+'/lig-%s.mol2'%(idx+sh))
 
                 # update info
                 info['program'].append(name)
-                info['nposes'].append(idx+1)
+                info['nposes'].append(nposes_idxs)
                 info['firstidx'].append(sh)
                 info['site'].append(bs[0])
 
                 # update shift
-                sh += idx + 1
+                sh += nposes_idxs
             nposes.append(sh)
 
         # write info
@@ -154,8 +212,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
     def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
 
-        if not args.prepare_only:
-            tcpu1 = time.time()
+        tcpu1 = time.time()
 
         config_d = config.docking
         # iterate over all the binding sites
@@ -167,13 +224,14 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, cleanup=config_d.cleanup, \
-extract_only=config.extract_only, prepare_only=args.prepare_only)
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
+cleanup=config_d.cleanup, prepare_only=args.prepare_only)
 
-        if not args.prepare_only:
-            self.finalize(config, config_d)
-            tcpu2 = time.time()
-            print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
+        if args.prepare_only:
+            return
+
+        tcpu2 = time.time()
+        print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run(self):
 
@@ -184,9 +242,15 @@ extract_only=config.extract_only, prepare_only=args.prepare_only)
         config = DockingConfig(args)
 
         # run docking
-        if not config.rescoring.rescore_only:
+        if not args.rescore_only:
             self.run_docking(config, args)
 
+        if args.prepare_only:
+            return
+
+        # create folder with poses
+        self.finalize(config)
+
         # run rescoring
-        if config.rescoring.is_rescoring and not args.prepare_only:
-            config.rescoring.run(config.input_file_r, args.posedir)
+        if config.rescoring.is_rescoring:
+            Rescoring().run_rescoring(config, args)

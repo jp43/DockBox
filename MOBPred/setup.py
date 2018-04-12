@@ -53,11 +53,25 @@ Make sure the program has been installed!'%(exe,program))
                     for key, value in default_settings.iteritems():
                         options[key] = value
 
-                # check config file (would possibly overwrite default preset parameters)
+                known_settings = {}
+                if hasattr(sys.modules[program], 'known_settings'):
+                    known_settings = getattr(sys.modules[program], 'known_settings')
+
+                def check_value(key, value):
+                   # TODO: check that value has the required type, e.g. set known_settings as a dict with the type and the list of possible choices if any!
+                   if key in known_settings:
+                       for known_value in known_settings[key]:
+                           if value.lower() == known_value.lower():
+                               return known_value
+                       raise ValueError("Value %s not recognized for option %s in instance %s!"%(value, key, instance))
+                   else:
+                       return value
+
+                # get parameters from config file (would possibly overwrite default preset parameters)
                 if config.has_section(instance.upper()):
                    config_d = dict(config.items(instance.upper()))
-                   for key, value in config_d.iteritems():
-                       options[key] = value
+                   for key, value in config_d.iteritems(): 
+                       options[key] = check_value(key, value)
 
                 self.instances.append((instance, program, options))
         else:
@@ -106,10 +120,13 @@ Make sure the program has been installed!'%(exe,program))
         else:
             return default
 
-class ScoringSetup(ConfigSetup):
+class RescoringSetup(ConfigSetup):
 
     def __init__(self, config):
-        super(ScoringSetup, self).__init__('rescoring', config)
+        super(RescoringSetup, self).__init__('rescoring', config)
+
+        self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
+        self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
 
 class DockingSetup(ConfigSetup):
 

@@ -17,7 +17,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False, prepare_only=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, prepare_only=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -30,13 +30,14 @@ class DockingMethod(object):
         if self.site[0]:
             dockdir += '.' + self.site[0]
 
-        if not extract_only:
+        docking = True
+        if docking:
             # create directory for docking (remove directory if exists)
             shutil.rmtree(dockdir, ignore_errors=True)
             os.mkdir(dockdir)
         os.chdir(dockdir)
 
-        if not extract_only:
+        if docking:
             print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
             print self.options
@@ -55,6 +56,9 @@ class DockingMethod(object):
             except subprocess.CalledProcessError:
                 pass
 
+        if prepare_only:
+            return
+
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
 
@@ -71,7 +75,7 @@ class DockingMethod(object):
         os.chdir(curdir)
         print "Docking with %s done."%self.program.capitalize()
 
-    def run_rescoring(self, file_r, files_l):
+    def run_rescoring(self, file_r, files_l, cleanup=False):
         """Rescore multiple ligands on one receptor"""
 
         single_run_programs = ['glide']

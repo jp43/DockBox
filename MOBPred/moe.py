@@ -14,11 +14,18 @@ required_programs = ['moebatch']
 default_settings = {'placement': 'Triangle Matcher', 'placement_nsample': '10', 'placement_maxpose': '250',  'scoring': 'London dG',
 'maxpose': '30', 'remaxpose': '5', 'gtest': '0.01', 'rescoring': 'GBVI/WSA dG'}
 
+known_scorings = ['ASE', 'Affinity dG', 'Alpha HB', 'GBVI/WSA dG', 'London dG', 'None']
+known_placements = ['Alpha PMI', 'Alpha Triangle', 'Proxy Triangle', 'Triangle Matcher'] 
+
+known_settings = {'placement': known_placements, 'scoring': known_scorings, 'rescoring': known_scorings}
+
 class Moe(method.DockingMethod):
 
     def __init__(self, instance, site, options):
 
         super(Moe, self).__init__(instance, site, options)
+
+        self.options
 
         # set box center
         self.options['center_bs'] = '[' + ', '.join(map(str.strip, site[1].split(','))) + ']'

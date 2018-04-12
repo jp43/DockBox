@@ -187,7 +187,7 @@ rundock is used to dock a ligand to a protein structure and eventually minimize 
                    [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
                    [-norun]
     
-    rundock : dock with multiple softwares -------- Requires one file for the
+    rundock : dock with multiple software -------- Requires one file for the
     ligand (1 struct.) and one file for the receptor (1 struct.)
     
     optional arguments:
@@ -238,7 +238,7 @@ runanlz is used to analyze the output docking poses obtained after running **run
       -rmsd RMSD            RMSD cutoff for clustering. Default: 2.0
       -instances INSTANCES [INSTANCES ...]
                             Choose instances to be used for consensus docking
-      -np NP                Keep only clusters predicted by at least np softwares)
+      -np NP                Keep only clusters predicted by at least np software)
       -s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]
       -colvar COLVAR [COLVAR ...]
       -extract_only         Extract results only!!!!
@@ -296,17 +296,17 @@ Below is an example of configuration file used to dock on two binding sites and 
 General sections
 ----------------
 
-* The **DOCKING** section includes the softwares that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking softwares should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
+* The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
-    * **programs**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the first example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+    * **programs**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the first example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
     * **minimization**: performs minimization on the generated poses (yes or no).
 
-    * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the softwares used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
+    * **rescoring**: performs rescoring on the generated poses (yes or no). I strongly recommend to enable minimization in case rescoring is done. This will avoid a lot clashes, especially when the software used for rescoring are different from those used for docking. If the rescoring option is enabled, a section RESCORING should be created that contains all the options relative to that step (see below).
 
     * **cleanup**: specifies if big intermediate files should be removed (yes or no).
 
-    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple softwares.
+    * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple software.
 
 
     Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
@@ -334,7 +334,7 @@ General sections
 
 * The **RESCORING** section has only one key specifying the programs used to rescore:
 
-    *  **program**: specifies the softwares which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+    *  **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
 Docking/scoring options relative to each software
 -------------------------------------------------
@@ -411,7 +411,7 @@ Each section relative to a docking/scoring program should be named the way it ap
 Examples
 --------
 
-Docking with multiple softwares on a single binding site and minimize the poses
+Docking with multiple software on a single binding site and minimize the poses
 -------------------------------------------------------------------------------
 
 Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
@@ -459,7 +459,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 
 
 
-Docking on multiple binding site, minimize and rescore the poses with multiple softwares
+Docking on multiple binding site, minimize and rescore the poses with multiple software
 ----------------------------------------------------------------------------------------
 
 Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
