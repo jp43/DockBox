@@ -39,7 +39,6 @@ class DockAnalysis(object):
             self.rmsd_file = args.rmsd_file
 
     def get_files_location(self, args):
-
         self.files_l = []
         self.files_r = []
 
@@ -65,12 +64,12 @@ class DockAnalysis(object):
 
                 index_per_dir = 0
                 for line in inff:
-                     program, nposes, firstidx, site = line.split()
+                     program, nposes, firstidx, site = line.strip().split(',')
                      firstidx = int(firstidx)
                      nposes = int(nposes)
 
                      instance = program
-                     if site != 'None':
+                     if site:
                          instance += '.' + site
 
                      if not (args.instances and instance not in args.instances):
@@ -238,8 +237,8 @@ class DockAnalysis(object):
         self.save_dataset('poses.csv', dataset, features)
         self.select_best_poses('clusters.csv', dataset, features)
 
-        dataset = dataset[features]
-        dataset.to_csv('poses.csv', index=False)
+        #dataset = dataset[features]
+        #dataset.to_csv('poses.csv', index=False)
 
     def save_dataset(self, filename, dataset, features):
 
@@ -256,8 +255,11 @@ class DockAnalysis(object):
     def select_best_poses(self, filename, dataset, features):
 
         f = {'score_multi': 'min', 'population': 'mean', 'programs': 'min'}
+        for sf in self.scoring_functions:
+            f[sf] = 'min'
+
         clusters = dataset.groupby('cluster_idx').agg(f).reset_index()
-        
+
         score_multi_norm = np.exp(-clusters['score_multi']).sum()
         population_norm = clusters['population'].sum()
         program_norm = clusters['programs'].apply(lambda x: len(x.split(','))).max()
@@ -265,7 +267,7 @@ class DockAnalysis(object):
         clusters['P_score'] = np.exp(-clusters['score_multi'])/score_multi_norm
         clusters['P_pop'] = clusters['population']/population_norm
         clusters['P_pro'] = clusters['programs'].apply(lambda x: len(x.split(',')))/program_norm
-        
+ 
         clusters['P'] = clusters['P_score']*clusters['P_pop']*clusters['P_pro']
         clusters_best_score = clusters.sort_values('P', ascending=False).head(5)['cluster_idx'].values
 
@@ -288,6 +290,13 @@ class DockAnalysis(object):
             shutil.copyfile(filename_l, dirname + '/ligand.mol2')
             shutil.copyfile(filename_r, dirname + '/target.pdb')
 
+        cols_to_format = ['P_score', 'P_pop', 'P_pro', 'P']
+        clusters[cols_to_format] = clusters[cols_to_format].applymap(lambda x: '{0:.3e}'.format(x))
+
+        cols_to_format = self.scoring_functions + ['score_multi']
+        clusters[cols_to_format] = clusters[cols_to_format].applymap(lambda x: '{0:.3f}'.format(x))
+
+        clusters = clusters[['cluster_idx', 'population', 'programs'] + self.scoring_functions + ['P_score', 'P_pop', 'P_pro', 'P']]
         clusters.to_csv(filename, index=False)
 
 if __name__ == '__main__':
