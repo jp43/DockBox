@@ -150,6 +150,12 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             default=False,
             help='Run rescoring only')
 
+        parser.add_argument('-skip_docking',
+            dest='skip_docking',
+            action='store_true',
+            default=False,
+            help='Skip docking (used for debugging)')
+
         return parser
 
     def finalize(self, config):
@@ -225,7 +231,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
                 DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
-cleanup=config_d.cleanup, prepare_only=args.prepare_only)
+cleanup=config_d.cleanup, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
 
         if args.prepare_only:
             return

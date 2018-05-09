@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 from glob import glob
 import shutil
@@ -6,6 +7,7 @@ import subprocess
 
 from mdtools.amber import minimz
 from mdtools.utility import mol2
+from mdtools.amber import clustr
 
 class DockingMethod(object):
 
@@ -17,7 +19,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, prepare_only=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, prepare_only=False, skip_docking=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -30,14 +32,13 @@ class DockingMethod(object):
         if self.site[0]:
             dockdir += '.' + self.site[0]
 
-        docking = True
-        if docking:
+        if not skip_docking:
             # create directory for docking (remove directory if exists)
             shutil.rmtree(dockdir, ignore_errors=True)
             os.mkdir(dockdir)
         os.chdir(dockdir)
 
-        if docking:
+        if not skip_docking:
             print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
             print self.options
@@ -62,11 +63,11 @@ class DockingMethod(object):
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
 
-
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
             self.minimize_extracted_poses(file_r, cleanup=cleanup)
         self.remove_out_of_range_poses('score.out')
+        self.remove_duplicates(file_r, 'score.out')
 
         # (D) remove intermediate files if required
         if cleanup:
@@ -136,18 +137,40 @@ class DockingMethod(object):
 
     def get_output_files_l(self):
 
-        nfiles_l = len(glob('lig-*.mol2'))
+        poses_idxs = []
+        for filename in glob('lig-*.mol2'):
+            poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+        poses_idxs = sorted(poses_idxs)
 
         files_l = []
-        for idx in range(nfiles_l):
-            mol2file = 'lig-%s.mol2'%(idx+1)
-            if os.path.isfile(mol2file):
-                files_l.append(mol2file)
+        for pose_idx in poses_idxs:
+            files_l.append('lig-%s.mol2'%pose_idx)
 
         return files_l
 
+    def minimize_extracted_poses(self, file_r, cleanup=False):
+        """Perform AMBER minimization on extracted poses"""
+
+        files_l = self.get_output_files_l()
+        nfiles_l = len(files_l)
+
+        if files_l:
+            # do energy minimization on ligand hydrogens
+            minimz.do_minimization(file_r, files_l=files_l, keep_hydrogens=True)
+
+        # extract results from minimization and purge out
+        for idx in range(nfiles_l):
+            mol2file = 'lig-%s-out.mol2'%(idx+1)
+            if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
+                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+            else: # the minimization failed
+                os.remove('lig-%s.mol2'%(idx+1))
+
+        if cleanup:
+            shutil.rmtree('minimz', ignore_errors=True)
+
     def remove_out_of_range_poses(self, file_s):
-        """Get rid off poses which were predicted outside the box"""
+        """Get rid of poses which were predicted outside the box"""
 
         files_l = self.get_output_files_l()
 
@@ -176,29 +199,35 @@ class DockingMethod(object):
                         for idx, line in enumerate(sf):
                             if idx not in out_of_range_idxs:
                                 sft.write(line)
-
                 shutil.move('score.tmp.out', file_s)
 
-    def minimize_extracted_poses(self, file_r, cleanup=False):
-        """Perform AMBER minimization on extracted poses"""
+    def remove_duplicates(self, file_r, file_s):
 
         files_l = self.get_output_files_l()
+        files_r = [file_r for idx in range(len(files_l))]
+
         nfiles_l = len(files_l)
+        if nfiles_l > 1:
+            # cluster poses
+            clustr.do_clustering(files_r, files_l, cutoff=2.0, cleanup=True)
 
-        if files_l:
-            # do energy minimization on ligand hydrogens
-            minimz.do_minimization(file_r, files_l=files_l, keep_hydrogens=True)
+            with open('clustering/info.dat', 'r') as ff:
+                for line in ff:
+                    if line.startswith('#Representative frames:'):
+                        rep_structures = map(int, line.split()[2:])
 
-        # extract results from minimization and purge out
-        for idx in range(nfiles_l):
-            mol2file = 'lig-%s-out.mol2'%(idx+1)
-            if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
-                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
-            else: # the minimization failed
-                os.remove('lig-%s.mol2'%(idx+1))
+            for idx, file_l in enumerate(files_l):
+                if idx+1 not in rep_structures:
+                    os.remove(file_l)
 
-        if cleanup:
-            shutil.rmtree('minimz', ignore_errors=True)
+            if os.path.exists(file_s):
+                with open(file_s, 'r') as sf:
+                    with open('score.tmp.out', 'w') as sft:
+                        for idx, line in enumerate(sf):
+                            if idx+1 in rep_structures:
+                                sft.write(line)
+
+                shutil.move('score.tmp.out', file_s)
 
     def write_rescoring_script(self, script_name, file_r, file_l):
         pass
