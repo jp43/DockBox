@@ -57,7 +57,9 @@ Make sure the program has been installed!'%(exe,program))
                 if hasattr(sys.modules[program], 'known_settings'):
                     known_settings = getattr(sys.modules[program], 'known_settings')
 
-                def check_value(key, value):
+                def check_value(key, value, instance):
+                   if not key in default_settings.keys():
+                       raise ValueError("Option %s not recognized in instance %s!"%(key, instance))
                    # TODO: check that value has the required type, e.g. set known_settings as a dict with the type and the list of possible choices if any!
                    if key in known_settings:
                        for known_value in known_settings[key]:
@@ -71,7 +73,7 @@ Make sure the program has been installed!'%(exe,program))
                 if config.has_section(instance.upper()):
                    config_d = dict(config.items(instance.upper()))
                    for key, value in config_d.iteritems(): 
-                       options[key] = check_value(key, value)
+                       options[key] = check_value(key, value, instance)
 
                 self.instances.append((instance, program, options))
         else:
