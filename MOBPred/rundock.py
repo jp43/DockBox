@@ -12,10 +12,7 @@ from glob import glob
 import subprocess
 
 from mdtools.utility import mol2
-
 import setup
-
-import rescoring
 
 class DockingConfig(object):
 
