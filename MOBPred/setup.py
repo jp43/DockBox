@@ -125,10 +125,11 @@ Make sure the program has been installed!'%(exe,program))
 class RescoringSetup(ConfigSetup):
 
     def __init__(self, config):
-        super(RescoringSetup, self).__init__('rescoring', config)
-
         self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
-        self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
+
+        if self.is_rescoring:
+            super(RescoringSetup, self).__init__('rescoring', config)
+            self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
 
 class DockingSetup(ConfigSetup):
 
