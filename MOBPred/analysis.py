@@ -155,7 +155,7 @@ class DockAnalysis(object):
 
         if not args.extract_results_only:
             # performs clustering
-            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.rmsd, cleanup=True, mask='', maskfit='')
+            clustr.do_clustering(self.files_r, self.files_l, cutoff=args.rmsd, cleanup=True)
         self.extract_results('clustering/info.dat', args)
 
         tcpu2 = time.time()
@@ -254,49 +254,24 @@ class DockAnalysis(object):
 
     def select_best_poses(self, filename, dataset, features):
 
-        f = {'score_multi': 'min', 'population': 'mean', 'programs': 'min'}
+        f = {'score_multi': 'min', 'population': 'max', 'programs': 'min'}
         for sf in self.scoring_functions:
             f[sf] = 'min'
 
         clusters = dataset.groupby('cluster_idx').agg(f).reset_index()
 
         score_multi_norm = np.exp(-clusters['score_multi']).sum()
-        population_norm = clusters['population'].sum()
-        program_norm = clusters['programs'].apply(lambda x: len(x.split(','))).max()
-
         clusters['P_score'] = np.exp(-clusters['score_multi'])/score_multi_norm
-        clusters['P_pop'] = clusters['population']/population_norm
-        clusters['P_pro'] = clusters['programs'].apply(lambda x: len(x.split(',')))/program_norm
- 
-        clusters['P'] = clusters['P_score']*clusters['P_pop']*clusters['P_pro']
-        clusters_best_score = clusters.sort_values('P', ascending=False).head(5)['cluster_idx'].values
+        clusters['P_pro'] = clusters['programs'].apply(lambda x: len(x.split(',')))/len(self.scoring_functions)
+        clusters['P'] = clusters['P_score']*clusters['P_pro']
 
-        # create directories with best poses
-        for kdx, idx in enumerate(clusters_best_score):
-            dirname = 'pose%s'%(kdx+1)
-
-            # remove directory if already exists and make a new one
-            shutil.rmtree(dirname, ignore_errors=True)
-            os.mkdir(dirname)
-
-            selected_cluster = dataset[dataset['cluster_idx']==idx]
-            rep_pose_selected_cluster = selected_cluster[selected_cluster['is_representative']]
-
-            filename_l = rep_pose_selected_cluster['file'].tolist()[0]
-            filename_l_split = filename_l.split('/')
-            filename_r = '/'.join(filename_l_split[:-1] + ['rec.pdb'])
-
-            rep_pose_selected_cluster.to_csv(dirname + '/info.csv', index=False)
-            shutil.copyfile(filename_l, dirname + '/ligand.mol2')
-            shutil.copyfile(filename_r, dirname + '/target.pdb')
-
-        cols_to_format = ['P_score', 'P_pop', 'P_pro', 'P']
+        cols_to_format = ['P_score', 'P_pro', 'P']
         clusters[cols_to_format] = clusters[cols_to_format].applymap(lambda x: '{0:.3e}'.format(x))
 
         cols_to_format = self.scoring_functions + ['score_multi']
         clusters[cols_to_format] = clusters[cols_to_format].applymap(lambda x: '{0:.3f}'.format(x))
 
-        clusters = clusters[['cluster_idx', 'population', 'programs'] + self.scoring_functions + ['P_score', 'P_pop', 'P_pro', 'P']]
+        clusters = clusters[['cluster_idx', 'population', 'programs'] + self.scoring_functions + ['P_score', 'P_pro', 'P']]
         clusters.to_csv(filename, index=False)
 
 if __name__ == '__main__':

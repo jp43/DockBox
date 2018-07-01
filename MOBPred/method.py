@@ -19,7 +19,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, prepare_only=False, skip_docking=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -62,12 +62,15 @@ class DockingMethod(object):
 
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
+        self.backup_files('origin')
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
             self.minimize_extracted_poses(file_r, cleanup=cleanup)
         self.remove_out_of_range_poses('score.out')
-        self.remove_duplicates(file_r, 'score.out')
+
+        if cutoff_clustering != 0.0:
+            self.remove_duplicates(file_r, 'score.out', cutoff=cutoff_clustering)
 
         # (D) remove intermediate files if required
         if cleanup:
@@ -148,6 +151,14 @@ class DockingMethod(object):
 
         return files_l
 
+    def backup_files(self, dir):
+
+        files_l = self.get_output_files_l()
+        shutil.rmtree(dir, ignore_errors=True)
+        os.mkdir(dir)
+        for file_l in files_l:
+            shutil.copyfile(file_l, dir+'/'+file_l) 
+
     def minimize_extracted_poses(self, file_r, cleanup=False):
         """Perform AMBER minimization on extracted poses"""
 
@@ -201,7 +212,7 @@ class DockingMethod(object):
                                 sft.write(line)
                 shutil.move('score.tmp.out', file_s)
 
-    def remove_duplicates(self, file_r, file_s):
+    def remove_duplicates(self, file_r, file_s, cutoff=0.0):
 
         files_l = self.get_output_files_l()
         files_r = [file_r for idx in range(len(files_l))]
@@ -209,7 +220,7 @@ class DockingMethod(object):
         nfiles_l = len(files_l)
         if nfiles_l > 1:
             # cluster poses
-            clustr.do_clustering(files_r, files_l, cutoff=2.0, cleanup=True)
+            clustr.do_clustering(files_r, files_l, cutoff=cutoff, cleanup=True)
 
             with open('clustering/info.dat', 'r') as ff:
                 for line in ff:

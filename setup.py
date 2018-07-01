@@ -65,7 +65,7 @@ def check_import(pkgname, pkgver):
 setup(name='MOBPredictor',
       packages=['MOBPred'],
       package_data = {'MOBPred.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-      scripts = ['bin/rundock', 'bin/runanlz'],
+      scripts = ['bin/rundock', 'bin/runanlz', 'bin/extract_best_poses'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',
       long_description=open('README.md').read(),

@@ -138,3 +138,9 @@ class DockingSetup(ConfigSetup):
 
         self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
         self.minimize = self.is_yesno_option(config, 'DOCKING', 'minimize')
+
+        if config.has_option('DOCKING', 'clustering'):
+            self.cutoff_clustering = config.getfloat('DOCKING', 'clustering')
+        else:
+            self.cutoff_clustering = 0.0
+

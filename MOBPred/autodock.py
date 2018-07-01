@@ -179,7 +179,7 @@ class Autodock(ADBased):
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
         autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autodock_options.iteritems()])
 
-        #self.write_check_lig_pdbqt_script()
+        self.write_check_lig_pdbqt_script()
         #self.write_check_nonstd_residues_script()
 
         if not rescoring:
@@ -203,6 +203,7 @@ set -e
 
 # prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python check_lig_pdbqt.py lig.pdbqt
 
 # prepare receptor
 prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
@@ -226,6 +227,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 set -e
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
+python check_lig_pdbqt.py lig.pdbqt
 
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log

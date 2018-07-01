@@ -1,0 +1,141 @@
+#!/usr/bin/python
+import os
+import sys
+import shutil
+from glob import glob
+import argparse
+import pandas as pd
+
+parser = argparse.ArgumentParser(description="Run docking analysis")
+
+parser.add_argument('-dir',
+    dest='dirs',
+    nargs='+',
+    default=['.'],
+    help='Directories considered (usually ligand)')
+
+parser.add_argument('-sub',
+    dest='subdirs',
+    nargs='+',
+    default=['.'],
+    help='Subdirectories used for analysis (usually targets and isomers, should contain poses directory)')
+
+parser.add_argument('-s',
+    required=True,
+    dest='sf',
+    help='Scoring functions used to select best pose')
+
+parser.add_argument('-d',
+    nargs='+',
+    required=True,
+    dest='prgms',
+    help='Docking programs used to select best pose')
+
+parser.add_argument('-l',
+    required=True,
+    dest='label',
+    help='Label used')
+
+args = parser.parse_args()
+
+features = ['file_l', 'file_r', 'site', 'instance', 'program', 'index', 'directory', 'index_dir']
+features_scores = ['score'] + [args.sf]
+info = {}
+for ft in features + features_scores:
+    info[ft] = []
+ 
+dirs = []
+for dir in args.dirs:
+    if os.path.isdir(dir):
+        dirs.append(os.path.relpath(dir))
+        subdirs = []
+        for subdir in args.subdirs:
+            posedir = dir+'/'+subdir+'/poses'
+            if not os.path.isdir(dir+'/'+subdir):
+                raise ValueError('Subdirectory %s not found'%workdir)
+            elif not os.path.isdir(posedir):
+                raise ValueError('Folder poses not found in %s'%workdir)
+            else:
+                subdirs.append(dir+'/'+subdir)
+ 
+    for jdx, subdir in enumerate(subdirs):
+        posedir = subdir + '/poses'
+        # get location of poses and receptor files
+        with open(posedir+'/info.dat', 'r') as inff:
+            inff.next()
+            inff.next()
+            for line in inff:
+                 program, nposes, firstidx, site = line.strip().split(',')
+                 firstidx = int(firstidx)
+                 nposes = int(nposes)
+                 instance = program
+                 if site:
+                     instance += '.' + site
+                 poses_idxs = range(firstidx, firstidx+nposes)
+    
+                 for index, idx in enumerate(poses_idxs):
+                     file_l = posedir + '/lig-%s.mol2'%idx
+                     if os.path.isfile(file_l):
+                         info['file_l'].append(os.path.relpath(file_l))
+                     else:
+                         raise IOError("File %s does not exist!"%file_l)
+                     info['file_r'].append(os.path.relpath(posedir+'/rec.pdb'))
+                     info['site'].append(site)
+                     info['instance'].append(instance)
+                     info['program'].append(program)
+                     info['index'].append(index)
+                     info['directory'].append(dir)
+                     info['index_dir'].append(idx-1)
+    
+                 # extract original scores
+                 with open(subdir+'/'+instance+'/score.out', 'r') as sout:
+                     for line_s in sout:
+                         info['score'].append(float(line_s))
+
+        for score_file in glob(subdir+'/rescoring/*.score'):
+            sf = os.path.basename(score_file).split('.')[0]
+            if sf not in info:
+                info[sf] = []
+            with open(score_file, 'r') as sout:
+                for line_s in sout:
+                    info[sf].append(float(line_s))
+    
+info = pd.DataFrame(info)
+
+shutil.rmtree(args.label, ignore_errors=True)
+os.mkdir(args.label)
+info.to_csv(args.label+'/poses.csv', index=False)
+
+info_group_by = info.groupby(['directory','program'])
+best_poses = info.loc[info_group_by['score'].idxmin]
+best_poses = best_poses[best_poses['program'].isin(args.prgms)]
+
+best_poses = best_poses.loc[best_poses.groupby('directory')[args.sf].idxmin]
+best_poses.to_csv(args.label+'/best_poses.csv', index=False)
+
+for dir in args.dirs:
+    ligdir = args.label + '/' + dir
+    os.mkdir(ligdir)
+
+    bp = best_poses[best_poses['directory']==dir]
+    file_l = bp['file_l'].values[0]
+    file_r = bp['file_r'].values[0]
+    instance = bp['instance'].values[0]
+    index = bp['index'].values[0]
+
+    shutil.copyfile(file_l, ligdir+'/ligand.mol2')
+    isomerdir = '/'.join(file_l.split('/')[:-2])
+
+    poses_idxs = []
+    #print index_dir
+    #print isomerdir+'/'+instance
+    for filename in glob(isomerdir+'/'+instance+'/lig-*.mol2'):
+        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+    poses_idxs = sorted(poses_idxs)
+    #print poses_idxs
+    pose_idx = poses_idxs[index]
+
+    if os.path.isdir(isomerdir+'/'+instance+'/origin'):
+        shutil.copyfile(isomerdir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, ligdir+'/ligand_orig.mol2')
+
+    shutil.copyfile(file_r, ligdir+'/protein.pdb')

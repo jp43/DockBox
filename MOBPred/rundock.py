@@ -228,7 +228,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
                 DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
-cleanup=config_d.cleanup, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
+cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
 
         if args.prepare_only:
             return
@@ -251,8 +251,9 @@ cleanup=config_d.cleanup, prepare_only=args.prepare_only, skip_docking=args.skip
         if args.prepare_only:
             return
 
-        # create folder with poses
-        self.finalize(config)
+        if not args.rescore_only:
+            # create folder with poses
+            self.finalize(config)
 
         # run rescoring
         if config.rescoring.is_rescoring:
