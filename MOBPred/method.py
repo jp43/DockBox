@@ -199,7 +199,7 @@ class DockingMethod(object):
                         isout = True
                         break
             if isout:
-                #print "out"
+                #print file_l, "out"
                 os.remove(file_l)
                 out_of_range_idxs.append(jdx)
 

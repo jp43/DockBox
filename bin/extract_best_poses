@@ -57,7 +57,7 @@ for dir in args.dirs:
                 raise ValueError('Folder poses not found in %s'%workdir)
             else:
                 subdirs.append(dir+'/'+subdir)
- 
+
     for jdx, subdir in enumerate(subdirs):
         posedir = subdir + '/poses'
         # get location of poses and receptor files
@@ -65,6 +65,7 @@ for dir in args.dirs:
             inff.next()
             inff.next()
             for line in inff:
+                 #print line
                  program, nposes, firstidx, site = line.strip().split(',')
                  firstidx = int(firstidx)
                  nposes = int(nposes)
@@ -72,7 +73,8 @@ for dir in args.dirs:
                  if site:
                      instance += '.' + site
                  poses_idxs = range(firstidx, firstidx+nposes)
-    
+
+                 nposes = len(poses_idxs)
                  for index, idx in enumerate(poses_idxs):
                      file_l = posedir + '/lig-%s.mol2'%idx
                      if os.path.isfile(file_l):
@@ -86,11 +88,14 @@ for dir in args.dirs:
                      info['index'].append(index)
                      info['directory'].append(dir)
                      info['index_dir'].append(idx-1)
-    
+
+                 nscores = 0
                  # extract original scores
                  with open(subdir+'/'+instance+'/score.out', 'r') as sout:
                      for line_s in sout:
+                         nscores += 1
                          info['score'].append(float(line_s))
+                 #print dir, jdx, subdir, nposes, nscores
 
         for score_file in glob(subdir+'/rescoring/*.score'):
             sf = os.path.basename(score_file).split('.')[0]
@@ -99,7 +104,10 @@ for dir in args.dirs:
             with open(score_file, 'r') as sout:
                 for line_s in sout:
                     info[sf].append(float(line_s))
-    
+
+#for key in info:
+#    print key, len(info[key])
+
 info = pd.DataFrame(info)
 
 shutil.rmtree(args.label, ignore_errors=True)
