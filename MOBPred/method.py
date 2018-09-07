@@ -66,11 +66,11 @@ class DockingMethod(object):
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize:
-            self.minimize_extracted_poses(file_r, cleanup=cleanup)
+            self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup)
         self.remove_out_of_range_poses('score.out')
 
         if cutoff_clustering != 0.0:
-            self.remove_duplicates(file_r, 'score.out', cutoff=cutoff_clustering)
+            self.remove_duplicates('score.out', cutoff=cutoff_clustering)
 
         # (D) remove intermediate files if required
         if cleanup:
@@ -159,7 +159,7 @@ class DockingMethod(object):
         for file_l in files_l:
             shutil.copyfile(file_l, dir+'/'+file_l) 
 
-    def minimize_extracted_poses(self, file_r, cleanup=False):
+    def minimize_extracted_poses(self, file_r, file_s, cleanup=False):
         """Perform AMBER minimization on extracted poses"""
 
         files_l = self.get_output_files_l()
@@ -169,6 +169,7 @@ class DockingMethod(object):
             # do energy minimization on ligand hydrogens
             minimz.do_minimization(file_r, files_l=files_l, keep_hydrogens=True)
 
+        failed_idxs = []
         # extract results from minimization and purge out
         for idx in range(nfiles_l):
             mol2file = 'lig-%s-out.mol2'%(idx+1)
@@ -176,6 +177,16 @@ class DockingMethod(object):
                 shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
+                failed_idxs.append(idx)
+
+        if files_l:
+            if os.path.exists(file_s):
+                with open(file_s, 'r') as sf:
+                    with open('score.tmp.out', 'w') as sft:
+                        for idx, line in enumerate(sf):
+                            if idx not in failed_idxs:
+                                sft.write(line)
+                shutil.move('score.tmp.out', file_s)
 
         if cleanup:
             shutil.rmtree('minimz', ignore_errors=True)
@@ -212,7 +223,7 @@ class DockingMethod(object):
                                 sft.write(line)
                 shutil.move('score.tmp.out', file_s)
 
-    def remove_duplicates(self, file_r, file_s, cutoff=0.0):
+    def remove_duplicates(self, file_s, cutoff=0.0):
 
         files_l = self.get_output_files_l()
         files_r = [file_r for idx in range(len(files_l))]

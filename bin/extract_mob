@@ -95,7 +95,8 @@ for dir in args.dirs:
                      for line_s in sout:
                          nscores += 1
                          info['score'].append(float(line_s))
-                 #print dir, jdx, subdir, nposes, nscores
+                     if nscores != nposes:
+                         raise ValueError("Number of poses different from number of scores (%s/%s)"%(subdir,instance))
 
         for score_file in glob(subdir+'/rescoring/*.score'):
             sf = os.path.basename(score_file).split('.')[0]
@@ -105,17 +106,15 @@ for dir in args.dirs:
                 for line_s in sout:
                     info[sf].append(float(line_s))
 
-#for key in info:
-#    print key, len(info[key])
-
 info = pd.DataFrame(info)
 
 shutil.rmtree(args.label, ignore_errors=True)
 os.mkdir(args.label)
 info.to_csv(args.label+'/poses.csv', index=False)
 
-info_group_by = info.groupby(['directory','program'])
-best_poses = info.loc[info_group_by['score'].idxmin]
+
+info_group_by = info.groupby(['directory', 'program'])
+best_poses = info.loc[info_group_by[args.sf].idxmin]
 best_poses = best_poses[best_poses['program'].isin(args.prgms)]
 
 best_poses = best_poses.loc[best_poses.groupby('directory')[args.sf].idxmin]
@@ -135,12 +134,9 @@ for dir in args.dirs:
     isomerdir = '/'.join(file_l.split('/')[:-2])
 
     poses_idxs = []
-    #print index_dir
-    #print isomerdir+'/'+instance
     for filename in glob(isomerdir+'/'+instance+'/lig-*.mol2'):
         poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
     poses_idxs = sorted(poses_idxs)
-    #print poses_idxs
     pose_idx = poses_idxs[index]
 
     if os.path.isdir(isomerdir+'/'+instance+'/origin'):
