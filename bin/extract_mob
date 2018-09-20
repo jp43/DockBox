@@ -20,6 +20,12 @@ parser.add_argument('-sub',
     default=['.'],
     help='Subdirectories used for analysis (usually targets and isomers, should contain poses directory)')
 
+parser.add_argument('-combine',
+    dest='combine',
+    action='store_true',
+    default=False,
+    help='Combine targets scores and get best target')
+
 parser.add_argument('-s',
     required=True,
     dest='sf',
@@ -38,7 +44,7 @@ parser.add_argument('-l',
 
 args = parser.parse_args()
 
-features = ['file_l', 'file_r', 'site', 'instance', 'program', 'index', 'directory', 'index_dir']
+features = ['file_l', 'file_r', 'target', 'site', 'instance', 'program', 'index', 'directory', 'index_dir']
 features_scores = ['score'] + [args.sf]
 info = {}
 for ft in features + features_scores:
@@ -60,12 +66,19 @@ for dir in args.dirs:
 
     for jdx, subdir in enumerate(subdirs):
         posedir = subdir + '/poses'
+        # get target name
+        target = None
+        for item in subdir.split('/'):
+            if item.startswith('target'):
+                target = item
+        if target is None:
+            raise ValueError("No target name found for subdir %s"%subdir)
+
         # get location of poses and receptor files
         with open(posedir+'/info.dat', 'r') as inff:
             inff.next()
             inff.next()
             for line in inff:
-                 #print line
                  program, nposes, firstidx, site = line.strip().split(',')
                  firstidx = int(firstidx)
                  nposes = int(nposes)
@@ -86,6 +99,7 @@ for dir in args.dirs:
                      info['instance'].append(instance)
                      info['program'].append(program)
                      info['index'].append(index)
+                     info['target'].append(target)
                      info['directory'].append(dir)
                      info['index_dir'].append(idx-1)
 
@@ -107,39 +121,45 @@ for dir in args.dirs:
                     info[sf].append(float(line_s))
 
 info = pd.DataFrame(info)
+info = info[info['program'].isin(args.prgms)]
 
 shutil.rmtree(args.label, ignore_errors=True)
 os.mkdir(args.label)
 info.to_csv(args.label+'/poses.csv', index=False)
 
-
-info_group_by = info.groupby(['directory', 'program'])
-best_poses = info.loc[info_group_by[args.sf].idxmin]
-best_poses = best_poses[best_poses['program'].isin(args.prgms)]
-
-best_poses = best_poses.loc[best_poses.groupby('directory')[args.sf].idxmin]
-best_poses.to_csv(args.label+'/best_poses.csv', index=False)
+if args.combine:
+    info_group_by = info.groupby('directory')
+    best_poses = info.loc[info_group_by[args.sf].idxmin]
+    best_poses.to_csv(args.label+'/best_poses.csv', index=False)
+else:
+    info_group_by = info.groupby(['directory', 'target'])
+    best_poses = info.loc[info_group_by[args.sf].idxmin]
+best_poses.to_csv(args.label + '/best_poses.csv', index=False)
 
 for dir in args.dirs:
     ligdir = args.label + '/' + dir
     os.mkdir(ligdir)
 
     bp = best_poses[best_poses['directory']==dir]
-    file_l = bp['file_l'].values[0]
-    file_r = bp['file_r'].values[0]
-    instance = bp['instance'].values[0]
-    index = bp['index'].values[0]
+    for idx, row in bp.iterrows():
+        file_l = row['file_l']
+        file_r = row['file_r']
+        instance = row['instance']
+        index = row['index']
+        target = row['target']
 
-    shutil.copyfile(file_l, ligdir+'/ligand.mol2')
-    isomerdir = '/'.join(file_l.split('/')[:-2])
+        tardir = ligdir + '/' + target
+        os.mkdir(tardir)
 
-    poses_idxs = []
-    for filename in glob(isomerdir+'/'+instance+'/lig-*.mol2'):
-        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-    poses_idxs = sorted(poses_idxs)
-    pose_idx = poses_idxs[index]
+        shutil.copyfile(file_l, tardir+'/ligand.mol2')
+        isomerdir = '/'.join(file_l.split('/')[:-2])
 
-    if os.path.isdir(isomerdir+'/'+instance+'/origin'):
-        shutil.copyfile(isomerdir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, ligdir+'/ligand_orig.mol2')
+        poses_idxs = []
+        for filename in glob(isomerdir+'/'+instance+'/lig-*.mol2'):
+            poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+        poses_idxs = sorted(poses_idxs)
+        pose_idx = poses_idxs[index]
 
-    shutil.copyfile(file_r, ligdir+'/protein.pdb')
+        if os.path.isdir(isomerdir+'/'+instance+'/origin'):
+            shutil.copyfile(isomerdir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, tardir+'/ligand_orig.mol2')
+        shutil.copyfile(file_r, tardir+'/protein.pdb')
