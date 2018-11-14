@@ -219,32 +219,6 @@ Thus, a typical use of **rundock** is done through the following command:
 
     rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
-runanlz
--------
-
-runanlz is used to analyze the output docking poses obtained after running **rundock**. A consensus strategy is carried out from clustering analysis, analysis of the scores obtained during the rescoring phase of **rundock**. When typing "runanlz -h" on the command line, the following help message will pop up:
-
-    usage: runanlz [-h] [-w DIRS [DIRS ...]] [-rmsd RMSD]
-                   [-instances INSTANCES [INSTANCES ...]] [-np NP]
-                   [-s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]]
-                   [-colvar COLVAR [COLVAR ...]] [-extract_only] [-cleanup]
-                   [-add_rmsd RMSD_FILE]
-    
-    Run docking analysis
-    
-    optional arguments:
-      -h, --help            show this help message and exit
-      -w DIRS [DIRS ...]    Working directories used for analysis
-      -rmsd RMSD            RMSD cutoff for clustering. Default: 2.0
-      -instances INSTANCES [INSTANCES ...]
-                            Choose instances to be used for consensus docking
-      -np NP                Keep only clusters predicted by at least np software)
-      -s SCORING_FUNCTIONS [SCORING_FUNCTIONS ...]
-      -colvar COLVAR [COLVAR ...]
-      -extract_only         Extract results only!!!!
-      -cleanup              Cleanup intermediate files
-      -add_rmsd RMSD_FILE
-
 
 Preparing the rundock configuration file
 ========================================
@@ -315,7 +289,7 @@ General sections
     |    Software   |    Docking    |   Rescoring   |
     | :-----------  |:-------------:|:-------------:|
     |   Autodock    |      Yes      |      Yes      |
-    |    Dock 6     |      Yes      |      No       |
+    |    Dock 6     |      Yes      |      Yes      |
     |     DSX       |      No       |      Yes      |
     |     Glide     |      Yes      |      Yes      |
     |     Gold      |      Yes      |      No       |
