@@ -4,8 +4,9 @@ import stat
 from glob import glob
 import shutil
 import subprocess
+import setup
 
-from mdtools.amber import minimz
+from mdtools.amber import minimization
 from mdtools.utility import mol2
 from mdtools.amber import clustr
 
@@ -19,7 +20,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
+    def run_docking(self, file_r, file_l, minimize_options=None, cleanup=False, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -41,7 +42,8 @@ class DockingMethod(object):
         if not skip_docking:
             print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
-            print self.options
+            for key, value in self.options.iteritems():
+                print str(key) + ': ' + str(value)
 
             # (A) run docking
             script_name = "run_" + self.program + ".sh"
@@ -50,7 +52,6 @@ class DockingMethod(object):
 
             if prepare_only:
                 return
-
             try:
                 # try running docking procedure
                 subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
@@ -65,8 +66,8 @@ class DockingMethod(object):
         self.backup_files('origin')
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
-        if minimize:
-            self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup)
+        if minimize_options['minimization']:
+            self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup, **minimize_options)
         self.remove_out_of_range_poses('score.out')
 
         if cutoff_clustering != 0.0:
@@ -82,7 +83,6 @@ class DockingMethod(object):
     def run_rescoring(self, file_r, files_l, cleanup=False):
         """Rescore multiple ligands on one receptor"""
 
-        single_run_programs = ['glide']
         curdir = os.getcwd()
 
         # find name for scoring directory
@@ -99,7 +99,7 @@ class DockingMethod(object):
         # change directory
         os.chdir(scordir)
 
-        if self.program in single_run_programs:
+        if self.program in setup.single_run_rescoring_programs:
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
 
@@ -122,7 +122,7 @@ class DockingMethod(object):
                     pass
 
                 # (C) extract docking results
-                if self.program in single_run_programs:
+                if self.program in setup.single_run_rescoring_programs:
                     nligands = len(files_l[0])
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
@@ -159,22 +159,29 @@ class DockingMethod(object):
         for file_l in files_l:
             shutil.copyfile(file_l, dir+'/'+file_l) 
 
-    def minimize_extracted_poses(self, file_r, file_s, cleanup=False):
+    def minimize_extracted_poses(self, file_r, file_s, cleanup=False, **minimize_options):
         """Perform AMBER minimization on extracted poses"""
 
         files_l = self.get_output_files_l()
         nfiles_l = len(files_l)
 
+        # get minimization options
+        charge_method = minimize_options['charge_method']
+        ncyc = minimize_options['ncyc']
+        maxcyc = minimize_options['maxcyc']
+        cut = minimize_options['cut']
+
         if files_l:
-            # do energy minimization on ligand hydrogens
-            minimz.do_minimization(file_r, files_l=files_l, keep_hydrogens=True)
+            # do energy minimization on ligand
+            minimization.do_minimization_after_docking(file_r, files_l, keep_hydrogens=True, charge_method=charge_method,\
+ncyc=ncyc, maxcyc=maxcyc, cut=cut)
 
         failed_idxs = []
         # extract results from minimization and purge out
         for idx in range(nfiles_l):
             mol2file = 'lig-%s-out.mol2'%(idx+1)
-            if os.path.isfile('minimz/'+mol2file): # the minimization succeeded
-                shutil.copyfile('minimz/'+mol2file, 'lig-%s.mol2'%(idx+1))
+            if os.path.isfile('em/'+mol2file): # the minimization succeeded
+                shutil.copyfile('em/'+mol2file, 'lig-%s.mol2'%(idx+1))
             else: # the minimization failed
                 os.remove('lig-%s.mol2'%(idx+1))
                 failed_idxs.append(idx)
@@ -189,7 +196,7 @@ class DockingMethod(object):
                 shutil.move('score.tmp.out', file_s)
 
         if cleanup:
-            shutil.rmtree('minimz', ignore_errors=True)
+            shutil.rmtree('em', ignore_errors=True)
 
     def remove_out_of_range_poses(self, file_s):
         """Get rid of poses which were predicted outside the box"""

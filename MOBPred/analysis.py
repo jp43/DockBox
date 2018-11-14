@@ -235,7 +235,8 @@ class DockAnalysis(object):
             dataset = dataset[dataset['programs'].apply(lambda x: len(x.split(','))>=args.np)]
 
         self.save_dataset('poses.csv', dataset, features)
-        self.select_best_poses('clusters.csv', dataset, features)
+        if self.scoring_functions:
+            self.select_best_poses('clusters.csv', dataset, features)
 
         #dataset = dataset[features]
         #dataset.to_csv('poses.csv', index=False)
@@ -257,7 +258,6 @@ class DockAnalysis(object):
         f = {'score_multi': 'min', 'population': 'max', 'programs': 'min'}
         for sf in self.scoring_functions:
             f[sf] = 'min'
-
         clusters = dataset.groupby('cluster_idx').agg(f).reset_index()
 
         score_multi_norm = np.exp(-clusters['score_multi']).sum()

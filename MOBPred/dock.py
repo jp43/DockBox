@@ -1,20 +1,21 @@
 import os
+import sys
 import method
 
+import shutil
+import subprocess
 from glob import glob
+
 from mdtools.utility import reader
 from mdtools.utility import mol2
+from mdtools.utility import utils
+from mdtools.amber import ambertools
 
-required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6', 'babel']
+required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 
-default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', 'grid_spacing': '0.3', \
-'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', 'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20' }
-
-# per default, ligand partial charges are kept as they are in the original .mol2 file 
-# however, we might want to generate them using with Chimera. In that case, chimera
-# works like antechamber, use simply addcharge nonstd :LIG net-charge method am1
-# before writing the mol2 file where net-charge should be computed by running 
-# the command antechamber until it does not fail
+default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', \
+'grid_spacing': '0.3', 'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', \
+'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20', 'charge_method': 'gas', 'rmsd': '2.0'}
 
 class Dock(method.DockingMethod):
 
@@ -27,62 +28,33 @@ class Dock(method.DockingMethod):
         self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
         self.options['sphgen_radius'] = str(max(self.options['boxsize'])/2)
 
-    def write_check_nonstd_residues_script(self):
-
-        raise NotImplementedError
-
-        with open('check_nonstd_residues.py', 'w') as file:
-            script = """import sys
-import shutil
-from tempfile import mkstemp
-
-# if some atoms are not recognized, we look if a file with charges has been specified
-file_q = sys.argv[2] # the file should be the second argument
-lines_file_q = []
-with open(file_q, 'r') as qf:
-    for line in qf:
-        lines_file_q.append(line.split())
-
-# update .pdbqt file for the receptor
-fh, abs_path = mkstemp()
-
-with open(abs_path, 'w') as tempf:
-    with open(sys.argv[1]) as ff:
-
-        for line in ff:
-            if line.startswith(('ATOM', 'HETATM')):
-                atomnum_pdbqt = int(line[6:11])
-                atomname_pdbqt = line[12:16].strip()
-                resname_pdbqt = line[17:20].strip()
-
-                is_atom_recognized = False
-                if mode == 'custom':
-                    # update the charges of the atoms specified in the charge file
-                    for line_file_q in lines_file_q:
-                        if atomnum_pdbqt == int(line_file_q[0]) and atomname_pdbqt == line_file_q[1]:
-                           charge = "%.3f"%float(line_file_q[-1])
-                           tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
-                           is_atom_recognized = True
-                           break
-                if is_atom_recognized:
-                    tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
-                else:
-                    tempf.write(line)
-            else:
-                tempf.write(line)
-
-shutil.move(abs_path, sys.argv[1])"""
-            file.write(script)
-
-
-    def write_docking_script(self, filename, file_r, file_l):
+    def write_rescoring_script(self, filename, file_r, files_l):
+        """Rescore using DOCK6 grid scoring function"""
 
         locals().update(self.options)
-        self.write_shift_coordinates_script()
+        self.write_script_ligand_prep()
 
-        charges_update_lines = ""
+        # cat mol2 files in a single mol2
+        file_l_all = 'lig_all.mol2'
 
-        # write autodock script
+        if self.options['charge_method']:
+            amber_version = utils.check_amber_version()
+            ambertools.run_antechamber(files_l[0], 'lig-1.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
+        else:
+            shutil.copyfile(files_l[0], 'lig-1.mol2')
+
+        for idx, file_l in enumerate(files_l):
+            if idx > 0:
+                if self.options['charge_method']:
+                    # if not first one, do not regenerate the charges, copy charges generated the first time
+                    coords_l = mol2.get_coordinates(file_l)
+                    struct = mol2.Reader('lig-1.mol2').next()
+                    struct = mol2.replace_coordinates(struct, coords_l)
+                    mol2.Writer().write('lig-%i.mol2'%(idx+1), struct)
+                else:
+                    shutil.copyfile(file_l, 'lig-%i.mol2'%(idx+1))
+            subprocess.check_output("cat lig-%i.mol2 >> %s"%(idx+1, file_l_all), shell=True)
+
         with open(filename, 'w') as file:
             script ="""#!/bin/bash
 set -e
@@ -104,8 +76,6 @@ from WriteMol2 import writeMol2
 writeMol2(models, 'target.mol2')" > dockprep.py
 chimera --nogui %(file_r)s dockprep.py
 
-%(charges_update_lines)s
-
 # generating receptor surface
 dms target_noH.pdb -n -w %(probe_radius)s -v -o target_noH.ms
 
@@ -120,8 +90,7 @@ target_noH_site.sph" > INSPH
 sphgen_cpp
 
 # shift ligand coordintates
-python shift_lig_coords.py %(file_l)s lig_s.mol2 %(center)s
-mv lig_s.mol2 lig.mol2
+python prepare_ligand_dock.py lig-1.mol2 lig.mol2 %(center)s
 
 # selecting spheres within a user-defined radius (sphgen_radius)
 sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
@@ -161,7 +130,136 @@ score_grid_prefix grid
 contact_cutoff_distance 4.5" > grid.in
 grid -i grid.in
 
-# flexible docking
+echo "ligand_atom_file %(file_l_all)s
+limit_max_ligands no
+skip_molecule no
+read_mol_solvation no
+calculate_rmsd no
+use_database_filter no
+orient_ligand no
+use_internal_energy yes
+internal_energy_rep_exp 12
+flexible_ligand no
+bump_filter no
+score_molecules yes
+contact_score_primary no
+contact_score_secondary no
+grid_score_primary yes
+grid_score_secondary no
+grid_score_rep_rad_scale 1
+grid_score_vdw_scale 1
+grid_score_es_scale 1
+grid_score_grid_prefix grid
+multigrid_score_secondary no
+dock3.5_score_secondary no
+continuous_score_secondary no
+descriptor_score_secondary no
+gbsa_zou_score_secondary no
+gbsa_hawkins_score_secondary no
+SASA_descriptor_score_secondary no
+amber_score_secondary no
+minimize_ligand no
+atom_model all
+vdw_defn_file $vdwfile
+flex_defn_file $flexfile
+flex_drive_file $flexdfile
+ligand_outfile_prefix lig_out
+write_orientations no
+num_scored_conformers 1
+rank_ligands no" > dock6.in
+
+dock6 -i dock6.in > dock.out""" % locals()
+            file.write(script)
+
+    def write_docking_script(self, filename, file_r, file_l):
+        """Dock using DOCK6 flexible docking with grid scoring as primary score"""
+
+        locals().update(self.options)
+        self.write_script_ligand_prep()
+
+        if self.options['charge_method']:
+            amber_version = utils.check_amber_version()
+            ambertools.run_antechamber(file_l, 'lig_ref.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
+        else:
+            shutil.copyfile(file_l, 'lig_ref.mol2')
+
+        # write autodock script
+        with open(filename, 'w') as file:
+            script ="""#!/bin/bash
+set -e
+
+# remove hydrogens from target
+echo "delete element.H
+write format pdb #0 target_noH.pdb" > removeH.cmd
+chimera --nogui %(file_r)s removeH.cmd
+rm -rf removeH.cmd
+
+# prepare receptor (add missing h, add partial charges,...)
+echo "import chimera
+from DockPrep import prep
+
+models = chimera.openModels.list(modelTypes=[chimera.Molecule])
+prep(models)
+
+from WriteMol2 import writeMol2
+writeMol2(models, 'target.mol2')" > dockprep.py
+chimera --nogui %(file_r)s dockprep.py
+
+# generating receptor surface
+dms target_noH.pdb -n -w %(probe_radius)s -v -o target_noH.ms
+
+# generating spheres
+echo "target_noH.ms
+R
+X
+0.0
+%(maximum_sphere_radius)s
+%(minimum_sphere_radius)s
+target_noH_site.sph" > INSPH
+sphgen_cpp
+
+# shift ligand coordintates
+python prepare_ligand_dock.py lig_ref.mol2 lig.mol2 %(center)s
+
+# selecting spheres within a user-defined radius (sphgen_radius)
+sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
+
+# create box - the second argument in the file showbox.in
+# is the extra margin to also be enclosed to the box (angstroms)
+echo "Y
+%(extra_margin)s
+selected_spheres.sph
+1
+target_noH_box.pdb" > showbox.in
+showbox < showbox.in
+
+dock6path=`which dock6`
+vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
+flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+
+# create grid
+echo "compute_grids yes
+grid_spacing %(grid_spacing)s
+output_molecule no
+contact_score yes
+energy_score yes
+energy_cutoff_distance 9999
+atom_model a
+attractive_exponent %(attractive_exponent)s
+repulsive_exponent %(repulsive_exponent)s
+distance_dielectric yes
+dielectric_factor 4
+bump_filter yes
+bump_overlap 0.75
+receptor_file target.mol2
+box_file target_noH_box.pdb
+vdw_definition_file $vdwfile
+score_grid_prefix grid
+contact_cutoff_distance 4.5" > grid.in
+grid -i grid.in
+
+# flexible docking using grid score as primary score and no secondary score
 echo "ligand_atom_file lig.mol2
 limit_max_ligands no
 skip_molecule no
@@ -234,7 +332,7 @@ write_orientations no
 num_scored_conformers %(num_scored_conformers)s
 write_conformations no
 cluster_conformations yes
-cluster_rmsd_threshold 2.0
+cluster_rmsd_threshold %(rmsd)s
 rank_ligands no" > dock6.in
 
 dock6 -i dock6.in"""% locals()
@@ -258,8 +356,27 @@ dock6 -i dock6.in"""% locals()
             ligname = reader.open('lig_out_scored.mol2').ligname
             mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
 
+    def extract_rescoring_results(self, filename, nligands=None):
+
+        with open(filename, 'a') as ff:
+            with open('dock.out', 'r') as outf:
+                for line in outf:
+                    if line.strip().startswith('Grid Score:'):
+                        print >> ff, line.split()[2]
+                    elif line.strip().startswith('ERROR:  Conformation could not be scored.'):
+                        print >> ff, 'NaN'
+
+        # remove heavy files
+        for ff in glob('grid*'):
+            os.remove(ff)
+
+        filenames = ['selected_spheres.sph', 'target_noH.ms']
+        for ff in filenames:
+            if os.path.isfile(ff):
+                os.remove(ff) 
+
     def cleanup(self):
-        # remove map files
+        # remove heavy files
         for ff in glob('grid*'):
             os.remove(ff)
 
@@ -268,11 +385,15 @@ dock6 -i dock6.in"""% locals()
             if os.path.isfile(ff):
                 os.remove(ff) 
     
-    def write_shift_coordinates_script(self):
-    
-        with open('shift_lig_coords.py', 'w') as file:
-            script ="""import sys
+    def write_script_ligand_prep(self):
+
+        with open('prepare_ligand_dock.py', 'w') as file:
+            script ="""import os
+import sys
 import numpy as np
+import shutil
+
+from mdtools.utility import utils
 from mdtools.utility import mol2
 
 # read mol2 file
@@ -281,16 +402,7 @@ new_mol2file = sys.argv[2]
 center = map(float,(sys.argv[3]).split())
 
 coords = np.array(mol2.get_coordinates(mol2file))
-
-def center_of_geometry(coords):
-    cog = np.array([0.0, 0.0, 0.0])
-    num_atom = coords.shape[0]
-    for idx in xrange(num_atom):
-        cog = cog + coords[idx]
-    cog = cog / num_atom
-    return cog
-
-cog = center_of_geometry(coords)
+cog = utils.center_of_geometry(coords)
 coords = coords - (cog - center)
 
 idx = 0
@@ -311,5 +423,5 @@ with open(new_mol2file, 'w') as nmol2f:
                 nmol2f.write(newline)
                 idx += 1
             else:
-                nmol2f.write(line)"""
+                nmol2f.write(line)"""%locals()
             file.write(script)

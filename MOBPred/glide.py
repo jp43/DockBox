@@ -15,7 +15,7 @@ required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert
 
 default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'use_prepwizard': 'True'}
 
-known_settings = {'precision': ['SP', 'XP'], 'use_prepwizard': ['True', 'False']}
+known_settings = {'precision': ['SP', 'XP'], 'use_prepwizard': ['true', 'false', 'yes', 'no']}
 
 class Glide(method.DockingMethod):
 

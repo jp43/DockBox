@@ -5,6 +5,7 @@ import shutil
 from glob import glob
 import argparse
 import pandas as pd
+from sklearn import preprocessing
 
 parser = argparse.ArgumentParser(description="Run docking analysis")
 
@@ -28,6 +29,7 @@ parser.add_argument('-combine',
 
 parser.add_argument('-s',
     required=True,
+    nargs='+',
     dest='sf',
     help='Scoring functions used to select best pose')
 
@@ -45,7 +47,7 @@ parser.add_argument('-l',
 args = parser.parse_args()
 
 features = ['file_l', 'file_r', 'target', 'site', 'instance', 'program', 'index', 'directory', 'index_dir']
-features_scores = ['score'] + [args.sf]
+features_scores = ['score'] + args.sf
 info = {}
 for ft in features + features_scores:
     info[ft] = []
@@ -108,7 +110,7 @@ for dir in args.dirs:
                  with open(subdir+'/'+instance+'/score.out', 'r') as sout:
                      for line_s in sout:
                          nscores += 1
-                         info['score'].append(float(line_s))
+                         info['score'].append(line_s.strip())
                      if nscores != nposes:
                          raise ValueError("Number of poses different from number of scores (%s/%s)"%(subdir,instance))
 
@@ -123,18 +125,25 @@ for dir in args.dirs:
 info = pd.DataFrame(info)
 info = info[info['program'].isin(args.prgms)]
 
+# compute rescaled scores
+for sf in args.sf:
+    info[sf+'_s'] = preprocessing.scale(info[sf].apply(lambda x: x))
+info['score_multi'] = info[[sf + '_s' for sf in args.sf]].sum(axis=1)
+
 shutil.rmtree(args.label, ignore_errors=True)
 os.mkdir(args.label)
-info.to_csv(args.label+'/poses.csv', index=False)
+
+features_csv = features + features_scores + [sf + '_s' for sf in args.sf] + ['score_multi']
+info[features_csv].to_csv(args.label+'/poses.csv', index=False, float_format='%.5f')
 
 if args.combine:
     info_group_by = info.groupby('directory')
-    best_poses = info.loc[info_group_by[args.sf].idxmin]
+    best_poses = info.loc[info_group_by['score_multi'].idxmin]
     best_poses.to_csv(args.label+'/best_poses.csv', index=False)
 else:
     info_group_by = info.groupby(['directory', 'target'])
-    best_poses = info.loc[info_group_by[args.sf].idxmin]
-best_poses.to_csv(args.label + '/best_poses.csv', index=False)
+    best_poses = info.loc[info_group_by['score_multi'].idxmin]
+best_poses[features_csv].to_csv(args.label + '/best_poses.csv', index=False, float_format='%.5f')
 
 for dir in args.dirs:
     ligdir = args.label + '/' + dir

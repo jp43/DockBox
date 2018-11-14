@@ -2,7 +2,11 @@ import sys
 import subprocess
 
 known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'ifd', 'moe', 'gold'], \
-     'rescoring': ['autodock', 'vina', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
+     'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
+
+single_run_rescoring_programs = ['glide', 'dock']
+
+default_minimize_options = {'charge_method': 'gas', 'ncyc': 10000, 'maxcyc': 20000, 'cut': 999.0, 'solvent': 'vacuo'}
 
 class ConfigSetup(object):
 
@@ -109,6 +113,7 @@ Make sure the program has been installed!'%(exe,program))
         self.site = site
         self.nsites = len(site)
 
+
     def is_yesno_option(self, config, section, option, default=False):
 
         if config.has_option(section, option):
@@ -137,10 +142,29 @@ class DockingSetup(ConfigSetup):
         super(DockingSetup, self).__init__('docking', config)
 
         self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
-        self.minimize = self.is_yesno_option(config, 'DOCKING', 'minimize')
+        self.minimize = self.set_minimization_options(config)
 
         if config.has_option('DOCKING', 'clustering'):
             self.cutoff_clustering = config.getfloat('DOCKING', 'clustering')
         else:
             self.cutoff_clustering = 0.0
 
+    def set_minimization_options(self, config):
+        """set options for minimization"""
+
+        self.minimize_options = {}
+        self.minimize_options['minimization'] = self.is_yesno_option(config, 'DOCKING', 'minimize')
+
+        section = 'MINIMIZATION'
+        if self.minimize_options['minimization']:
+            # load default parameters
+            for key, value in default_minimize_options.iteritems():
+                self.minimize_options[key] = value
+
+            # get parameters from config file (would possibly overwrite default preset parameters)
+            if config.has_section(section):
+               config_m = dict(config.items(section))
+               for key, value in config_m.iteritems():
+                   self.minimize_options[key] = value
+
+        return self.minimize_options

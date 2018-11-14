@@ -29,10 +29,10 @@ class DockingConfig(object):
         file_l = os.path.abspath(args.input_file_l)
         new_file_l = os.path.basename(file_l)
         pref, ext = os.path.splitext(new_file_l)
-        new_file_l = pref + '_uniq' + ext
+        new_file_l = pref + '_u' + ext # new ligand file with unique names for every atom
 
         # create a ligand file with unique atom names
-        mol2.update_mol2file(file_l, new_file_l, unique=True)
+        mol2.update_mol2file(file_l, new_file_l, unique=True, ligname='LIG')
         self.input_file_l = os.path.abspath(new_file_l)
 
         # check if ligand file exists
@@ -111,7 +111,7 @@ class Rescoring(object):
 class Docking(object):
 
     def create_arg_parser(self):
-        parser = argparse.ArgumentParser(description="""rundock : dock with multiple softwares --------
+        parser = argparse.ArgumentParser(description="""rundock : dock with multiple software --------
 Requires one file for the ligand (1 struct.) and one file for the receptor (1 struct.)""")
 
         parser.add_argument('-l',
@@ -151,7 +151,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             dest='skip_docking',
             action='store_true',
             default=False,
-            help='Skip docking (used for debugging)')
+            help='Skip docking (used for debugging minimization step prior to rescoring)')
 
         return parser
 
@@ -227,7 +227,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
-                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize=config_d.minimize, \
+                DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize_options=config_d.minimize, \
 cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
 
         if args.prepare_only:
