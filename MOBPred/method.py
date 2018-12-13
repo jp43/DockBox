@@ -8,7 +8,7 @@ import setup
 
 from mdtools.amber import minimization
 from mdtools.utility import mol2
-from mdtools.amber import clustr
+from mdtools.amber import clustering
 
 class DockingMethod(object):
 
@@ -84,7 +84,6 @@ class DockingMethod(object):
         """Rescore multiple ligands on one receptor"""
 
         curdir = os.getcwd()
-
         # find name for scoring directory
         if 'name' in self.options:
             scordir = self.options['name']
@@ -99,13 +98,9 @@ class DockingMethod(object):
         # change directory
         os.chdir(scordir)
 
-        if self.program in setup.single_run_rescoring_programs:
+        if self.program in setup.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
-
-        if self.program == 'colvar':
-            if self.options['type'] == 'sasa':
-                files_l = [files_l]
 
         if files_l:
             # iterate over all the poses
@@ -122,7 +117,7 @@ class DockingMethod(object):
                     pass
 
                 # (C) extract docking results
-                if self.program in setup.single_run_rescoring_programs:
+                if self.program in setup.single_run_scoring_programs:
                     nligands = len(files_l[0])
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
@@ -137,6 +132,7 @@ class DockingMethod(object):
 
         os.chdir(curdir)
         return scordir + '/score.out'
+
 
     def get_output_files_l(self):
 
@@ -238,7 +234,7 @@ ncyc=ncyc, maxcyc=maxcyc, cut=cut)
         nfiles_l = len(files_l)
         if nfiles_l > 1:
             # cluster poses
-            clustr.do_clustering(files_r, files_l, cutoff=cutoff, cleanup=True)
+            clustering.cluster_poses(files_r, files_l, cutoff=cutoff, cleanup=True)
 
             with open('clustering/info.dat', 'r') as ff:
                 for line in ff:

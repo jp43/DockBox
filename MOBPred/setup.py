@@ -3,10 +3,11 @@ import subprocess
 
 known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'ifd', 'moe', 'gold'], \
      'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
+known_programs['scoring'] = known_programs['rescoring']
 
-single_run_rescoring_programs = ['glide', 'dock']
+single_run_scoring_programs = ['glide', 'dock']
 
-default_minimize_options = {'charge_method': 'gas', 'ncyc': 10000, 'maxcyc': 20000, 'cut': 999.0, 'solvent': 'vacuo'}
+default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
 
 class ConfigSetup(object):
 
@@ -127,18 +128,11 @@ Make sure the program has been installed!'%(exe,program))
         else:
             return default
 
-class RescoringSetup(ConfigSetup):
-
-    def __init__(self, config):
-        self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
-
-        if self.is_rescoring:
-            super(RescoringSetup, self).__init__('rescoring', config)
-            self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
 
 class DockingSetup(ConfigSetup):
 
     def __init__(self, config):
+
         super(DockingSetup, self).__init__('docking', config)
 
         self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
@@ -168,3 +162,20 @@ class DockingSetup(ConfigSetup):
                    self.minimize_options[key] = value
 
         return self.minimize_options
+
+class RescoringSetup(ConfigSetup):
+
+    def __init__(self, config):
+        self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
+
+        if self.is_rescoring:
+            super(RescoringSetup, self).__init__('rescoring', config)
+            self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
+
+
+class ScoringSetup(ConfigSetup):
+
+    def __init__(self, config):
+
+        super(ScoringSetup, self).__init__('scoring', config)
+        self.cleanup = self.is_yesno_option(config, 'SCORING', 'cleanup')

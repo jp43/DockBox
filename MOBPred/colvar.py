@@ -2,8 +2,6 @@ import os
 import sys
 import method
 
-from MOBPred.license import check as chkl
-
 mandatory_settings = ['type']
 known_types = ['distance', 'volume', 'sasa']
 default_settings = {'type': 'distance', 'residues': None, 'distance_mode': 'cog'}
@@ -26,20 +24,19 @@ class Colvar(method.ScoringMethod):
         locals().update(self.options)
 
         if self.options['type'] == 'distance':
-
             if self.options['distance_mode'] == 'cog':
                 with open(filename, 'w') as file:
                     script ="""#!/bin/bash
 set -e
-echo "from MOBPred.tools import mol2, PDB
-from MOBPred.tools import reader
-from MOBPred.tools import util
+echo "from mdtools.utility import mol2, PDB
+from mdtools.utility import reader
+from mdtools.utility import utils
 import numpy as np
 
 ligrd = reader.open('%(file_l)s')
 coords_lig = [map(float,line[2:5]) for line in ligrd.next()['ATOM']]
 coords_lig = np.array(coords_lig)
-cog_lig = util.center_of_geometry(coords_lig)
+cog_lig = utils.center_of_geometry(coords_lig)
 
 recrd = reader.open('%(file_r)s')
 residue = %(residues)s
@@ -50,7 +47,7 @@ for rs in residue:
 
     coords_rec = [map(float,line[4:7]) for line in rec if line[3] == str(rs)]
     coords_rec = np.array(coords_rec)
-    cog_rec = util.center_of_geometry(coords_rec)
+    cog_rec = utils.center_of_geometry(coords_rec)
 
     dist = np.sqrt(np.sum((cog_lig - cog_rec)**2))
     if dist < dist_min:
@@ -66,9 +63,9 @@ python get_distance.py"""% locals()
                 with open(filename, 'w') as file:
                     script ="""#!/bin/bash
 set -e
-echo "from MOBPred.tools import mol2, PDB
-from MOBPred.tools import reader
-from MOBPred.tools import util
+echo "from mdtools.utility import mol2, PDB
+from mdtools.utility import reader
+from mdtools.utility import utils
 import numpy as np
 
 ligrd = reader.open('%(file_l)s')
@@ -142,7 +139,7 @@ structconvert -n 2: -imae complex-out_pv.mae -osd lig_out.sdf"""% locals()
                     with open('lig_out.sdf', 'r') as ff:
                         is_sasa_line = False
                         for line in ff:
-                            if line.startswith('> <r_user_sasa_ligand_total_bound>'):
+                            if line.startswith('> <r_user_sasa_ligand_total_delta>'):
                                 is_sasa_line = True
                             elif is_sasa_line:
                                 is_sasa_line = False

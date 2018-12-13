@@ -31,8 +31,11 @@ set -e
 # remove pre-existing result file
 rm -rf dsx.txt
 
+cp %(file_r)s protein.pdb
+cp %(file_l)s ligand.mol2
+
 # execute DSX
-dsx -P %(file_r)s -L %(file_l)s -F dsx.txt%(pot_dir_str)s%(other_flags_str)s
+dsx -P protein.pdb -L ligand.mol2 -F dsx.txt%(pot_dir_str)s%(other_flags_str)s
 """% locals()
             file.write(script)
 

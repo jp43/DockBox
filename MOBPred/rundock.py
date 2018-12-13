@@ -1,8 +1,7 @@
 #!/usr/bin/python
 from __future__ import with_statement
-
-import sys
 import os
+import sys
 import shutil
 import argparse
 import ConfigParser
@@ -10,13 +9,12 @@ import time
 import pandas as pd
 from glob import glob
 import subprocess
-
-from mdtools.utility import mol2
 import setup
+from mdtools.utility import mol2
 
 class DockingConfig(object):
 
-    def __init__(self, args):
+    def __init__(self, args, task='docking'):
 
         # check if config file exist
         if not os.path.exists(args.config_file):
@@ -45,10 +43,67 @@ class DockingConfig(object):
         if not os.path.exists(self.input_file_r):
             raise IOError("File %s not found!"%(self.input_file_r))
 
-        self.docking = setup.DockingSetup(config)
-        self.rescoring = setup.RescoringSetup(config)
+        if task == 'docking':
+            self.docking = setup.DockingSetup(config)
+            self.rescoring = setup.RescoringSetup(config)
+        elif task == 'scoring':
+            self.scoring = setup.ScoringSetup(config)
+        else:
+            raise ValueError("Task should be one of docking or scoring")
 
-class Rescoring(object):
+class Scoring(object):
+
+    def create_arg_parser(self):
+        parser = argparse.ArgumentParser(description="""runscore : score with multiple software --------
+Requires one file for the ligand (1 struct.) and one file for the receptor (1 struct.)""")
+
+        parser.add_argument('-l',
+            type=str,
+            dest='input_file_l',
+            required=True,
+            help = 'Ligand coordinate file(s): .mol2')
+
+        parser.add_argument('-r',
+            type=str,
+            dest='input_file_r',
+            required=True,
+            help = 'Receptor coordinate file(s): .pdb')
+
+        parser.add_argument('-f',
+            dest='config_file',
+            required=True,
+            help='config file containing docking parameters')
+
+        return parser
+
+    def run_scoring(self):
+        """Run scoring on original poses provided"""
+
+        parser = self.create_arg_parser()
+        args = parser.parse_args()
+
+        print "Setting up parameters..."
+        config = DockingConfig(args, task='scoring')
+
+        tcpu1 = time.time()
+        file_r = config.input_file_r
+        config_s = config.scoring
+
+        print "Starting scoring..."
+        for kdx in range(len(config_s.site)):
+            site = config_s.site['site'+str(kdx+1)]
+
+            # iterate over rescoring instances
+            for instance, program, options in config_s.instances:
+
+                # get docking class
+                ScoringClass = getattr(sys.modules[program], program.capitalize())
+ 
+                ScoringInstance = ScoringClass(instance, site, options)
+                outputfile = ScoringInstance.run_rescoring(config.input_file_r, [config.input_file_l], cleanup=config_s.cleanup)
+ 
+        tcpu2 = time.time()
+        print "Scoring done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run_rescoring(self, config, args):
         """Run rescoring on docking poses"""
@@ -58,8 +113,6 @@ class Rescoring(object):
         file_r = config.input_file_r
         config_r = config.rescoring
         posedir = args.posedir
-
-        print "Starting rescoring..."
 
         # look for results folder
         if not os.path.isdir(posedir):
@@ -76,6 +129,7 @@ class Rescoring(object):
             os.mkdir(workdir)
 
         os.chdir(workdir)
+        print "Starting rescoring..."
         # iterate over rescoring instances
         for instance, program, options in config_r.instances:
 
@@ -94,12 +148,11 @@ class Rescoring(object):
 
                 # get complex filenames
                 files_l = [os.path.abspath('../'+posedir+'/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
-
                 # get docking class
-                DockingClass = getattr(sys.modules[program], program.capitalize())
+                ScoringClass = getattr(sys.modules[program], program.capitalize())
 
-                DockingInstance = DockingClass(instance, site, options)
-                outputfile = DockingInstance.run_rescoring(file_r, files_l)
+                ScoringInstance = ScoringClass(instance, site, options)
+                outputfile = ScoringInstance.run_rescoring(file_r, files_l, cleanup=config_r.cleanup)
 
                 # cat output in file (cat instead of copying because of the binding sites)
                 subprocess.check_output('cat %s >> %s'%(outputfile,name+'.score'), shell=True, executable='/bin/bash')
@@ -257,4 +310,4 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
 
         # run rescoring
         if config.rescoring.is_rescoring:
-            Rescoring().run_rescoring(config, args)
+            Scoring().run_rescoring(config, args)
