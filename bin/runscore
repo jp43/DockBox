@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from MOBPred import rundock as rd
+from dockbox import rundock as rd
 
 if __name__ == '__main__':
     rd.Scoring().run_scoring()

@@ -1,11 +1,11 @@
-Mode-of-binding Predictor
-=========================
+DockBox
+=======
 
-Mode-of-binding Predictor (MOBPred) is a python package used to facilitate the use of popular docking software (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different software or combine them in a consensus docking or consensus scoring strategy.
+DockBox is a python package used to facilitate the use of popular docking software (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different software or combine them in a consensus docking or consensus scoring strategy.
 
-Note that the software that can be used by MOBPred are not part of the current repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine MOBPred is set up.
+Note that the software that can be used by DockBox are not included in the repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine DockBox is set up.
 
-Below is a list of all the programs which can be used by MOBPred. 
+Below is a list of all the programs which can be used by DockBox. 
 
 * **Structure preparation/optimization**:
 
@@ -49,7 +49,7 @@ Table of contents
 Prerequisites
 =============
 
-Before installing the MOBPred package, make sure that you have the following packages installed:
+Before installing the DockBox package, make sure that you have the following packages installed:
 
 * NumPy; version 1.4.1 or later
 
@@ -57,7 +57,7 @@ Before installing the MOBPred package, make sure that you have the following pac
 
 * AmberTools; version 12 or later
 
-Any software intended to be used in conjunction with MOBPred should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
+Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
 * **Autodock**: except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
   * autodock4
@@ -133,13 +133,13 @@ Any software intended to be used in conjunction with MOBPred should be installed
 Installation
 ============
 
-The Python Distutils are used to build and install MOBPred, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
+The Python Distutils are used to build and install DockBox, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
 
 1. First, make sure that you have the NumPy and pandas modules. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
 
 2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...) are accessible through your PATH variable. For pharmamatrix users, see section **prerequisites**.
 
-3. From the main MOBPred distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
+3. From the main DockBox distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
 
         python setup.py install
 
@@ -283,7 +283,7 @@ General sections
     * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple software.
 
 
-    Below is a list of all the programs that can be used by MOBPred specifying if they can be used for docking or/and rescoring.
+    Below is a list of all the programs that can be used by DockBox specifying if they can be used for docking or/and rescoring.
 
 
     |    Software   |    Docking    |   Rescoring   |

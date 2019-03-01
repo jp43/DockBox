@@ -62,9 +62,9 @@ def check_import(pkgname, pkgver):
             % {'pkgname': pkgname, 'pkgver': mod.__version__} ))
     globals()[pkgname] = mod
 
-setup(name='MOBPredictor',
-      packages=['MOBPred'],
-      package_data = {'MOBPred.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
+setup(name='DockBox',
+      packages=['dockbox'],
+      package_data = {'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
       scripts = ['bin/rundock', 'bin/runscore', 'bin/runanlz', 'bin/extract_mob', 'bin/prepare_sites', 'bin/prepare_vs', 'bin/rmsd2ref.py'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',

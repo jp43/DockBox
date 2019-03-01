@@ -5,11 +5,9 @@ import glide
 import subprocess
 import socket
 import method
-
 import license
 
 required_programs = ['prepwizard', 'ifd', 'ligprep', 'pdbconvert']
-
 default_settings = {'rmsd': '0.18', 'cv_cutoff': '100.00', 'hbond_cutoff' : '-0.05', 'poses_per_lig_dock1': '4', 'poses_per_lig_dock2': '5', 'precision': 'SP'}
 
 class Ifd(method.DockingMethod):
