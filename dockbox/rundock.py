@@ -1,5 +1,6 @@
 #!/usr/bin/python
 from __future__ import with_statement
+
 import os
 import sys
 import shutil
@@ -9,6 +10,7 @@ import time
 import pandas as pd
 from glob import glob
 import subprocess
+
 import setup
 from mdtools.utility import mol2
 
