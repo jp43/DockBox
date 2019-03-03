@@ -7,11 +7,11 @@ import shutil
 import argparse
 import ConfigParser
 import time
-import pandas as pd
 from glob import glob
 import subprocess
-
 import setup
+
+import pandas as pd
 from mdtools.utility import mol2
 
 class DockingConfig(object):

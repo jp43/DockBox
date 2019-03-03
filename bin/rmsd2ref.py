@@ -8,8 +8,8 @@ import subprocess
 
 from mdtools.utility import reader
 from mdtools.utility import mol2
+from mdtools.amber import clusterize
 from mdtools.amber import ambertools
-from mdtools.amber import clustr
 
 if not os.path.exists('poses'):
     print "No poses directory detected. Quitting..."
@@ -42,7 +42,7 @@ for idx, file_l in enumerate(files_l):
     ambertools.prepare_ligand('protein.pdb', file_l, file_rl)
     files_rl.append(file_rl)
 
-clustr.prepare_leap_config_file('leap.in', ['protein.pdb'], ['ligand.mol2']+files_l, ['protein-ligand.pdb']+files_rl)
+clusterize.prepare_leap_config_file('leap.in', ['protein.pdb'], ['ligand.mol2']+files_l, ['protein-ligand.pdb']+files_rl)
 subprocess.check_output('tleap -f leap.in', shell=True)
 
 lines_trajin = ""

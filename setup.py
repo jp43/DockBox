@@ -1,8 +1,8 @@
 import os
 import sys
 import re
-import textwrap
 import glob
+import textwrap
 
 from distutils.core import setup
 from distutils.core import Extension

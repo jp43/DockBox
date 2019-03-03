@@ -4,8 +4,8 @@ import sys
 import shutil
 from glob import glob
 import argparse
-import pandas as pd
 
+import pandas as pd
 from sklearn import preprocessing
 
 parser = argparse.ArgumentParser(description="Run docking analysis")

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 from dockbox import rundock as rd
 
 if __name__ == '__main__':
