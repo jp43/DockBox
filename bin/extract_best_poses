@@ -1,0 +1,382 @@
+#!/usr/bin/python
+import os
+import sys
+import shutil
+from glob import glob
+import argparse
+
+import numpy as np
+import pandas as pd
+from mdtools.utility import mol2
+from sklearn import preprocessing
+
+cutoff = 2.0
+
+parser = argparse.ArgumentParser(description="Extract best docking poses after rundock finished.")
+
+parser.add_argument('-all-targets',
+    dest='combine_targets',
+    action='store_true',
+    default=False,
+    help='Select best poses over all the targets. If not specified, extract best pose separately for each target.')
+
+parser.add_argument('-all-isomers',
+    dest='combine_isomers',
+    action='store_true',
+    default=False,
+    help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer.')
+
+group = parser.add_mutually_exclusive_group(required=True)
+
+group.add_argument('-cd',
+    dest='cd',
+    nargs='+',
+    metavar='PRGM',
+    help='Docking programs used with consensus docking.')
+
+group.add_argument('-cs',
+    dest='cs',
+    nargs='+',
+    metavar='FUNC',
+    help='Scoring functions used with consensus scoring.')
+
+group.add_argument('-s',
+    nargs='+',
+    dest='sf',
+    metavar='FUNC',
+    help='Scoring functions used to extract best pose.')
+
+parser.add_argument('-dirs',
+    dest='dirs',
+    nargs='+',
+    default=['.'],
+    metavar=('DIR1', 'DIR2'),
+    help='Directories considered for analysis. Should contain a folder called "poses". Default: curr. dir.')
+
+parser.add_argument('-r',
+    required=False,
+    dest='resultsdir',
+    default='results',
+    metavar='DIRECTORY NAME',
+    help='Name of results directory.')
+
+args = parser.parse_args()
+
+def compute_rmsd(file1, file2):
+    # structures are already aligned, so no need to perform the alignment
+    coords1 = np.array(mol2.get_coordinates(file1, keep_h=False))
+    coords2 = np.array(mol2.get_coordinates(file2, keep_h=False))
+
+    natoms = coords1.shape[0]
+    rmsd = np.sqrt(np.sum((coords1-coords2)**2)/natoms)
+    return rmsd
+
+def check_architecture(directory):
+    """check architecture lig/target/isomer of directories provided"""
+
+    if os.path.isdir(directory):
+        dir_split = directory.split('/')
+        if dir_split[0].startswith('lig'):
+            isligID = True
+            if len(dir_split) > 1:
+                if dir_split[1].startswith('target'):
+                    istargetID = True
+                    if len(dir_split) > 2 and dir_split[2].startswith('isomer'):
+                        isisomerID = True
+                    else:
+                        isisomerID = False
+                elif dir_split[1].startswith('isomer'):
+                    istargetID = False
+                    isisomerID = True
+                else:
+                    istargetID = False
+                    isisomerID = False
+            else:
+                istargetID = False
+                isisomerID = False
+        elif dir_split[0].startswith('target'):
+            isligID = False
+            istargetID = True
+            if len(dir_split) > 1 and dir_split[1].startswith('isomer'):
+                isisomerID = True
+            else:
+                isisomerID = False
+        elif dir_split[0].startswith('isomer'):
+            isligID = False
+            istargetID = False
+            isisomerID = True
+        else:
+            isligID = False
+            istargetID = False
+            isisomerID = False
+
+    return isligID, istargetID, isisomerID
+
+def get_IDs(directory, isligID, istargetID, isisomerID):
+    if isligID:
+        ligID = directory.split('/')[0]
+        if istargetID:
+            targetID = directory.split('/')[1]
+            if isisomerID:
+                isomerID = directory.split('/')[2]
+            else:
+                isomerID = None
+        elif isisomerID:
+            targetID = None
+            isomerID = directory.split('/')[1]
+    elif istargetID:
+        ligID = None
+        targetID = directory.split('/')[0]
+        if isisomerID:
+            isomerID = directory.split('/')[1]
+        else:
+            isomerID = None
+    elif isisomerID:
+        ligID = None
+        targetID = None
+        isomerID = directory.split('/')[0]
+    else:
+        ligID, targetID, isomerID = None, None, None
+
+    return ligID, targetID, isomerID
+
+def check_directories(dirs):
+    if dirs != ['.']:
+        iscwd = False
+        for jdx, dir in enumerate(dirs):
+            isligID, istargetID, isisomerID = check_architecture(dir)
+            if jdx == 0:
+                isligID_ref = isligID
+                istargetID_ref = istargetID
+                isisomerID_ref = isisomerID
+            elif isligID != isligID_ref or istargetID != istargetID_ref or isisomerID != isisomerID_ref:
+                raise ValueError("Lig/target/isomer architecture inconsistent between folders!")
+    else:
+        iscwd = True
+        isligID = False
+        istargetID = False
+        isisomerID = False
+    return iscwd, isligID, istargetID, isisomerID
+
+dirs = []
+for dir in args.dirs:
+    if os.path.isdir(dir+'/poses'):
+        dirs.append(os.path.relpath(dir))
+    else:
+        raise ValueError('directory '+dir+'/poses does not exist!')
+iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
+
+scoring_functions_all = []
+if args.cs:
+    scoring_functions = args.cs
+    if len(args.cs) < 2:
+        raise ValueError('Number of functions for consensus scoring should be at least 2!')
+elif args.cd:
+    scoring_functions = None
+    if len(args.cd) < 2:
+        raise ValueError('Number of programs for consensus docking should be at least 2!')
+elif args.sf:
+    scoring_functions = args.sf
+else:
+    raise IOError("One of -cs, -cd or -s options should be used when running extract_best_poses!")
+
+features = ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose']
+features_ids = []
+if isligID:
+    features_ids += ['ligID']
+if istargetID: 
+    features_ids += ['targetID']
+if isisomerID:
+    features_ids += ['isomerID']
+
+poses = []
+best_poses = []
+for jdx, dir in enumerate(dirs):
+    posedir = dir+'/poses'
+    ligID, targetID, isomerID = get_IDs(posedir, isligID, istargetID, isisomerID)
+
+    info_dir = {}
+    for ft in features_ids + features + ['score']:
+        info_dir[ft] = []
+
+    # get location of poses and receptor files
+    with open(posedir+'/info.dat', 'r') as inff:
+        inff.next()
+        inff.next()
+
+        for line in inff:
+            program, nposes, firstidx, site = line.strip().split(',')
+            firstidx = int(firstidx)
+            nposes = int(nposes)
+            instance = program
+            if site:
+                instance += '.' + site
+            poses_idxs = range(firstidx, firstidx+nposes)
+
+            nposes = len(poses_idxs)
+            for index, idx in enumerate(poses_idxs):
+                file_l = posedir + '/lig-%s.mol2'%idx
+                if os.path.isfile(file_l):
+                    info_dir['file_l'].append(os.path.relpath(file_l))
+                else:
+                    raise IOError("File %s does not exist!"%file_l)
+                info_dir['file_r'].append(os.path.relpath(posedir+'/rec.pdb'))
+                info_dir['site'].append(site)
+                info_dir['program'].append(program)
+                info_dir['instance'].append(instance)
+                info_dir['index_pose'].append(index)
+                if isligID:    
+                    info_dir['ligID'].append(ligID)
+                if istargetID:
+                    info_dir['targetID'].append(targetID)
+                if isisomerID:
+                    info_dir['isomerID'].append(isomerID)
+
+            nscores = 0
+            # extract original scores
+            with open(dir+'/'+instance+'/score.out', 'r') as sout:
+                for line_s in sout:
+                    nscores += 1
+                    info_dir['score'].append(float(line_s.strip()))
+                if nscores != nposes:
+                    raise ValueError("Number of poses different from number of scores (%s/%s)"%(subdir,instance))
+
+    # extract all scores
+    for score_file in sorted(glob(dir+'/rescoring/*.score')):
+        sf = os.path.basename(score_file).split('.')[0]
+        if jdx == 0:
+            scoring_functions_all.append(sf)
+        elif sf not in scoring_functions_all:
+            raise ValueError("%s scores not computed in every directory!")
+        info_dir[sf] = []
+        with open(score_file, 'r') as sout:
+            for line_s in sout:
+                info_dir[sf].append(float(line_s))
+
+    df_dir = pd.DataFrame(info_dir)
+    poses.append(df_dir)
+
+    if args.sf:
+        # extract best pose from best linear combination of scores
+        df_dir['score'] = df_dir[args.sf].sum(axis=1)
+        df_dir_groupby = df_dir.groupby(['program'])
+        best_poses_dir = df_dir.loc[df_dir_groupby['score'].idxmin]
+    elif args.cs:
+        # extract best pose if consensus between poses with best score is met
+        consensus = True
+        file_l_ref = None
+        for idx, sf in enumerate(args.cs):
+            row = df_dir.loc[df_dir[sf].idxmin]
+            if idx == 0:
+                firstrow = row.copy()
+                file_l_ref = row['file_l']
+            elif idx > 0:
+                rmsd = compute_rmsd(row['file_l'], file_l_ref)
+                if rmsd > cutoff:
+                    consensus = False
+                    break
+        if consensus:
+            best_poses_dir = pd.DataFrame(firstrow).T
+            # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
+            best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
+            best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score']+scoring_functions_all})
+            best_poses_dir['score'] = best_poses_dir[args.cs].sum(axis=1)/len(args.cs) # score computed from average internal score
+    elif args.cd:
+        # extract best pose if consensus between poses with best docking score is met
+        df_dir_prgms = df_dir[df_dir['program'].isin(args.cd)]
+        df_dir_prgms_groupby = df_dir_prgms.groupby(['program'])
+        rows = df_dir_prgms.loc[df_dir_prgms_groupby['score'].idxmin]
+        consensus = True
+        for idx, (index, row) in enumerate(rows.iterrows()):
+            if idx == 0:
+                firstrow = row.copy()
+                file_l_ref = row['file_l']
+            elif idx > 0:
+                rmsd = compute_rmsd(row['file_l'], file_l_ref)
+                if rmsd > cutoff:
+                    consensus = False
+                    break
+        if consensus:
+            best_poses_dir = firstrow.to_frame().T
+            # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
+            best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
+            best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score']+scoring_functions_all})
+
+    if args.sf or consensus:
+        best_poses.append(best_poses_dir)
+
+if poses:
+    poses = pd.concat(poses).reset_index()
+else:
+    poses = None
+
+if best_poses:
+    best_poses = pd.concat(best_poses).reset_index()
+    # combine results over all isomers.
+    if args.combine_isomers:
+        if isisomerID:
+            groupby_columns = []
+            if isligID:
+                groupby_columns += ['ligID']
+            if istargetID:
+                groupby_columns += ['targetID']
+            if groupby_columns:
+                best_poses_groupby = best_poses.groupby(groupby_columns)
+                best_poses = best_poses.loc[best_poses_groupby['score'].idxmin]
+            else:
+                best_poses = best_poses.loc[best_poses['score'].idxmin].T
+    # combine results over all targets.
+    if args.combine_targets:
+        if istargetID:
+            groupby_columns = []
+            if isligID:
+                groupby_columns += ['ligID']
+            if isisomerID:
+                groupby_columns += ['isomerID']
+            if groupby_columns:
+                best_poses_groupby = best_poses.groupby(groupby_columns)
+                best_poses = best_poses.loc[best_poses_groupby['score'].idxmin]
+            else:
+                best_poses = best_poses.loc[best_poses['score'].idxmin].T
+else:
+    best_poses = None
+
+shutil.rmtree(args.resultsdir, ignore_errors=True)
+os.mkdir(args.resultsdir)
+
+features_csv = features_ids + features + scoring_functions_all + ['score']
+features_csv.remove('instance')
+features_csv.remove('index_pose')
+
+if poses is not None:
+    poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.5f')
+
+if args.combine_isomers and isisomerID:
+    features_ids.remove('isomerID')
+if args.combine_targets and istargetID:
+    features_ids.remove('targetID')
+
+if best_poses is not None:
+    best_poses[features_csv].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.5f')
+
+    for idx, row in best_poses.iterrows():
+        newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+        if not os.path.isdir(newdir):
+            os.makedirs(newdir)
+        file_l = row['file_l']
+        file_r = row['file_r']
+        instance = row['instance']
+        index = row['index_pose']
+    
+        shutil.copyfile(file_l, newdir+'/ligand.mol2')
+        origindir = '/'.join(file_l.split('/')[:-2])
+    
+        poses_idxs = []
+        for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+            poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+        poses_idxs = sorted(poses_idxs)
+        pose_idx = poses_idxs[int(index)]
+    
+        if os.path.isdir(origindir+'/'+instance+'/origin'):
+            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig.mol2')
+        shutil.copyfile(file_r, newdir+'/protein.pdb')

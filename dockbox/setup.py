@@ -31,7 +31,7 @@ class ConfigSetup(object):
                 program = ''.join([c for c in instance if not c.isdigit()]) # get program's exact name
                 if program not in known_programs[task]:
                     raise ValueError("%s programs should be one of "%task.capitalize() + ", ".join(known_programs[task]))
-                sys.modules[program] = __import__('MOBPred.'+program, fromlist=['a'])
+                sys.modules[program] = __import__('dockbox.'+program, fromlist=['a'])
 
                 options = {}
                 # check if all needed executables are available

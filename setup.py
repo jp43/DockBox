@@ -65,7 +65,7 @@ def check_import(pkgname, pkgver):
 setup(name='DockBox',
       packages=['dockbox'],
       package_data = {'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-      scripts = ['bin/rundock', 'bin/runscore', 'bin/runanlz', 'bin/extract_mob', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs', 'bin/rmsd2ref.py'],
+      scripts = ['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',
       long_description=open('README.md').read(),
