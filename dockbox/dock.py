@@ -366,25 +366,16 @@ dock6 -i dock6.in"""% locals()
                     elif line.strip().startswith('ERROR:  Conformation could not be scored.'):
                         print >> ff, 'NaN'
 
-        # remove heavy files
-        for ff in glob('grid*'):
-            os.remove(ff)
-
-        filenames = ['selected_spheres.sph', 'target_noH.ms']
-        for ff in filenames:
-            if os.path.isfile(ff):
-                os.remove(ff) 
-
     def cleanup(self):
         # remove heavy files
-        for ff in glob('grid*'):
-            os.remove(ff)
-
-        filenames = ['selected_spheres.sph', 'target_noH.ms']
-        for ff in filenames:
-            if os.path.isfile(ff):
-                os.remove(ff) 
-    
+        to_be_removed = ['run_'+self.program+'.sh', 'antechamber.log', 'selected_spheres.sph', 'target_noH.ms', \
+'dockprep.py', 'dockprep.pyc', 'INSPH', 'lig.mol2', 'lig_ref.mol2', \
+'prepare_ligand_dock.py', 'showbox.in', 'target.mol2', 'target_noH_box.pdb', \
+'target_noH.pdb', 'target_noH_site.sph'] + list(glob('grid*'))
+        for filename in to_be_removed:
+            if os.path.isfile(filename):
+                os.remove(filename)
+ 
     def write_script_ligand_prep(self):
 
         with open('prepare_ligand_dock.py', 'w') as file:

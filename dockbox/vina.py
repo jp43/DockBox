@@ -102,3 +102,12 @@ vina --score_only --config vina.config > vina.out"""% locals()
         for ff in filenames:
             if os.path.isfile(ff):
                 os.remove(ff)
+
+    def cleanup(self):
+
+        to_be_removed = ['run_'+self.program+'.sh', 'lig.pdbqt', 'lig_out.pdbqt', 'prepare_receptor4.log', 'target.pdbqt', 'check_lig_pdbqt.py', 'vina.err']
+
+        # remove map files
+        for filename in to_be_removed:
+            if os.path.isfile(filename):
+                os.remove(filename)

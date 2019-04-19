@@ -115,7 +115,7 @@ Make sure the program has been installed!'%(exe,program))
         self.nsites = len(site)
 
 
-    def is_yesno_option(self, config, section, option, default=False):
+    def get_value_yesno_option(self, config, section, option, default=False):
 
         if config.has_option(section, option):
             yesno = config.get(section, option).lower()
@@ -129,13 +129,28 @@ Make sure the program has been installed!'%(exe,program))
             return default
 
 
+    def get_value_cleanup_option(self, config, section, default=0):
+
+        if config.has_option(section, 'cleanup'):
+            value = config.get(section, 'cleanup').lower()
+            if value == 'no' or value == '0':
+                return 0
+            elif value == 'yes' or value == '1':
+                return 1
+            elif value == '2':
+                return 2
+            else:
+                raise ValueError("cleanup option in section DOCKING should be yes, no or 0, 1 or 2!")
+        else:
+            return default
+
 class DockingSetup(ConfigSetup):
 
     def __init__(self, config):
 
         super(DockingSetup, self).__init__('docking', config)
 
-        self.cleanup = self.is_yesno_option(config, 'DOCKING', 'cleanup')
+        self.cleanup = self.get_value_cleanup_option(config, 'DOCKING')
         self.minimize = self.set_minimization_options(config)
 
         if config.has_option('DOCKING', 'clustering'):
@@ -147,7 +162,7 @@ class DockingSetup(ConfigSetup):
         """set options for minimization"""
 
         self.minimize_options = {}
-        self.minimize_options['minimization'] = self.is_yesno_option(config, 'DOCKING', 'minimize')
+        self.minimize_options['minimization'] = self.get_value_yesno_option(config, 'DOCKING', 'minimize')
 
         section = 'MINIMIZATION'
         if self.minimize_options['minimization']:
@@ -157,7 +172,7 @@ class DockingSetup(ConfigSetup):
 
             # get parameters from config file (would possibly overwrite default preset parameters)
             if config.has_section(section):
-               config_m = dict(config.items(section))
+              config_m = dict(config.items(section))
                for key, value in config_m.iteritems():
                    self.minimize_options[key] = value
 
@@ -166,16 +181,10 @@ class DockingSetup(ConfigSetup):
 class RescoringSetup(ConfigSetup):
 
     def __init__(self, config):
-        self.is_rescoring = self.is_yesno_option(config, 'DOCKING', 'rescoring')
+        self.is_rescoring = self.get_value_yesno_option(config, 'DOCKING', 'rescoring')
 
         if self.is_rescoring:
             super(RescoringSetup, self).__init__('rescoring', config)
-            self.cleanup = self.is_yesno_option(config, 'RESCORING', 'cleanup')
-
 
 class ScoringSetup(ConfigSetup):
-
-    def __init__(self, config):
-
-        super(ScoringSetup, self).__init__('scoring', config)
-        self.cleanup = self.is_yesno_option(config, 'SCORING', 'cleanup')
+    pass

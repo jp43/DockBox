@@ -260,7 +260,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 with open(file_s, 'w') as sf: 
                     line = '' # initialize line
                     for line in dlgf:
-                        if 'Estimated Free Energy of Binding' in line:
+                        if line.startswith('DOCKED: USER    Estimated Free Energy of Binding'):
                             score = float(line.split()[8])
                             print >> sf, score
                         if 'CLUSTERING HISTOGRAM' in line:
@@ -288,9 +288,10 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 print >> ff, 'NaN'
 
     def cleanup(self):
-        # remove map files
-        for ff in glob('*map*'):
-            os.remove(ff)
 
-        for ff in glob('*pdbqt'):
-            os.remove(ff)
+        to_be_removed = ['run_'+self.program+'.sh', 'prepare_receptor4.log', 'check_lig_pdbqt.py'] + list(glob('*map*')) + list(glob('*pdbqt'))
+
+        for filename in to_be_removed:
+            if os.path.isfile(filename):
+                os.remove(filename)
+

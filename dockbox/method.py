@@ -20,7 +20,7 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize_options=None, cleanup=False, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
+    def run_docking(self, file_r, file_l, minimize_options=None, cleanup=0, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
         """Run docking on one receptor (file_r) and one ligand (file_l)"""
 
         curdir = os.getcwd()
@@ -63,10 +63,10 @@ class DockingMethod(object):
 
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
-        self.backup_files('origin')
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize_options['minimization']:
+            self.backup_files('origin')
             self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup, **minimize_options)
         self.remove_out_of_range_poses('score.out')
 
@@ -74,13 +74,13 @@ class DockingMethod(object):
             self.remove_duplicates('score.out', cutoff=cutoff_clustering)
 
         # (D) remove intermediate files if required
-        if cleanup:
+        if cleanup >= 1:
             self.cleanup()
 
         os.chdir(curdir)
         print "Docking with %s done."%self.program.capitalize()
 
-    def run_rescoring(self, file_r, files_l, cleanup=False):
+    def run_rescoring(self, file_r, files_l):
         """Rescore multiple ligands on one receptor"""
 
         curdir = os.getcwd()
@@ -122,10 +122,6 @@ class DockingMethod(object):
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
                     self.extract_rescoring_results('score.out')
-
-            # (D) remove intermediate files if required
-            if cleanup:
-                self.cleanup()
         else:
             # if no files provided, create an empty score.out file
             open('score.out', 'w').close()
@@ -155,7 +151,7 @@ class DockingMethod(object):
         for file_l in files_l:
             shutil.copyfile(file_l, dir+'/'+file_l) 
 
-    def minimize_extracted_poses(self, file_r, file_s, cleanup=False, **minimize_options):
+    def minimize_extracted_poses(self, file_r, file_s, cleanup=0, **minimize_options):
         """Perform AMBER minimization on extracted poses"""
 
         files_l = self.get_output_files_l()
@@ -191,7 +187,7 @@ ncyc=ncyc, maxcyc=maxcyc, cut=cut)
                                 sft.write(line)
                 shutil.move('score.tmp.out', file_s)
 
-        if cleanup:
+        if cleanup >= 1:
             shutil.rmtree('em', ignore_errors=True)
 
     def remove_out_of_range_poses(self, file_s):
@@ -271,7 +267,7 @@ ncyc=ncyc, maxcyc=maxcyc, cut=cut)
 
 class ScoringMethod(DockingMethod):
 
-    def run_docking(self, file_r, file_l, minimize=False, cleanup=False, extract_only=False):
+    def run_docking(self, file_r, file_l, minimize=False, cleanup=0, extract_only=False):
         pass
 
     def remove_out_of_range_poses(self, file_s):

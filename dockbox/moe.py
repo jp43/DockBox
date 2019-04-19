@@ -25,8 +25,6 @@ class Moe(method.DockingMethod):
 
         super(Moe, self).__init__(instance, site, options)
 
-        self.options
-
         # set box center
         self.options['center_bs'] = '[' + ', '.join(map(str.strip, site[1].split(','))) + ']'
 

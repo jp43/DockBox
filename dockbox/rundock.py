@@ -25,6 +25,10 @@ class DockingConfig(object):
         config = ConfigParser.SafeConfigParser()
         config.read(args.config_file)
 
+        # check if ligand file exists
+        if not os.path.isfile(args.input_file_l):
+            raise IOError("File %s not found!"%(args.input_file_l))
+
         # prepare ligand file
         file_l = os.path.abspath(args.input_file_l)
         new_file_l = os.path.basename(file_l)
@@ -35,15 +39,11 @@ class DockingConfig(object):
         mol2.update_mol2file(file_l, new_file_l, unique=True, ligname='LIG')
         self.input_file_l = os.path.abspath(new_file_l)
 
-        # check if ligand file exists
-        if not os.path.exists(self.input_file_l):
-            raise IOError("File %s not found!"%(self.input_file_l))
+        # check if receptor file exists
+        if not os.path.isfile(args.input_file_r):
+            raise IOError("File %s not found!"%(args.input_file_r))
 
         self.input_file_r = os.path.abspath(args.input_file_r)
-
-        # check if receptor file exists
-        if not os.path.exists(self.input_file_r):
-            raise IOError("File %s not found!"%(self.input_file_r))
 
         if task == 'docking':
             self.docking = setup.DockingSetup(config)
@@ -102,7 +102,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 ScoringClass = getattr(sys.modules[program], program.capitalize())
  
                 ScoringInstance = ScoringClass(instance, site, options)
-                outputfile = ScoringInstance.run_rescoring(config.input_file_r, [config.input_file_l], cleanup=config_s.cleanup)
+                outputfile = ScoringInstance.run_rescoring(config.input_file_r, [config.input_file_l])
  
         tcpu2 = time.time()
         print "Scoring done. Total time needed: %i s" %(tcpu2-tcpu1)
@@ -154,10 +154,13 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 ScoringClass = getattr(sys.modules[program], program.capitalize())
 
                 ScoringInstance = ScoringClass(instance, site, options)
-                outputfile = ScoringInstance.run_rescoring(file_r, files_l, cleanup=config_r.cleanup)
+                outputfile = ScoringInstance.run_rescoring(file_r, files_l)
 
                 # cat output in file (cat instead of copying because of the binding sites)
                 subprocess.check_output('cat %s >> %s'%(outputfile,name+'.score'), shell=True, executable='/bin/bash')
+
+                if config.docking.cleanup >= 1:
+                    shutil.rmtree(os.path.dirname(outputfile), ignore_errors=True)
 
         os.chdir(curdir)
         tcpu2 = time.time()
@@ -267,6 +270,22 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
         # copy receptor in folder
         shutil.copyfile(config.input_file_r, resultdir+'/rec.pdb')
 
+    def do_final_cleanup(self):
+
+        shutil.rmtree('poses', ignore_errors=True)
+        for dir in glob('*'):
+            scorefile = dir+'/score.out'
+
+            if os.path.isfile(scorefile):
+                for filename in glob(dir+'/*'):
+                    if scorefile != filename:
+                        if os.path.isfile(filename):
+                            os.remove(filename)
+                        elif os.path.isdir(filename):
+                            shutil.rmtree(filename, ignore_errors=True)
+                        else:
+                            raise ValueError('Folder or file not recognized for %s'%filename)
+
     def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
 
@@ -274,14 +293,14 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
         config_d = config.docking
         # iterate over all the binding sites
-        for kdx in range(len(config.docking.site)):
-            for instance, program, options in config.docking.instances: # iterate over all the instances
+        for kdx in range(len(config_d.site)):
+            for instance, program, options in config_d.instances: # iterate over all the instances
 
                 # get docking class
                 DockingClass = getattr(sys.modules[program], program.capitalize())
 
                 # create docking instance and run docking
-                DockingInstance = DockingClass(instance, config.docking.site['site'+str(kdx+1)], options)
+                DockingInstance = DockingClass(instance, config_d.site['site'+str(kdx+1)], options)
                 DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize_options=config_d.minimize, \
 cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
 
@@ -313,3 +332,7 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
         # run rescoring
         if config.rescoring.is_rescoring:
             Scoring().run_rescoring(config, args)
+
+        # final cleanup if needed
+        if config.docking.cleanup == 2:
+            self.do_final_cleanup()

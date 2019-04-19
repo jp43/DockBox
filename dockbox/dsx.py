@@ -49,6 +49,3 @@ dsx -P protein.pdb -L ligand.mol2 -F dsx.txt%(pot_dir_str)s%(other_flags_str)s
                             break
             else:
                 print >> sf, 'NaN'
-
-    def cleanup(self):
-        pass

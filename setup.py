@@ -4,9 +4,7 @@ import re
 import glob
 import textwrap
 
-from distutils.core import setup
-from distutils.core import Extension
-from distutils.sysconfig import get_python_lib
+import setuptools
 
 min_numpy_version = '1.2.0'
 
@@ -28,10 +26,10 @@ def print_warning(head, body=''):
 
 # Check for Python
 if not (sys.version_info[0] >= 2 and sys.version_info[1] >= 6):
-    exit_with_error("You need Python 2.6.x or Python 2.7.x to install lsdmap package!")
+    exit_with_error("You need Python 2.6.x or Python 2.7.x to install DockBox package!")
 
 if (sys.version_info[0] >= 3 and sys.version_info[1] >= 0):
-    exit_with_error("You need Python 2.6.x or Python 2.7.x to install lsdmap package!")
+    exit_with_error("You need Python 2.6.x or Python 2.7.x to install DockBox package!")
 
 # Check for required Python packages
 def check_import(pkgname, pkgver):
@@ -62,10 +60,12 @@ def check_import(pkgname, pkgver):
             % {'pkgname': pkgname, 'pkgver': mod.__version__} ))
     globals()[pkgname] = mod
 
-setup(name='DockBox',
+setuptools.setup(name='dockbox',
+      version='0.0.1',
       packages=['dockbox'],
       package_data = {'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-      scripts = ['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
+      scripts = ['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/extract_smiles_from_pubchem', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
+      install_requires = ['pandas', 'mdkit'],
       license='LICENSE.txt',
       description='All you need to predict non-covalent modes of binding',
       long_description=open('README.md').read(),
