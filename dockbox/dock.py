@@ -362,9 +362,13 @@ dock6 -i dock6.in"""% locals()
             with open('dock.out', 'r') as outf:
                 for line in outf:
                     if line.strip().startswith('Grid Score:'):
-                        print >> ff, line.split()[2]
+                        line_s = line.split()
+                        if len(line_s) > 2:
+                            ff.write(line.split()[2]+'\n')
+                        else:
+                            ff.write('NaN\n')
                     elif line.strip().startswith('ERROR:  Conformation could not be scored.'):
-                        print >> ff, 'NaN'
+                        ff.write('NaN\n')
 
     def cleanup(self):
         # remove heavy files
