@@ -173,8 +173,8 @@ class DockingSetup(ConfigSetup):
             # get parameters from config file (would possibly overwrite default preset parameters)
             if config.has_section(section):
               config_m = dict(config.items(section))
-               for key, value in config_m.iteritems():
-                   self.minimize_options[key] = value
+              for key, value in config_m.iteritems():
+                  self.minimize_options[key] = value
 
         return self.minimize_options
 

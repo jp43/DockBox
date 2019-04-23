@@ -12,7 +12,7 @@ import subprocess
 import setup
 
 import pandas as pd
-from mdtools.utility import mol2
+from mdkit.utility import mol2
 
 class DockingConfig(object):
 
@@ -270,7 +270,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
         # copy receptor in folder
         shutil.copyfile(config.input_file_r, resultdir+'/rec.pdb')
 
-    def do_final_cleanup(self):
+    def do_final_cleanup(self, config):
 
         shutil.rmtree('poses', ignore_errors=True)
         for dir in glob('*'):
@@ -285,6 +285,8 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                             shutil.rmtree(filename, ignore_errors=True)
                         else:
                             raise ValueError('Folder or file not recognized for %s'%filename)
+        os.remove(config.input_file_l)
+
 
     def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
@@ -335,4 +337,4 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
 
         # final cleanup if needed
         if config.docking.cleanup == 2:
-            self.do_final_cleanup()
+            self.do_final_cleanup(config)

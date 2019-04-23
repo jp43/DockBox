@@ -6,9 +6,9 @@ import shutil
 import subprocess
 import setup
 
-from mdtools.amber import minimization
-from mdtools.utility import mol2
-from mdtools.amber import clustering
+from mdkit.amber import minimization
+from mdkit.utility import mol2
+from mdkit.amber import clustering
 
 class DockingMethod(object):
 

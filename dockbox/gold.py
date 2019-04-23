@@ -7,8 +7,8 @@ import method
 import license
 
 from glob import glob
-from mdtools.utility import reader
-from mdtools.utility import mol2
+from mdkit.utility import reader
+from mdkit.utility import mol2
 
 required_programs = ['gold_auto']
 

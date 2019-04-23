@@ -28,9 +28,9 @@ class Colvar(method.ScoringMethod):
                 with open(filename, 'w') as file:
                     script ="""#!/bin/bash
 set -e
-echo "from mdtools.utility import mol2, PDB
-from mdtools.utility import reader
-from mdtools.utility import utils
+echo "from mdkit.utility import mol2, PDB
+from mdkit.utility import reader
+from mdkit.utility import utils
 import numpy as np
 
 ligrd = reader.open('%(file_l)s')
@@ -63,9 +63,9 @@ python get_distance.py"""% locals()
                 with open(filename, 'w') as file:
                     script ="""#!/bin/bash
 set -e
-echo "from mdtools.utility import mol2, PDB
-from mdtools.utility import reader
-from mdtools.utility import utils
+echo "from mdkit.utility import mol2, PDB
+from mdkit.utility import reader
+from mdkit.utility import utils
 import numpy as np
 
 ligrd = reader.open('%(file_l)s')

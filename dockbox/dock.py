@@ -6,10 +6,10 @@ import shutil
 import subprocess
 from glob import glob
 
-from mdtools.utility import reader
-from mdtools.utility import mol2
-from mdtools.utility import utils
-from mdtools.amber import ambertools
+from mdkit.utility import reader
+from mdkit.utility import mol2
+from mdkit.utility import utils
+from mdkit.amber import ambertools
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 
@@ -388,8 +388,8 @@ import sys
 import numpy as np
 import shutil
 
-from mdtools.utility import utils
-from mdtools.utility import mol2
+from mdkit.utility import utils
+from mdkit.utility import mol2
 
 # read mol2 file
 mol2file = sys.argv[1]

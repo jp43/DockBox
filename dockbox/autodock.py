@@ -5,7 +5,7 @@ import shutil
 import method
 
 from glob import glob
-from mdtools.utility import mol2
+from mdkit.utility import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
@@ -72,7 +72,7 @@ if lines_to_be_removed:
 import shutil
 from tempfile import mkstemp
 
-from mdtools.amber.ambertools import load_atomic_ions
+from mdkit.amber.ambertools import load_atomic_ions
 
 # first all residues are supposed to be recognized
 are_unrecognized_residues = False

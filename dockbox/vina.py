@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import autodock
 
-from mdtools.utility import mol2
+from mdkit.utility import mol2
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 

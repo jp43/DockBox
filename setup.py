@@ -3,11 +3,9 @@ import sys
 import re
 import glob
 import textwrap
-
 import setuptools
 
 min_numpy_version = '1.2.0'
-
 # Some functions for showing errors and warnings.
 def _print_admonition(kind, head, body):
     tw = textwrap.TextWrapper(
@@ -36,20 +34,18 @@ def check_import(pkgname, pkgver):
     try:
         mod = __import__(pkgname)
     except ImportError:
-            exit_with_error(
-                "You need %(pkgname)s %(pkgver)s or greater to run lsdmap!"
-                % {'pkgname': pkgname, 'pkgver': pkgver} )
+        exit_with_error("You need %(pkgname)s %(pkgver)s or greater to run lsdmap!"
+            % {'pkgname': pkgname, 'pkgver': pkgver} )
     else:
         if len(mod.__version__)>6:
-                mod_ver = mod.__version__[:6]
+            mod_ver = mod.__version__[:6]
         else:
-                mod_ver = mod.__version__
+            mod_ver = mod.__version__
 
         def mycmp(version1, version2):
             def normalize(v):
                 return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
             return cmp(normalize(version1), normalize(version2))
-
         # code for mycmp() taken from http://stackoverflow.com/questions/1714027/version-number-comparison
         if mycmp(mod_ver,pkgver) < 0:
             exit_with_error(
@@ -61,12 +57,12 @@ def check_import(pkgname, pkgver):
     globals()[pkgname] = mod
 
 setuptools.setup(name='dockbox',
-      version='0.0.2',
-      packages=['dockbox'],
-      package_data = {'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-      scripts = ['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/extract_smiles_from_pubchem', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
-      install_requires = ['pandas', 'mdkit'],
-      license='LICENSE.txt',
-      description='All you need to predict non-covalent modes of binding',
-      long_description=open('README.md').read(),
+    version='0.0.2',
+    packages=['dockbox'],
+    package_data={'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
+    scripts=['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/extract_smiles_from_pubchem', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
+    install_requires=['mdkit', 'numpy==1.8.0', 'pandas==0.19.0'],
+    license='LICENSE.txt',
+    description='All you need to predict non-covalent modes of binding',
+    long_description=open('README.md').read(),
 )
