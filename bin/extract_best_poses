@@ -46,6 +46,12 @@ group.add_argument('-s',
     metavar='FUNC',
     help='Scoring functions used to extract best pose.')
 
+parser.add_argument('-d',
+    dest='docking_programs',
+    nargs='+',
+    metavar=('PRGM1', 'PRGM2'),
+    help='Docking programs (instances) to be considered when extracting best poses')
+
 parser.add_argument('-dirs',
     dest='dirs',
     nargs='+',
@@ -254,6 +260,8 @@ for jdx, dir in enumerate(dirs):
                 info_dir[sf].append(float(line_s))
 
     df_dir = pd.DataFrame(info_dir)
+    if args.docking_programs: 
+        df_dir = df_dir[df_dir['instance'].isin(args.docking_programs)]
     poses.append(df_dir)
 
     if args.sf:
