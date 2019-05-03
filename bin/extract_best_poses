@@ -46,6 +46,12 @@ group.add_argument('-s',
     metavar='FUNC',
     help='Scoring functions used to extract best pose.')
 
+parser.add_argument('-csv',
+    type=str,
+    dest='csvfile',
+    metavar='FILE',
+    help='.csv filename with compounds. Used to add names of compounds (default: none)')
+
 parser.add_argument('-d',
     dest='docking_programs',
     nargs='+',
@@ -64,7 +70,7 @@ parser.add_argument('-r',
     dest='resultsdir',
     default='results',
     metavar='DIRECTORY NAME',
-    help='Name of results directory.')
+    help='Name of results directory. Default: results')
 
 args = parser.parse_args()
 
@@ -82,67 +88,69 @@ def check_architecture(directory):
 
     if os.path.isdir(directory):
         dir_split = directory.split('/')
-        if dir_split[0].startswith('lig'):
-            isligID = True
-            if len(dir_split) > 1:
-                if dir_split[1].startswith('target'):
-                    istargetID = True
-                    if len(dir_split) > 2 and dir_split[2].startswith('isomer'):
-                        isisomerID = True
-                    else:
-                        isisomerID = False
-                elif dir_split[1].startswith('isomer'):
-                    istargetID = False
-                    isisomerID = True
+        if dir_split[-1].startswith('isomer'):
+            isisomerID = True
+            if len(dir_split) > 1 and dir_split[-2].startswith('target'):
+                istargetID = True
+                if len(dir_split) > 2 and dir_split[-3].startswith('lig'):
+                    isligID = True
                 else:
-                    istargetID = False
-                    isisomerID = False
+                    isligID = False
+            elif len(dir_split) > 1 and dir_split[-2].startswith('lig'):
+                istargetID = False
+                isligID = True
             else:
                 istargetID = False
-                isisomerID = False
-        elif dir_split[0].startswith('target'):
-            isligID = False
-            istargetID = True
-            if len(dir_split) > 1 and dir_split[1].startswith('isomer'):
-                isisomerID = True
-            else:
-                isisomerID = False
-        elif dir_split[0].startswith('isomer'):
-            isligID = False
-            istargetID = False
-            isisomerID = True
-        else:
-            isligID = False
-            istargetID = False
+                isligID = False
+        elif dir_split[-1].startswith('target'):
             isisomerID = False
+            istargetID = True
+            if len(dir_split) > 1 and dir_split[-2].startswith('lig'):
+                isligID = True
+            else:
+                isligID = False
+        elif dir_split[-1].startswith('lig'):
+            isisomerID = False
+            istargetID = False
+            isligID = True
+        else:
+            isisomerID = False
+            istargetID = False
+            isligID = False
 
     return isligID, istargetID, isisomerID
 
 def get_IDs(directory, isligID, istargetID, isisomerID):
-    if isligID:
-        ligID = directory.split('/')[0]
+
+    if isisomerID:
+        isomerID = directory.split('/')[-1]
         if istargetID:
-            targetID = directory.split('/')[1]
-            if isisomerID:
-                isomerID = directory.split('/')[2]
+            targetID = directory.split('/')[-2]
+            if isligID:
+                ligID = directory.split('/')[-3]
             else:
-                isomerID = None
-        elif isisomerID:
+                ligID = None
+        elif isligID:
             targetID = None
-            isomerID = directory.split('/')[1]
-    elif istargetID:
-        ligID = None
-        targetID = directory.split('/')[0]
-        if isisomerID:
-            isomerID = directory.split('/')[1]
+            ligID = directory.split('/')[-2]
         else:
-            isomerID = None
-    elif isisomerID:
-        ligID = None
+            targetID = None
+            ligID = None
+    elif istargetID:
+        isomerID = None
+        targetID = directory.split('/')[-1]
+        if isligID:
+            ligID = directory.split('/')[-2]
+        else:
+            ligID = None
+    elif isligID:
+        isomerID = None
         targetID = None
-        isomerID = directory.split('/')[0]
+        ligID = directory.split('/')[-1]
     else:
-        ligID, targetID, isomerID = None, None, None
+        isomerID = None
+        targetID = None
+        ligID = None
 
     return ligID, targetID, isomerID
 
@@ -187,6 +195,10 @@ else:
     raise IOError("One of -cs, -cd or -s options should be used when running extract_best_poses!")
 
 features = ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose']
+if args.csvfile:
+    if not os.path.isfile(args.csvfile):
+        raise IOError("csvfile %s not found!"%args.csvfile)
+
 features_ids = []
 if isligID:
     features_ids += ['ligID']
@@ -199,7 +211,7 @@ poses = []
 best_poses = []
 for jdx, dir in enumerate(dirs):
     posedir = dir+'/poses'
-    ligID, targetID, isomerID = get_IDs(posedir, isligID, istargetID, isisomerID)
+    ligID, targetID, isomerID = get_IDs(dir, isligID, istargetID, isisomerID)
 
     info_dir = {}
     for ft in features_ids + features + ['score']:
@@ -313,13 +325,24 @@ for jdx, dir in enumerate(dirs):
     if args.sf or consensus:
         best_poses.append(best_poses_dir)
 
+def add_names(csvfile, df):
+    df_ligands = pd.read_csv(csvfile)
+    if 'isomer' in df_ligands:
+        df_ligands = df_ligands[df_ligands['isomer']==1]
+    df = df.merge(df_ligands[['ligID', 'name']], on='ligID')
+    return df
+
 if poses:
     poses = pd.concat(poses).reset_index()
+    if args.csvfile and isligID:
+        poses = add_names(args.csvfile, poses)
 else:
     poses = None
 
 if best_poses:
     best_poses = pd.concat(best_poses).reset_index()
+    if args.csvfile and isligID:
+        best_poses = add_names(args.csvfile, best_poses)
     # combine results over all isomers.
     if args.combine_isomers:
         if isisomerID:
@@ -339,7 +362,7 @@ if best_poses:
             groupby_columns = []
             if isligID:
                 groupby_columns += ['ligID']
-            if isisomerID:
+            if isisomerID and not args.combine_isomers:
                 groupby_columns += ['isomerID']
             if groupby_columns:
                 best_poses_groupby = best_poses.groupby(groupby_columns)
@@ -353,6 +376,8 @@ shutil.rmtree(args.resultsdir, ignore_errors=True)
 os.mkdir(args.resultsdir)
 
 features_csv = features_ids + features + scoring_functions_all + ['score']
+if args.csvfile and isligID:
+    features_csv.append('name')
 features_csv.remove('instance')
 features_csv.remove('index_pose')
 
