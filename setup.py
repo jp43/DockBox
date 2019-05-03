@@ -57,7 +57,7 @@ def check_import(pkgname, pkgver):
     globals()[pkgname] = mod
 
 setuptools.setup(name='dockbox',
-    version='0.0.7',
+    version='0.0.8',
     packages=['dockbox'],
     package_data={'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
     scripts=['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/extract_smiles_from_pubchem', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
