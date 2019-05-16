@@ -57,10 +57,9 @@ def check_import(pkgname, pkgver):
     globals()[pkgname] = mod
 
 setuptools.setup(name='dockbox',
-    version='0.0.8',
+    version='0.0.9',
     packages=['dockbox'],
-    package_data={'dockbox.amber': ['PROTON_INFO', 'atomic_ions.cmd']},
-    scripts=['bin/rundock', 'bin/runscore', 'bin/extract_best_poses', 'bin/extract_smiles_from_pubchem', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
+    scripts=['bin/rundbx', 'bin/extract_dbx_best_poses', 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
     install_requires=['mdkit', 'cython', 'numpy==1.8.0', 'pandas==0.19.0'],
     license='LICENSE.txt',
     description='All you need to predict non-covalent modes of binding',

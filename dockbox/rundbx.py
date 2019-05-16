@@ -56,7 +56,7 @@ class DockingConfig(object):
 class Scoring(object):
 
     def create_arg_parser(self):
-        parser = argparse.ArgumentParser(description="""runscore : score with multiple software --------
+        parser = argparse.ArgumentParser(description="""runscore : score in-place with multiple software --------
 Requires one file for the ligand (1 struct.) and one file for the receptor (1 struct.)""")
 
         parser.add_argument('-l',
@@ -169,7 +169,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 class Docking(object):
 
     def create_arg_parser(self):
-        parser = argparse.ArgumentParser(description="""rundock : dock with multiple software --------
+        parser = argparse.ArgumentParser(description="""rundbx : dock and rescore with multiple programs --------
 Requires one file for the ligand (1 struct.) and one file for the receptor (1 struct.)""")
 
         parser.add_argument('-l',
