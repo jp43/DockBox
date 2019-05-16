@@ -63,5 +63,5 @@ setuptools.setup(name='dockbox',
     install_requires=['mdkit', 'cython', 'numpy==1.8.0', 'pandas==0.19.0'],
     license='LICENSE.txt',
     description='All you need to predict non-covalent modes of binding',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
 )
