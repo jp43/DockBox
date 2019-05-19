@@ -269,7 +269,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
             try:
                 subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
                 self.update_output_mol2files(sample=input_file_l)
-            except subprocess.CalledProcessError:
+            except:
                 pass
 
     def extract_rescoring_results(self, filename):

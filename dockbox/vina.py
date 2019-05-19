@@ -85,8 +85,11 @@ vina --score_only --config vina.config > vina.out"""% locals()
                             score = float(line[19:].split()[0])
                             print >> sf, score
 
-        subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
-        self.update_output_mol2files(sample=input_file_l)
+        try:
+            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
+            self.update_output_mol2files(sample=input_file_l)
+        except:
+            pass
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
