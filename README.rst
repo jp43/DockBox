@@ -4,6 +4,7 @@ DockBox
 
 DockBox is a python wrapper library designed to facilitate the use of standard docking programs either alone or in combination. In addition, DockBox enables to rescore the generated docking poses with different popular scoring algorithms as well as to analyze the results using different consensus docking/scoring strategies.
 
+
 The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
 
 ****************************************
@@ -153,9 +154,9 @@ Thus, a typical use of **rundock** is done through the following command:
 
     rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
-
+****************************************
 Preparing the rundock configuration file
-========================================
+****************************************
 
 Besides one **.mol2** file containing the ligand structure (-l flag) and one **.pdb** file containing the receptor structure (-r flag), running **rundock** requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
 
@@ -202,9 +203,9 @@ Below is an example of configuration file used to dock on two binding sites and 
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
 
-
+================
 General sections
-----------------
+================
 
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
@@ -221,35 +222,9 @@ General sections
 
     Below is a list of all the programs that can be used by DockBox specifying if they can be used for docking or/and rescoring.
 
-.. list-table::
-   :widths: 15 15 70
-   :header-rows: 1
-   
-   * - Software
-     - Docking
-     - Rescoring
-   * - Autodock
-     - Yes
-     - Yes
-   * - DOCK 6.5
-     - Yes
-     - Yes
-   * - DSX
-     - No
-     - Yes
-   * - Glide
-     - Yes
-     - Yes
-   * - Gold
-     - Yes
-     - No
-   * - MOE
-     - Yes
-     - Yes
-   * - Autodock Vina
-     - Yes
-     - Yes
-
+==========  ==========  ==========
+ Header 1    Header 2    Header 3  
+==========  ==========  ==========
 
     Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
 
@@ -264,8 +239,9 @@ General sections
 
     *  **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
+=================================================
 Docking/scoring options relative to each software
--------------------------------------------------
+=================================================
 
 Each section relative to a docking/scoring program should be named the way it appears through the keys **program** of the **DOCKING** and/or **RESCORING** section. Below is a list of all the options per software that can be specified in the configuration file.
 
