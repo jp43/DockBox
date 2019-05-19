@@ -1,18 +1,20 @@
+#######
 DockBox
-=======
+#######
 
-DockBox is a python package used to facilitate the use of popular docking software (including structure preparation, docking and rescoring). The package is particularly suitable to compare docking results obtained from different software or combine them in a consensus docking or consensus scoring strategy.
+DockBox is a python wrapper library designed to facilitate the use of standard docking programs either alone or in combination. In addition, DockBox enables to rescore the generated docking poses with different popular scoring algorithms as well as to analyze the results using different consensus docking/scoring strategies.
 
-Note that the software that can be used by DockBox are not included in the repository. Whatever program needs to be utilized, it should be downloaded from its official website and installed separately on the same machine DockBox is set up.
+The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
 
-Below is a list of all the programs which can be used by DockBox. 
+****************************************
+List of programs compatible with DockBox
+****************************************
 
-* **Structure preparation/optimization**:
-
-  * antechamber, prmchk, tleap, sander (AMBER12 or later, http://ambermd.org) used to assign partial charges, minimize structures...
-  * ligprep (Schrodinger 2015, https://www.schrodinger.com/ligprep) used to prepare compounds (generate protonation states, isomers, conformers,...)
-  * moebatch (MOE2015) used to identify probable binding sites
-  * Open Babel (http://openbabel.org/wiki/Main_Page)
+.. note::
+   None of the following docking or scoring programs are included in the current repository. 
+   Hence the user eager to test a docking/scoring program with DockBox should first install 
+   that program separately on the same machine DockBox is installed. To make an installed 
+   program usable by the DockBox package, see section **Make a program usable by DockBox**.
 
 * **Docking**:
 
@@ -21,41 +23,40 @@ Below is a list of all the programs which can be used by DockBox.
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * Glide (https://www.schrodinger.com/glide)
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
-  * Induced Fit (https://www.schrodinger.com/induced-fit)
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 * **Scoring**:
 
-  * Autodock (http://autodock.scripps.edu) 
+  * Autodock (http://autodock.scripps.edu)
   * Autodock Vina (http://autodock.scripps.edu)
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
   * Glide (https://www.schrodinger.com/glide)
   * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-Table of contents
-=================
 
-  * [Prerequisites](#prerequisites)
-  * [Installation](#installation)
-  * [Commands](#commands)
-    * [prepvs](#prepvs)
-    * [rundock](#rundock)
-    * [runanlz](#runanlz)
-  * [Preparing the rundock config file](#preparing-the-rundock-config-file)
-    * [General sections](#general-sections)
-    * [Sections relative to each software](#sections-relative-to-each-software)
-    * [Examples]
+.. contents:: **Table of Contents**
 
+************
 Prerequisites
-=============
+************
 
-Before installing the DockBox package, make sure that you have the following packages installed:
+The following are the minimal requirements to install the DockBox module
 
-* NumPy; version 1.4.1 or later
+* python2 version 2.7 or later
 
-* pandas; version 0.18.1 or later
+* virtualenv version 1.11 or later
 
-* AmberTools; version 12 or later
+* pip version 1.5 or later
+
+************
+Installation
+************
+
+To be written
+
+************
+Make a program usable by DockBox
+************
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
@@ -103,89 +104,22 @@ Any software intended to be used in conjunction with DockBox should be installed
 * **MOE2015**:
   * moebatch
 
-***Pharmamatrix users***: on the pharmamatrix cluster, the majority of the docking programs mentioned above have already been installed. Below is an example on how to set the PATH environment variable in order to use Autodock, Vina, Glide, MOE2015 and DOCK 6:
-
-    # Amber 14
-    export AMBERHOME=/pmshare/amber/ambertools14_ibm_gnu-20140820
-    PATH=$PATH:$AMBERHOME/bin
-
-    # AD and ADV
-    PATH=$PATH:/opt/mgltools/1.5.4:/opt/mgltools/1.5.4/MGLToolsPckgs/AutoDockTools/Utilities24
-    PATH=$PATH:/pmshare/vina/autodock_vina_1_1_2_linux_x86/bin
-    PATH=$PATH:/opt/autodock/4.2.3/bin
-
-    # Glide
-    export SCHRODINGER=/nfs/r720-1/preto/tools/schrodinger2015-4
-    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4
-    PATH=$PATH:/nfs/r720-1/preto/tools/schrodinger2015-4/utilities
-
-    # MOE2015
-    export MOE=/nfs/r720-1/preto/tools/moe2015
-    PATH=$PATH:/nfs/r720-1/preto/tools/moe2015/bin
-
-    # DOCK 6
-    PATH=$PATH:/nfs/r720-1/preto/tools/UCSF-Chimera64-1.10.2/bin
-    PATH=$PATH:/nfs/r720-1/preto/tools/dms
-    PATH=$PATH:/nfs/r720-1/preto/src/dock6/bin
-
-    export PATH
-
-Installation
-============
-
-The Python Distutils are used to build and install DockBox, so it is fairly simple to get things ready to go. Following are very simple instructions on how to proceed:
-
-1. First, make sure that you have the NumPy and pandas modules. If not, get them from http://numpy.scipy.org/, http://pandas.pydata.org. Compile/install them.
-
-2. Make sure AmberTools is installed and that standard executables (e.g., sander, tleap,...) are accessible through your PATH variable. For pharmamatrix users, see section **prerequisites**.
-
-3. From the main DockBox distribution directory run this command (plus any extra flags, e.g., --prefix or --user to specify the installation directory):
-
-        python setup.py install
-
-After installation, make sure that the bin folder within your installation directory is accessible via your PATH variable. It contains the executables **prepvs**, **rundock** and **runanlz** that are used for virtual screening preparation, docking and docking analysis, respectively.
-
-
+********
 Commands
-========
-
-After adding the bin folder of your installation directory to your PATH variable, the following commands can be run: 
+********
 
 
-prepvs
-------
+=======
+rundbx
+=======
 
-prepvs is used to prepare the ligand structures (carried out with Schrodinger's ligprep utility) and to create folders (one folder per receptor and per ligand) intended to facilitate docking or virtual screening runs performed with rundock. When typing "prepvs -h" on the command line, the following help message will pop up:
+rundbx is used to dock a ligand to a protein structure and eventually minimize and rescore the output poses. When typing "rundbx -h" on the command line, the following help message will pop up:
 
-    prepvs -h
-    usage: prepvs [-h] [-l INPUT_FILES_L [INPUT_FILES_L ...]]
-                  [-r INPUT_FILES_R [INPUT_FILES_R ...]] [-f CONFIG_FILE]
-                  [-lpflags LPFLAGS] [-ligprep] [-site SITE] [-noprep]
-    
-    Prepare files for Docking or Virtual Screening
-    
-    optional arguments:
-      -h, --help            show this help message and exit
-      -l INPUT_FILES_L [INPUT_FILES_L ...]
-                            Ligand coordinate file(s): .sdf, .smi
-      -r INPUT_FILES_R [INPUT_FILES_R ...]
-                            Receptor coordinate file(s): .pdb
-      -f CONFIG_FILE        config file: .ini
-      -lpflags LPFLAGS      Ligprep (Schrodinger) flags for ligand preparation.
-                            Default: "-ph 7.0 -pht 2.0 -i 2 -s 8 -t 4"
-      -ligprep              Prepare compounds using ligprep
-      -site SITE            Update binding sites info in config file from file
-      -noprep               No structure preparation, update directories and files
-                            only (used debbuging)
-
-rundock
--------
-
-rundock is used to dock a ligand to a protein structure and eventually minimize and rescore the output poses. When typing "rundock -h" on the command line, the following help message will pop up:
+:: 
 
     usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
-                   [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
-                   [-norun]
+        [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
+        [-norun]
     
     rundock : dock with multiple software -------- Requires one file for the
     ligand (1 struct.) and one file for the receptor (1 struct.)
@@ -230,6 +164,8 @@ Besides one **.mol2** file containing the ligand structure (-l flag) and one **.
 The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
 Below is an example of configuration file used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
+
+::
 
     [DOCKING]
     site = site1, site2
@@ -285,17 +221,35 @@ General sections
 
     Below is a list of all the programs that can be used by DockBox specifying if they can be used for docking or/and rescoring.
 
+.. list-table::
+   :widths: 15 15 70
+   :header-rows: 1
+   
+   * - Software
+     - Docking
+     - Rescoring
+   * - Autodock
+     - Yes
+     - Yes
+   * - DOCK 6.5
+     - Yes
+     - Yes
+   * - DSX
+     - No
+     - Yes
+   * - Glide
+     - Yes
+     - Yes
+   * - Gold
+     - Yes
+     - No
+   * - MOE
+     - Yes
+     - Yes
+   * - Autodock Vina
+     - Yes
+     - Yes
 
-    |    Software   |    Docking    |   Rescoring   |
-    | :-----------  |:-------------:|:-------------:|
-    |   Autodock    |      Yes      |      Yes      |
-    |    Dock 6     |      Yes      |      Yes      |
-    |     DSX       |      No       |      Yes      |
-    |     Glide     |      Yes      |      Yes      |
-    |     Gold      |      Yes      |      No       |
-    |  Induced Fit  |      Yes      |      No       |
-    |     MOE       |      Yes      |      Yes      |
-    |     Vina      |      Yes      |      Yes      |
 
     Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
 
@@ -541,7 +495,7 @@ Glide
 -----
 
 parameters
-* outerbox: box within which the grids are calculated. This is also the box within which all the ligand atoms must be contained. The maximum size of the enclosing box is 50Å.
+* outerbox: box within which the grids are calculated. This is also the box within which all the ligand atoms must be contained. The maximum size of the enclosing box is 50Å.
 * innerbox: box explored by the ligand center (restricted to a cube whose sides cannot be longer than 40Å)
 
 * DOCKING_METHOD = confgen ensure flexible docking
