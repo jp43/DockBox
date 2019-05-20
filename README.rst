@@ -11,11 +11,10 @@ The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_p
 List of programs compatible with DockBox
 ****************************************
 
-.. note::
-   None of the following docking or scoring programs are included in the current repository. 
-   Hence the user eager to test a docking/scoring program with DockBox should first install 
-   that program separately on the same machine DockBox is installed. To make an installed 
-   program usable by the DockBox package, see section **Make a program usable by DockBox**.
+None of the following docking or scoring programs are included in the current repository. 
+Hence the user eager to test a docking/scoring program with DockBox should first install 
+that program separately on the same machine DockBox is installed. To make an installed 
+program usable by the DockBox package, see section **Make a program usable by DockBox**.
 
 * **Docking**:
 
@@ -37,9 +36,9 @@ List of programs compatible with DockBox
 
 .. contents:: **Table of Contents**
 
-************
+*************
 Prerequisites
-************
+*************
 
 The following are the minimal requirements to install the DockBox module
 
@@ -55,9 +54,9 @@ Installation
 
 To be written
 
-************
+********************************
 Make a program usable by DockBox
-************
+********************************
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
@@ -404,75 +403,4 @@ Below is another example of configuration file for *rundock* used to dock on two
     boxsize = 40.0, 40.0, 40.0
 
 * Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
-
-
-Docking/scoring options relative to each software
--------------------------------------------------
-
-LigPrep
--------
-
-Used to prepare the ligand structure
-
-default flags: ligprep -WAIT -W e,-ph,7.0,-pht,2.0 -s 8 -t 4
-These flags aim at generating a few low-risk variations on the input structures (p.40 of ligprep manual)
-
-Steps:
-
-    sdconvert
-        -- Converts the input sdf or smi to the schrodinger format
-
-    applyhtreat
-
-        -- Adds (or deletes) hydrogen atoms following treatment
-        -- Chemical structures often are specified with implicit hydrogens
-        -- The default treatment should be fine "All-atom with No-Lp" (lone pair)
-        -- Note that for AutoDock you need to remove non-polar hydrogens, but this will be taken care of later by the ligand preparation script for AutoDock
-        -- Also if you are preparing the ligands for a particular force field you may want to select a different treatment, or again you can post-process it
-
-    desalter
-        -- Normally you should just leave this on
-        -- This will remove the counter-ions that you sometimes find in chemical database structures
-        -- Also rarely there might be multiple unbonded molecules stored as a single "structure", this will just pick the single largest molecule (for example, this happens in drugbank with some "drugs" that are mixtures)
-
-    neutralizer
-        -- The default is to neutralize, that is normally what you want
-        -- It will do this by adding/removing protons
-        -- Can check the manual for the exact list of changes that it may make
-
-    ionizer
-        -- This doesn't run by default
-        -- For docking normally a neutral state only is what you want... at least that's what we've done in the past
-
-    tautomerizer
-        -- This will generate multiple isomers from the input structures by moving protons & double bonds
-        -- The default is up to 8 tautomers
-        -- The default is to exclude tautomers with probability < 0.01
-
-    stereoizer
-        -- This will generate multiple stereoisomers (e.g. at carbon stereo centers or double-bonds)
-        -- It will keep the chirality from the input structures where it is specified, but where it is not specified it will generate most possible stereoisomers (up to the max stereoisomers allowed)
-        -- There are some restrictions it will apply by default, i.e. it will exclude some states are not achievable for geometric reasons or are atypical for some types of natural products (e.g. peptides and steroids).
-        -- The default is up to 32 stereoisomers
-
-    ring_conf
-        -- For non-flexible rings it will always use the input conformation
-        -- By default this will only generate a single (most likely) ring conformation
-        -- Might be worth trying to increase the max number of ring conformations, e.g. add the ligprep option "-r 3"
-
-    premin & bmin
-        -- Uses a forcefield to generate a 3D conformation
-        -- One reasonable conformation should be fine, the docking program will explore other conformations
-        -- A few input structures may be filtered by premin, these are problematic structures that it couldn't generated a conformation for, should be ok to exclude these
-
-
-
-Glide
------
-
-parameters
-* outerbox: box within which the grids are calculated. This is also the box within which all the ligand atoms must be contained. The maximum size of the enclosing box is 50Å.
-* innerbox: box explored by the ligand center (restricted to a cube whose sides cannot be longer than 40Å)
-
-* DOCKING_METHOD = confgen ensure flexible docking
 
