@@ -5,7 +5,7 @@ DockBox
 DockBox is a python wrapper library designed to facilitate the use of standard docking programs either alone or in combination. In addition, DockBox enables to rescore the generated docking poses with different popular scoring algorithms as well as to analyze the results using different consensus docking/scoring strategies.
 
 List of programs compatible with DockBox
-****************************************
+########################################
 
 * **Docking**:
 
