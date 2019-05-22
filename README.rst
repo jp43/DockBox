@@ -1,20 +1,11 @@
-#######
+*******
 DockBox
-#######
+*******
 
 DockBox is a python wrapper library designed to facilitate the use of standard docking programs either alone or in combination. In addition, DockBox enables to rescore the generated docking poses with different popular scoring algorithms as well as to analyze the results using different consensus docking/scoring strategies.
 
-
-The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
-
-****************************************
 List of programs compatible with DockBox
 ****************************************
-
-None of the following docking or scoring programs are included in the current repository. 
-Hence the user eager to test a docking/scoring program with DockBox should first install 
-that program separately on the same machine DockBox is installed. To make an installed 
-program usable by the DockBox package, see section **Make a program usable by DockBox**.
 
 * **Docking**:
 
@@ -23,7 +14,7 @@ program usable by the DockBox package, see section **Make a program usable by Do
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * Glide (https://www.schrodinger.com/glide)
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
-  * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
+  * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 * **Scoring**:
 
@@ -31,32 +22,33 @@ program usable by the DockBox package, see section **Make a program usable by Do
   * Autodock Vina (http://autodock.scripps.edu)
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
   * Glide (https://www.schrodinger.com/glide)
-  * MOE2015 (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
+  * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
+None of the above docking or scoring programs are included in the current repository. 
+Hence the user eager to test a docking/scoring program with DockBox should first install
+that program separately on the same machine DockBox is installed. To make an installed
+program usable by the DockBox package, see section **Make a program usable by DockBox**.
 
 .. contents:: **Table of Contents**
 
-*************
 Prerequisites
-*************
+#############
 
 The following are the minimal requirements to install the DockBox module
 
-* python2 version 2.7 or later
+* python version 2.6 or 2.7
 
 * virtualenv version 1.11 or later
 
 * pip version 1.5 or later
 
-************
 Installation
-************
+############
 
 To be written
 
-********************************
 Make a program usable by DockBox
-********************************
+################################
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
@@ -104,14 +96,13 @@ Any software intended to be used in conjunction with DockBox should be installed
 * **MOE2015**:
   * moebatch
 
-********
 Commands
-********
+########
 
+The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
 
-=======
 rundbx
-=======
+******
 
 rundbx is used to dock a ligand to a protein structure and eventually minimize and rescore the output poses. When typing "rundbx -h" on the command line, the following help message will pop up:
 
@@ -153,7 +144,6 @@ Thus, a typical use of **rundock** is done through the following command:
 
     rundock -f config.ini -r receptor.pdb -l ligand.mol2
 
-****************************************
 Preparing the rundock configuration file
 ****************************************
 
@@ -202,9 +192,8 @@ Below is an example of configuration file used to dock on two binding sites and 
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
 
-================
 General sections
-================
+################
 
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
@@ -238,9 +227,8 @@ General sections
 
     *  **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
-=================================================
 Docking/scoring options relative to each software
-=================================================
+#################################################
 
 Each section relative to a docking/scoring program should be named the way it appears through the keys **program** of the **DOCKING** and/or **RESCORING** section. Below is a list of all the options per software that can be specified in the configuration file.
 
@@ -312,12 +300,14 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 
 Examples
---------
+########
 
 Docking with multiple software on a single binding site and minimize the poses
--------------------------------------------------------------------------------
+******************************************************************************
 
 Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
+
+::
 
     [DOCKING]
     program = autodock, vina, dock, glide, moe, moe1, moe2
@@ -361,11 +351,12 @@ Below is an example of configuration file that can be used as an input of *rundo
     boxsize = 30.0, 30.0, 30.0
 
 
-
 Docking on multiple binding site, minimize and rescore the poses with multiple software
-----------------------------------------------------------------------------------------
+****************************************************************************************
 
 Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
+
+::
 
     [DOCKING]
     site = site1, site2
