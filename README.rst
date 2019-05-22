@@ -2,7 +2,10 @@
 DockBox
 *******
 
-DockBox is a python wrapper library designed to facilitate the use of standard docking programs either alone or in combination. In addition, DockBox enables to rescore the generated docking poses with different popular scoring algorithms as well as to analyze the results using different consensus docking/scoring strategies.
+DockBox is a python wrapper library designed to facilitate the use of standard docking
+programs either alone or in combination. In addition, DockBox enables to rescore the
+generated docking poses with different popular scoring algorithms as well as to analyze
+the results using different consensus docking/scoring strategies.
 
 **List of programs compatible with DockBox**
 
@@ -31,7 +34,7 @@ program usable by the DockBox package, see section **Make a program usable by Do
 .. contents:: **Table of Contents**
 
 Prerequisites
-#############
+*************
 
 The following are the minimal requirements to install the DockBox module
 
@@ -42,12 +45,12 @@ The following are the minimal requirements to install the DockBox module
 * pip version 1.5 or later
 
 Installation
-############
+************
 
 To be written
 
 Make a program usable by DockBox
-################################
+********************************
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
@@ -96,12 +99,12 @@ Any software intended to be used in conjunction with DockBox should be installed
   * moebatch
 
 Commands
-########
+********
 
 The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
 
 rundbx
-******
+######
 
 rundbx is used to dock a ligand to a protein structure and eventually minimize and rescore the output poses. When typing "rundbx -h" on the command line, the following help message will pop up:
 
@@ -192,7 +195,7 @@ Below is an example of configuration file used to dock on two binding sites and 
     boxsize = 40.0, 40.0, 40.0
 
 General sections
-################
+****************
 
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
@@ -299,10 +302,10 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 
 Examples
-########
+********
 
 Docking with multiple software on a single binding site and minimize the poses
-******************************************************************************
+##############################################################################
 
 Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
 
@@ -351,7 +354,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 
 
 Docking on multiple binding site, minimize and rescore the poses with multiple software
-****************************************************************************************
+#######################################################################################
 
 Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
