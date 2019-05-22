@@ -7,33 +7,46 @@ import shutil
 import argparse
 import ConfigParser
 import time
-from glob import glob
-import subprocess
-import setup
 
+from glob import glob
 import pandas as pd
+import subprocess
+
 from mdkit.utility import mol2
+from mdkit.amber.ambertools import load_PROTON_INFO
+from mdkit.amber.ambertools import load_atomic_ions
+import setconf
 
 class DockingConfig(object):
 
     def __init__(self, args, task='docking'):
 
         # check if config file exist
-        if not os.path.exists(args.config_file):
+        if os.path.exists(args.config_file):
+            config = ConfigParser.SafeConfigParser()
+            config.read(args.config_file)
+        else:
             raise ValueError("Config file %s not found!"%(args.config_file))
-
-        config = ConfigParser.SafeConfigParser()
-        config.read(args.config_file)
 
         # check if ligand file exists
         if not os.path.isfile(args.input_file_l):
             raise IOError("File %s not found!"%(args.input_file_l))
 
-        # prepare ligand file
         file_l = os.path.abspath(args.input_file_l)
-        new_file_l = os.path.basename(file_l)
-        pref, ext = os.path.splitext(new_file_l)
-        new_file_l = pref + '_u' + ext # new ligand file with unique names for every atom
+        file_l_abs = os.path.basename(file_l)
+
+        pref, ext = os.path.splitext(file_l_abs)
+        if ext != '.mol2':
+            raise IOError("Ligand file provided with -l option should be in .mol2 format! %s format detected!"%ext)
+
+        nligands = subprocess.check_output('fgrep -c "@<TRIPOS>ATOM" %s'%file_l_abs, shell=True)
+        if nligands == 0:
+            raise IOError("No ligand detected in %s, check your file again!"%file_l)
+        elif nligands > 1:
+            raise IOError("More than one ligand detected in %s. Only one structure per ligand file is allowed!"%file_l)
+
+        # new ligand file with unique names for every atom
+        new_file_l = pref + '_dbx' + ext
 
         # create a ligand file with unique atom names
         mol2.update_mol2file(file_l, new_file_l, unique=True, ligname='LIG')
@@ -43,13 +56,28 @@ class DockingConfig(object):
         if not os.path.isfile(args.input_file_r):
             raise IOError("File %s not found!"%(args.input_file_r))
 
+        # check if the .pdb file is valid
+        with open(args.input_file_r, 'r') as pdbf:
+            is_end_line = False
+            for line in pdbf:
+                if line.startswith(('ATOM', 'HETATM')):
+                    resname = line[17:20].strip()
+                    if resname in ions_info:
+                        sys.exit("Ion %s found in structure %s!" %(resname, args.input_file_r))
+                    elif resname not in proton_info or line.startswith('HETATM'):
+                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
+only contains one protein structure with standard residues!'%(resname, args.input_file_r))
+                    elif is_end_line:
+                        sys.exit("More than one structure detected in .pdb file! Check your file again!")
+                elif line.startswith('END'):
+                    is_end_line = True
         self.input_file_r = os.path.abspath(args.input_file_r)
 
         if task == 'docking':
-            self.docking = setup.DockingSetup(config)
-            self.rescoring = setup.RescoringSetup(config)
+            self.docking = setconf.DockingSetup(config)
+            self.rescoring = setconf.RescoringSetup(config)
         elif task == 'scoring':
-            self.scoring = setup.ScoringSetup(config)
+            self.scoring = setconf.ScoringSetup(config)
         else:
             raise ValueError("Task should be one of docking or scoring")
 
@@ -114,20 +142,21 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
         file_r = config.input_file_r
         config_r = config.rescoring
-        posedir = args.posedir
+        posedir = 'poses'
 
         # look for results folder
-        if not os.path.isdir(posedir):
-            raise IOError('no folder %s found!'%posedir)
-        else:
+        if os.path.isdir(posedir):
             with open(posedir+'/info.dat') as inff:
                 nposes = inff.next()
                 nposes = nposes[1:] # the first character is a # sign
                 nposes = map(int, nposes.split(','))
+        else:
+            raise IOError('no folder %s found!'%posedir)
 
         curdir = os.getcwd()
         workdir = 'rescoring'
         if not os.path.exists(workdir):
+            print "Creating rescoring folder..."
             os.mkdir(workdir)
 
         os.chdir(workdir)
@@ -189,15 +218,10 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             required=True,
             help='config file containing docking parameters')
 
-        parser.add_argument('-d',
-            dest='posedir',
-            default='poses',
-            help='Directory containing poses to rescore (should be used with rescore_only option)')
-
         parser.add_argument('-prepare_only',
             dest='prepare_only',
             action='store_true',
-            help='Only prepare scripts for docking (do not run docking)')
+            help='Only prepare scripts for docking (does not run docking)')
 
         parser.add_argument('-rescore_only',
             dest='rescore_only',
@@ -209,7 +233,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             dest='skip_docking',
             action='store_true',
             default=False,
-            help='Skip docking (used for debugging minimization step prior to rescoring)')
+            help=argparse.SUPPRESS)
 
         return parser
 
@@ -218,9 +242,9 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
         config_d = config.docking
 
-        resultdir = 'poses'
-        shutil.rmtree(resultdir, ignore_errors=True)
-        os.mkdir(resultdir)
+        posedir = 'poses'
+        shutil.rmtree(posedir, ignore_errors=True)
+        os.mkdir(posedir)
 
         nposes = [1] # number of poses involved for each binding site
         sh = 1 # shift of model
@@ -244,7 +268,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 nposes_idxs = len(poses_idxs)
 
                 for idx, pose_idx in enumerate(poses_idxs):
-                    shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, resultdir+'/lig-%s.mol2'%(idx+sh))
+                    shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, posedir+'/lig-%s.mol2'%(idx+sh))
 
                 # update info
                 info['program'].append(name)
@@ -258,17 +282,17 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
         # write info
         info = pd.DataFrame(info)
-        info[features].to_csv(resultdir+'/info.dat', index=False)
+        info[features].to_csv(posedir+'/info.dat', index=False)
 
         # insert line at the beginning of the info file
-        with open(resultdir+'/info.dat', 'r+') as ff:
+        with open(posedir+'/info.dat', 'r+') as ff:
             content = ff.read()
             ff.seek(0, 0)
             line = '#' + ','.join(map(str,nposes))+'\n'
             ff.write(line.rstrip('\r\n') + '\n' + content)
 
         # copy receptor in folder
-        shutil.copyfile(config.input_file_r, resultdir+'/rec.pdb')
+        shutil.copyfile(config.input_file_r, posedir+'/rec.pdb')
 
     def do_final_cleanup(self, config):
 

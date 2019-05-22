@@ -1,7 +1,7 @@
 import sys
 import subprocess
 
-known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'ifd', 'moe', 'gold'], \
+known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], \
      'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
 known_programs['scoring'] = known_programs['rescoring']
 
@@ -41,8 +41,8 @@ class ConfigSetup(object):
                         try:
                             subprocess.check_call('which %s > /dev/null'%exe, shell=True)
                         except subprocess.CalledProcessError:
-                            raise ValueError('Executable %s needed for docking with %s is not found in your PATH! \
-Make sure the program has been installed!'%(exe,program))
+                            raise ValueError('Executable %s needed for docking with %s not found! \
+Make sure the program has been installed and is in your PATH!'%(exe, program))
 
                 # check if mandatory options are set up
                 if hasattr(sys.modules[program], 'mandatory_settings'):
@@ -166,6 +166,10 @@ class DockingSetup(ConfigSetup):
 
         section = 'MINIMIZATION'
         if self.minimize_options['minimization']:
+
+            # check AMBER version
+            self.minimize_options['amber_version'] = self.check_amber_version()
+
             # load default parameters
             for key, value in default_minimize_options.iteritems():
                 self.minimize_options[key] = value
@@ -177,6 +181,28 @@ class DockingSetup(ConfigSetup):
                   self.minimize_options[key] = value
 
         return self.minimize_options
+
+    def check_amber_version():
+        error_msg = 'AmberTools serial version >= 14 and <= 17 is required for minimization with DockBox!'
+
+        if os.environ.get('AMBERHOME'):
+            for exe in ['tleap', 'sander', 'cpptraj']:
+                try:
+                    subprocess.check_call('which %s > /dev/null'%exe, shell=True)
+                except subprocess.CalledProcessError:
+                    raise ValueError('Executable %s is not found in your PATH! %s'%(exe, error_msg))
+
+            docfile = glob(os.environ.get('AMBERHOME')+'/doc/Amber*.pdf')
+            amber_version = os.path.basename(docfile[0])[5:-4]
+            try:
+                int(amber_version)
+                if amber_version not in ['14', '15', '16', '17']:
+                    raise ValueError("Amber version %s detected! %s"%error_msg)
+                return amber_version
+            except ValueError:
+                raise ValueError("Amber version not detected! %s"%error_msg)
+        else:
+            raise ValueError("AMBERHOME is not set! %s"%error_msg)
 
 class RescoringSetup(ConfigSetup):
 

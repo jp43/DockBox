@@ -162,11 +162,12 @@ class DockingMethod(object):
         ncyc = minimize_options['ncyc']
         maxcyc = minimize_options['maxcyc']
         cut = minimize_options['cut']
+        amber_version = minimize_options['amber_version']
 
         if files_l:
             # do energy minimization on ligand
             minimization.do_minimization_after_docking(file_r, files_l, keep_hydrogens=True, charge_method=charge_method,\
-ncyc=ncyc, maxcyc=maxcyc, cut=cut)
+ncyc=ncyc, maxcyc=maxcyc, cut=cut, amber_version=amber_version)
 
         failed_idxs = []
         # extract results from minimization and purge out
