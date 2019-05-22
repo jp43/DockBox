@@ -46,6 +46,11 @@ class Vina(autodock.ADBased):
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
+
+MGLPATH=`which prepare_ligand4.py`
+MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
+export PYTHONPATH=$PYTHONPATH:$MGLPATH
+
 # generate .pdbqt files
 # prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
@@ -61,6 +66,11 @@ vina --config vina.config 1> vina.out 2> vina.err"""% locals()
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
+
+MGLPATH=`which prepare_ligand4.py`
+MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
+export PYTHONPATH=$PYTHONPATH:$MGLPATH
+
 # generate .pdbqt files
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 python check_lig_pdbqt.py lig.pdbqt
@@ -87,9 +97,10 @@ vina --score_only --config vina.config > vina.out"""% locals()
 
         try:
             subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
-            self.update_output_mol2files(sample=input_file_l)
         except:
             pass
+
+        self.update_output_mol2files(sample=input_file_l)
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

@@ -20,10 +20,13 @@ class ADBased(method.DockingMethod):
         # number of mol2 files generated
         n_files_l = len(glob('lig-*.mol2'))
 
+        mgltools_path = subprocess.check_output('which prepare_ligand4.py', shell=True, executable='/bin/bash')
+        mgltools_path = '/'.join(mgltools_path.split('/')[:-3]) 
+
         for idx in range(n_files_l):
             mol2file = 'lig-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, mol2file, ADupdate=sample, unique=True, mask=['h','H'])
-            mol2.arrange_hydrogens(mol2file, 'tmp.mol2')
+            mol2.arrange_hydrogens(mol2file, 'tmp.mol2', path=mgltools_path)
             shutil.move('tmp.mol2', mol2file)
 
     def write_check_lig_pdbqt_script(self):
@@ -199,8 +202,12 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
-# generate .pdbqt files
 
+MGLPATH=`which prepare_ligand4.py`
+MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
+export PYTHONPATH=$PYTHONPATH:$MGLPATH
+
+# generate .pdbqt files
 # prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 python check_lig_pdbqt.py lig.pdbqt
@@ -225,10 +232,17 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 set -e
+
+MGLPATH=`which prepare_ligand4.py`
+MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
+export PYTHONPATH=$PYTHONPATH:$MGLPATH
+
 # generate .pdbqt files
+# prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
 python check_lig_pdbqt.py lig.pdbqt
 
+# prepare receptor only once
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log
 fi
@@ -268,9 +282,9 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 
             try:
                 subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-                self.update_output_mol2files(sample=input_file_l)
             except:
                 pass
+            self.update_output_mol2files(sample=input_file_l)
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""

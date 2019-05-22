@@ -4,7 +4,7 @@ import stat
 from glob import glob
 import shutil
 import subprocess
-import setup
+import setconf
 
 from mdkit.amber import minimization
 from mdkit.utility import mol2
@@ -42,8 +42,10 @@ class DockingMethod(object):
         if not skip_docking:
             print "Starting docking with %s..."%self.program.capitalize()
             print "The following options will be used:"
+            options_info = ""
             for key, value in self.options.iteritems():
-                print str(key) + ': ' + str(value)
+                options_info += str(key) + ': ' + str(value) + ', '
+            print options_info[:-2]
 
             # (A) run docking
             script_name = "run_" + self.program + ".sh"
@@ -54,8 +56,10 @@ class DockingMethod(object):
                 return
             try:
                 # try running docking procedure
-                subprocess.check_output("./" + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
-            except subprocess.CalledProcessError:
+                subprocess.check_output('./' + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
+            except subprocess.CalledProcessError as e:
+                print e
+                print "Check %s file for more details!"%(dockdir+'/'+self.program+'.log')
                 pass
 
         if prepare_only:
@@ -98,7 +102,7 @@ class DockingMethod(object):
         # change directory
         os.chdir(scordir)
 
-        if self.program in setup.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
+        if self.program in setconf.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
 
@@ -113,11 +117,12 @@ class DockingMethod(object):
                 # (B) run scoring method
                 try:
                     subprocess.check_output('./' + script_name + ' &> ' + self.program + '.log', shell=True, executable='/bin/bash')
-                except subprocess.CalledProcessError:
+                except subprocess.CalledProcessError as e:
+                    print e.output
                     pass
 
                 # (C) extract docking results
-                if self.program in setup.single_run_scoring_programs:
+                if self.program in setconf.single_run_scoring_programs:
                     nligands = len(files_l[0])
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:

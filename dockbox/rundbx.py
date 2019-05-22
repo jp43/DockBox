@@ -32,29 +32,30 @@ class DockingConfig(object):
         if not os.path.isfile(args.input_file_l):
             raise IOError("File %s not found!"%(args.input_file_l))
 
-        file_l = os.path.abspath(args.input_file_l)
-        file_l_abs = os.path.basename(file_l)
-
+        file_l_abs = os.path.abspath(args.input_file_l)
         pref, ext = os.path.splitext(file_l_abs)
         if ext != '.mol2':
             raise IOError("Ligand file provided with -l option should be in .mol2 format! %s format detected!"%ext)
 
-        nligands = subprocess.check_output('fgrep -c "@<TRIPOS>ATOM" %s'%file_l_abs, shell=True)
+        nligands = int(subprocess.check_output('fgrep -c "@<TRIPOS>ATOM" %s'%file_l_abs, shell=True))
         if nligands == 0:
-            raise IOError("No ligand detected in %s, check your file again!"%file_l)
+            raise IOError("No ligand detected in %s, check your file again!"%args.input_file_l)
         elif nligands > 1:
-            raise IOError("More than one ligand detected in %s. Only one structure per ligand file is allowed!"%file_l)
+            raise IOError("More than one ligand detected in %s. Only one structure per ligand file is allowed!"%args.input_file_l)
 
         # new ligand file with unique names for every atom
         new_file_l = pref + '_dbx' + ext
 
         # create a ligand file with unique atom names
-        mol2.update_mol2file(file_l, new_file_l, unique=True, ligname='LIG')
+        mol2.update_mol2file(file_l_abs, new_file_l, unique=True, ligname='LIG')
         self.input_file_l = os.path.abspath(new_file_l)
 
         # check if receptor file exists
         if not os.path.isfile(args.input_file_r):
             raise IOError("File %s not found!"%(args.input_file_r))
+
+        proton_info = load_PROTON_INFO()
+        ions_info = load_atomic_ions()
 
         # check if the .pdb file is valid
         with open(args.input_file_r, 'r') as pdbf:

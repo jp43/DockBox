@@ -1,4 +1,6 @@
+import os
 import sys
+from glob import glob
 import subprocess
 
 known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], \
@@ -182,7 +184,7 @@ class DockingSetup(ConfigSetup):
 
         return self.minimize_options
 
-    def check_amber_version():
+    def check_amber_version(self):
         error_msg = 'AmberTools serial version >= 14 and <= 17 is required for minimization with DockBox!'
 
         if os.environ.get('AMBERHOME'):
