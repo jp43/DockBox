@@ -56,48 +56,48 @@ Make a program usable by DockBox
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
 
 - **Autodock**: except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
-  * autodock4
-  * autogrid4
-  * babel
-  * prepare_dpf4.py
-  * prepare_gpf4.py
-  * prepare_ligand4.py
-  * prepare_receptor4.py
+  - autodock4
+  - autogrid4
+  - babel
+  - prepare_dpf4.py
+  - prepare_gpf4.py
+  - prepare_ligand4.py
+  - prepare_receptor4.py
 
 - **Autodock Vina**: 
-  * babel
-  * prepare_ligand4.py
-  * prepare_receptor4.py
-  * vina
+  - babel
+  - prepare_ligand4.py
+  - prepare_receptor4.py
+  - vina
 
 - **DOCK 6**:
-  * chimera (http://www.cgl.ucsf.edu/chimera)
-  * dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
-  * dock6
-  * grid
-  * showbox
-  * sphere_selector
-  * sphgen_cpp (http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm)
+  - chimera (http://www.cgl.ucsf.edu/chimera)
+  - dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
+  - dock6
+  - grid
+  - showbox
+  - sphere_selector
+  - sphgen_cpp (http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm)
 
 - **DSX**:
-  * dsx (symbolic link to dsx_linux_64.lnx or similar executables)
+  - dsx (symbolic link to dsx_linux_64.lnx or similar executables)
 
 - **Glide**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
-  * glide
-  * glide_sort
-  * ligprep
-  * pdbconvert
-  * prepwizard
+  - glide
+  - glide_sort
+  - ligprep
+  - pdbconvert
+  - prepwizard
 
 - **Gold**:
-  * gold_auto
+  - gold_auto
 
 - **Induced Fit**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com): 
-  * ifd
-  * prepwizard
+  - ifd
+  - prepwizard
 
 - **MOE2015**:
-  * moebatch
+  - moebatch
 
 Commands
 ********
