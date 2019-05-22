@@ -1,9 +1,0 @@
-#!/bin/bash 
-#PBS -l walltime=03:00:00
-#PBS -l nodes=1:ppn=1,mem=1024mb
-#PBS -q hermes
-#PBS -N prepvs
-#PBS -j oe
-
-cd $PBS_O_WORKDIR
-prepvs -f config.ini -r $HOME/projects/Tubulin/PlosOne/clusters*.pdb -l $HOME/projects/anesthetics/*.smi -findsites
