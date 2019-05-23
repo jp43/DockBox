@@ -244,24 +244,24 @@ General sections
   * **site**: specifies the labels for the binding sites in case multiple binding sites are considered (site1, site2,...). See the example configuration to dock on multiple binding site, minimize and rescore the poses with multiple software.
 
 
-    Below is a list of all the programs that can be used by DockBox specifying if they can be used for docking or/and rescoring.
+Below is a list of all the programs that can be used by DockBox specifying if they can be used for docking or/and rescoring.
 
 ==========  ==========  ==========
  Header 1    Header 2    Header 3  
 ==========  ==========  ==========
 
-    Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
+Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
 
 * The **SITE** section includes the information about the box to spot the binding site. The keys are the following:
 
-  *  **center**: x, y, z coordinates of the center of the binding box (in Å).
+  * **center**: x, y, z coordinates of the center of the binding box (in Å).
 
-  *  **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
+  * **boxsize**: size of the box along each dimension x, y, z. The dimensions of the box should be no more than 50.0, 50.0, 50.0 (in Å).
 
 
 * The **RESCORING** section has only one key specifying the programs used to rescore:
 
-  *  **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+  * **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
 Docking/scoring options relative to each software
 #################################################
