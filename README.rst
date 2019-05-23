@@ -111,25 +111,57 @@ rundbx is used to dock a ligand to a protein structure and eventually minimize a
 
 :: 
 
-    usage: rundock [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
-        [-q CHARGE_FILE] [-rescore_only] [-extract_only] [-d POSEDIR]
-        [-norun]
+    usage: rundbx [-h] -l INPUT_FILE_L -r INPUT_FILE_R -f CONFIG_FILE
+                  [-prepare_only] [-rescore_only]
     
-    rundock : dock with multiple software -------- Requires one file for the
-    ligand (1 struct.) and one file for the receptor (1 struct.)
+    rundbx : dock and rescore with multiple programs -------- Requires one file
+    for the ligand (1 struct.) and one file for the receptor (1 struct.)
     
     optional arguments:
       -h, --help       show this help message and exit
       -l INPUT_FILE_L  Ligand coordinate file(s): .mol2
       -r INPUT_FILE_R  Receptor coordinate file(s): .pdb
       -f CONFIG_FILE   config file containing docking parameters
-      -q CHARGE_FILE   File with partial charges of non-standard residues
+      -prepare_only    Only prepare scripts for docking (does not run docking)
       -rescore_only    Run rescoring only
-      -extract_only    Extract structures only (usually used for debugging)
-      -d POSEDIR       Directory containing poses to rescore (should be used with
-                       rescore_only option)
-      -norun           Do not run the scripts for docking (simply generate the
-                       files)
+
+extract_dbx_best_poses
+######################
+
+When typing "extract_dbx_best_poses -h" on the command line, the following help message will pop up:
+
+::
+
+    usage: extract_dbx_best_poses [-h] [-all-targets] [-all-isomers]
+                                  (-cd PRGM [PRGM ...] | -sbcd FUNC [FUNC ...] | -s FUNC [FUNC ...])
+                                  [-csv FILE] [-d PRGM1 [PRGM2 ...]]
+                                  [-dirs DIR1 [DIR2 ...]] [-r DIRECTORY NAME]
+    
+    Extract best docking poses after rundock finished.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -all-targets          Select best poses over all the targets. If not
+                            specified, extract best pose separately for each
+                            target.
+      -all-isomers          Select best poses over all the isomers. If not
+                            specified, extract best pose separately for every
+                            isomer.
+      -cd PRGM [PRGM ...]   Docking programs used with standard consensus docking
+      -sbcd FUNC [FUNC ...]
+                            Scoring functions used with score-based consensus
+                            docking
+      -s FUNC [FUNC ...]    Scoring functions used to extract the best pose
+                            (combination of scores)
+      -csv FILE             .csv filename with compounds. Used to add names of
+                            compounds (default: none)
+      -d PRGM1 [PRGM2 ...]  Docking programs (instances) to be considered when
+                            extracting best poses
+      -dirs DIR1 [DIR2 ...]
+                            Directories considered for analysis. Should contain a
+                            folder called "poses". Default: curr. dir.
+      -r DIRECTORY NAME     Name of results directory. Default: results
+
 
 * Mandatory arguments
 

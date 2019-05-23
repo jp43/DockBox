@@ -8,9 +8,14 @@ import argparse
 import numpy as np
 import pandas as pd
 from mdkit.utility import mol2
-from sklearn import preprocessing
 
+# cutoff for consensus docking
 cutoff = 2.0
+
+# prefix to identify ligand, target and isomer directories
+ligdir_prefix = 'lig'
+tardir_prefix = 'target'
+isodir_prefix = 'isomer'
 
 parser = argparse.ArgumentParser(description="Extract best docking poses after rundock finished.")
 
@@ -32,19 +37,19 @@ group.add_argument('-cd',
     dest='cd',
     nargs='+',
     metavar='PRGM',
-    help='Docking programs used with consensus docking.')
+    help='Docking programs used with standard consensus docking')
 
-group.add_argument('-cs',
-    dest='cs',
+group.add_argument('-sbcd',
+    dest='sbcd',
     nargs='+',
     metavar='FUNC',
-    help='Scoring functions used with consensus scoring.')
+    help='Scoring functions used with score-based consensus docking')
 
 group.add_argument('-s',
     nargs='+',
     dest='sf',
     metavar='FUNC',
-    help='Scoring functions used to extract best pose.')
+    help='Scoring functions used to extract the best pose (combination of scores)')
 
 parser.add_argument('-csv',
     type=str,
@@ -88,28 +93,28 @@ def check_architecture(directory):
 
     if os.path.isdir(directory):
         dir_split = directory.split('/')
-        if dir_split[-1].startswith('isomer'):
+        if dir_split[-1].startswith(isodir_prefix):
             isisomerID = True
-            if len(dir_split) > 1 and dir_split[-2].startswith('target'):
+            if len(dir_split) > 1 and dir_split[-2].startswith(tardir_prefix):
                 istargetID = True
-                if len(dir_split) > 2 and dir_split[-3].startswith('lig'):
+                if len(dir_split) > 2 and dir_split[-3].startswith(ligdir_prefix):
                     isligID = True
                 else:
                     isligID = False
-            elif len(dir_split) > 1 and dir_split[-2].startswith('lig'):
+            elif len(dir_split) > 1 and dir_split[-2].startswith(ligdir_prefix):
                 istargetID = False
                 isligID = True
             else:
                 istargetID = False
                 isligID = False
-        elif dir_split[-1].startswith('target'):
+        elif dir_split[-1].startswith(tardir_prefix):
             isisomerID = False
             istargetID = True
-            if len(dir_split) > 1 and dir_split[-2].startswith('lig'):
+            if len(dir_split) > 1 and dir_split[-2].startswith(ligdir_prefix):
                 isligID = True
             else:
                 isligID = False
-        elif dir_split[-1].startswith('lig'):
+        elif dir_split[-1].startswith(ligdir_prefix):
             isisomerID = False
             istargetID = False
             isligID = True
@@ -181,10 +186,10 @@ for dir in args.dirs:
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
 scoring_functions_all = []
-if args.cs:
-    scoring_functions = args.cs
-    if len(args.cs) < 2:
-        raise ValueError('Number of functions for consensus scoring should be at least 2!')
+if args.sbcd:
+    scoring_functions = args.sbcd
+    if len(args.sbcd) < 2:
+        raise ValueError('Number of functions for score-based consensus docking should be at least 2!')
 elif args.cd:
     scoring_functions = None
     if len(args.cd) < 2:
@@ -192,7 +197,7 @@ elif args.cd:
 elif args.sf:
     scoring_functions = args.sf
 else:
-    raise IOError("One of -cs, -cd or -s options should be used when running extract_best_poses!")
+    raise IOError("One of -cd, -sbcd or -s options should be used when running extract_best_poses!")
 
 features = ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose']
 if args.csvfile:
@@ -278,14 +283,16 @@ for jdx, dir in enumerate(dirs):
 
     if args.sf:
         # extract best pose from best linear combination of scores
-        df_dir['score'] = df_dir[args.sf].sum(axis=1)
+        df_dir['score_combin'] = df_dir[args.sf].sum(axis=1)
         df_dir_groupby = df_dir.groupby(['program'])
         best_poses_dir = df_dir.loc[df_dir_groupby['score'].idxmin]
-    elif args.cs:
-        # extract best pose if consensus between poses with best score is met
+
+    elif args.sbcd:
+        # extract best pose if consensus between poses with best score after rescoring is met
         consensus = True
         file_l_ref = None
-        for idx, sf in enumerate(args.cs):
+
+        for idx, sf in enumerate(args.sbcd):
             row = df_dir.loc[df_dir[sf].idxmin]
             if idx == 0:
                 firstrow = row.copy()
@@ -300,12 +307,13 @@ for jdx, dir in enumerate(dirs):
             # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
             best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
             best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score']+scoring_functions_all})
-            best_poses_dir['score'] = best_poses_dir[args.cs].sum(axis=1)/len(args.cs) # score computed from average internal score
+
     elif args.cd:
         # extract best pose if consensus between poses with best docking score is met
         df_dir_prgms = df_dir[df_dir['program'].isin(args.cd)]
         df_dir_prgms_groupby = df_dir_prgms.groupby(['program'])
         rows = df_dir_prgms.loc[df_dir_prgms_groupby['score'].idxmin]
+
         consensus = True
         for idx, (index, row) in enumerate(rows.iterrows()):
             if idx == 0:
@@ -376,8 +384,12 @@ shutil.rmtree(args.resultsdir, ignore_errors=True)
 os.mkdir(args.resultsdir)
 
 features_csv = features_ids + features + scoring_functions_all + ['score']
+if args.sf:
+    features_csv.append('score_combin')
+
 if args.csvfile and isligID:
     features_csv.append('name')
+
 features_csv.remove('instance')
 features_csv.remove('index_pose')
 
