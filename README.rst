@@ -26,7 +26,7 @@ the results using different consensus docking/scoring strategies.
   * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-Note that none of the above docking or scoring programs are included in the current 
+None of the above docking or scoring programs are included in the current 
 repository. Hence the user eager to test a docking/scoring program with DockBox should 
 first install that program separately on the same machine DockBox is installed. To make
 an installed program usable by the DockBox package, see section **Make a program usable
