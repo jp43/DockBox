@@ -125,6 +125,22 @@ rundbx is used to dock a ligand to a protein structure and eventually minimize a
       -prepare_only    Only prepare scripts for docking (does not run docking)
       -rescore_only    Run rescoring only
 
+* Mandatory arguments
+
+    * -l INPUT_FILE_L: **.mol2** file containing the coordinates of the ligand (only one structure allowed)
+
+    * -r INPUT_FILE_R: **.pdb** file containing the receptor coordinates (only one structure allowed)
+
+    * -f CONFIG_FILE: **.ini** configuration file containing the docking parameters (see the section **preparing the rundbx configuration file**)
+
+* Optional arguments
+
+    Preferably do not use any flags other than -l, -r and -f
+
+Thus, a typical use of **rundbx** is done through the following command:
+
+    rundbx -f config.ini -r receptor.pdb -l ligand.mol2
+
 extract_dbx_best_poses
 ######################
 
@@ -137,7 +153,7 @@ When typing "extract_dbx_best_poses -h" on the command line, the following help 
                                   [-csv FILE] [-d PRGM1 [PRGM2 ...]]
                                   [-dirs DIR1 [DIR2 ...]] [-r DIRECTORY NAME]
     
-    Extract best docking poses after rundock finished.
+    Extract best docking poses after rundbx finished.
     
     optional arguments:
       -h, --help            show this help message and exit
@@ -163,30 +179,14 @@ When typing "extract_dbx_best_poses -h" on the command line, the following help 
       -r DIRECTORY NAME     Name of results directory. Default: results
 
 
-* Mandatory arguments
-
-    * -l INPUT_FILE_L: **.mol2** file containing the coordinates of the ligand (only one structure allowed)
-
-    * -r INPUT_FILE_R: **.pdb** file containing the receptor coordinates (only one structure allowed)
-
-    * -f CONFIG_FILE: **.ini** configuration file containing the docking parameters (see the section **preparing the rundock configuration file**)
-
-* Optional arguments
-
-    Preferably do not use any flags other than -l, -r and -f
-
-Thus, a typical use of **rundock** is done through the following command:
-
-    rundock -f config.ini -r receptor.pdb -l ligand.mol2
-
-Preparing the rundock configuration file
+Preparing the rundbx configuration file
 ****************************************
 
-Besides one **.mol2** file containing the ligand structure (-l flag) and one **.pdb** file containing the receptor structure (-r flag), running **rundock** requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
+Besides one **.mol2** file containing the ligand structure (-l flag) and one **.pdb** file containing the receptor structure (-r flag), running **rundbx** requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
 
-**Note**: **rundock** can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the **prepvs** command can be used to create folders for each protein-ligand pair (see the above section **prepvs**). 
+**Note**: **rundbx** can only be used to run docking and scoring procedures with a single protein and ligand structure. If multiple protein or/and ligand structures need to be used, the **prepvs** command can be used to create folders for each protein-ligand pair (see the above section **prepvs**). 
 
-The rundock configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
+The rundbx configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
 Below is an example of configuration file used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
@@ -340,7 +340,7 @@ Examples
 Docking with multiple software on a single binding site and minimize the poses
 ##############################################################################
 
-Below is an example of configuration file that can be used as an input of *rundock*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
+Below is an example of configuration file that can be used as an input of *rundbx*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
 
 ::
 
@@ -389,7 +389,7 @@ Below is an example of configuration file that can be used as an input of *rundo
 Docking on multiple binding site, minimize and rescore the poses with multiple software
 #######################################################################################
 
-Below is another example of configuration file for *rundock* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
+Below is another example of configuration file for *rundbx* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
 ::
 

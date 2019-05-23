@@ -17,7 +17,7 @@ ligdir_prefix = 'lig'
 tardir_prefix = 'target'
 isodir_prefix = 'isomer'
 
-parser = argparse.ArgumentParser(description="Extract best docking poses after rundock finished.")
+parser = argparse.ArgumentParser(description="Extract best docking poses after rundbx finished.")
 
 parser.add_argument('-all-targets',
     dest='combine_targets',
