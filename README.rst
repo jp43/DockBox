@@ -32,7 +32,7 @@ install the program separately on the same system DockBox is installed.
 
 To make a docking or scoring program usable by DockBox, make sure all the executable files
 required for each program can be directly run on the command line from any location,
-i.e., are in your PATH (see section **Executable files required for each program** 
+i.e., are in your PATH (see section **executable files required for each program** 
 to find out the executables needed to run each docking/scoring programs).
 
 .. contents:: **Table of Contents**
@@ -58,7 +58,7 @@ Binaries required by each program
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
-* Autodock. Except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
+* Autodock 4
 
   * autodock4
   * autogrid4
@@ -68,8 +68,9 @@ Any software intended to be used in conjunction with DockBox should be installed
   * prepare_ligand4.py
   * prepare_receptor4.py
 
-Autodock Vina
-#############
+The autodock4 and autogrid4 executables can be installed by installing `AutoDock4 <http://autodock.scripps.edu/downloads/autodock-registration/autodock-4-2-download-page/>`_. All the .py executable files are included in the `MGLTools <http://mgltools.scripps.edu/downloads>`_ package. It is important to not move those executable to different locations outside the MGLTools package as DockBox uses those locations to deduce additional MGLTools python modules (PyBabel, MolKit).
+
+* Autodock Vina
 
 * babel
 * prepare_ligand4.py
