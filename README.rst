@@ -116,13 +116,13 @@ Any software intended to be used in conjunction with DockBox should be installed
 
   * gold_auto
   
-  gold_auto is the main executable of GOLD.
+  gold_auto is the main executable of `GOLD <https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/>`_.
 
 * **MOE**
 
   * moebatch
   
-  Make sure the MOE environment variable (pointing towards MOE's installation directory) has been correctly exported.
+  Can be downloaded over `here <https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm>`_. Make sure the MOE environment variable (pointing towards MOE's installation directory) has been correctly exported.
 
 Commands
 ********
