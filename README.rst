@@ -31,8 +31,8 @@ repository. Hence the user eager to test a docking/scoring program with DockBox 
 first install the program separately on the same system DockBox is installed. To make
 a docking or scoring program usable by DockBox, make sure all the binaries required by
 each program can be directly run on the command line from any location, i.e., are 
-in your PATH (see section **required executables** to find out the binaries required by
-each docking/scoring programs**).
+in your PATH (see section **Binaries required by each program** to find out the executables
+needed to run each docking/scoring programs).
 
 .. contents:: **Table of Contents**
 
@@ -52,8 +52,8 @@ Installation
 
 To be written
 
-Required executables
-********************
+Binaries required by each program
+*********************************
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
