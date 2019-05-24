@@ -31,7 +31,8 @@ repository. Hence the user eager to test a docking/scoring program with DockBox 
 first install the program separately on the same system DockBox is installed. To make
 a docking or scoring program usable by DockBox, make sure all the binaries required by
 each program can be directly run on the command line from any location, i.e., are 
-in your PATH (see **Binaries required to run docking/scoring programs**).
+in your PATH (see section **required executables** to find out the binaries required by
+each docking/scoring programs**).
 
 .. contents:: **Table of Contents**
 
@@ -51,10 +52,10 @@ Installation
 
 To be written
 
-Binaries required to run docking/scoring programs
-*************************************************
+Required executables
+********************
 
-Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following executables are in your PATH, depending on which docking/scoring software should be used:
+Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
 * **Autodock**: except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
