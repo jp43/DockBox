@@ -28,8 +28,9 @@ the results using different consensus docking/scoring strategies.
 
 None of the above docking or scoring programs are included in the current repository.
 Hence the user eager to test a docking/scoring program with DockBox should first 
-install the program separately on the same system DockBox is installed. To make a 
-docking or scoring program usable by DockBox, make sure all the executable files
+install the program separately on the same system DockBox is installed. 
+
+To make a docking or scoring program usable by DockBox, make sure all the executable files
 required for each program can be directly run on the command line from any location,
 i.e., are in your PATH (see section **Executable files required for each program** 
 to find out the executables needed to run each docking/scoring programs).
