@@ -49,10 +49,12 @@ The following are the minimal requirements to install the DockBox module
 
 * pip version 1.5 or later
 
+To be completed...
+
 Installation
 ************
 
-To be written
+To be completed...
 
 Executable files required for each program
 ******************************************
@@ -112,7 +114,7 @@ Any software intended to be used in conjunction with DockBox should be installed
   
   All the executables can be found within the `Schrodinger package <https://www.schrodinger.com>`_. Make sure the SCHRODINGER environment variable (pointing towards Schrodinger's installation directory) has been correctly exported.
 
-* **Gold**
+* **GOLD**
 
   * gold_auto
   
