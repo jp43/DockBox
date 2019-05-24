@@ -11,28 +11,28 @@ the results using different consensus docking/scoring strategies.
 
 * **Docking**:
 
-  * Autodock (http://autodock.scripps.edu)
+  * Autodock 4 (http://autodock.scripps.edu)
   * Autodock Vina (http://autodock.scripps.edu)
   * DOCK 6.5 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * Glide (https://www.schrodinger.com/glide)
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-* **Scoring**:
+* **Rescoring**:
 
-  * Autodock (http://autodock.scripps.edu)
+  * Autodock 4 (http://autodock.scripps.edu)
   * Autodock Vina (http://autodock.scripps.edu)
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
   * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
-None of the above docking or scoring programs are included in the current 
-repository. Hence the user eager to test a docking/scoring program with DockBox should 
-first install the program separately on the same system DockBox is installed. To make
-a docking or scoring program usable by DockBox, make sure all the binaries required by
-each program can be directly run on the command line from any location, i.e., are 
-in your PATH (see section **Binaries required by each program** to find out the executables
-needed to run each docking/scoring programs).
+None of the above docking or scoring programs are included in the current repository.
+Hence the user eager to test a docking/scoring program with DockBox should first 
+install the program separately on the same system DockBox is installed. To make a 
+docking or scoring program usable by DockBox, make sure all the executable files
+required for each program can be directly run on the command line from any location,
+i.e., are in your PATH (see section **Executable files required for each program** 
+to find out the executables needed to run each docking/scoring programs).
 
 .. contents:: **Table of Contents**
 
@@ -57,18 +57,15 @@ Binaries required by each program
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
-Autodock
-########
+* Autodock. Except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
-Except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
-
-* autodock4
-* autogrid4
-* babel
-* prepare_dpf4.py
-* prepare_gpf4.py
-* prepare_ligand4.py
-* prepare_receptor4.py
+  * autodock4
+  * autogrid4
+  * babel
+  * prepare_dpf4.py
+  * prepare_gpf4.py
+  * prepare_ligand4.py
+  * prepare_receptor4.py
 
 Autodock Vina
 #############
@@ -245,6 +242,7 @@ General sections
 ****************
 
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
+
 
   * **programs**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the first example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
