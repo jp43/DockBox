@@ -7,7 +7,7 @@ programs either alone or in combination. In addition, DockBox enables to rescore
 generated docking poses with different popular scoring algorithms as well as to analyze
 the results using different consensus docking/scoring strategies.
 
-**List of programs compatible with DockBox**
+**List of programs supported by DockBox**
 
 * **Docking**:
 
@@ -28,9 +28,10 @@ the results using different consensus docking/scoring strategies.
 
 None of the above docking or scoring programs are included in the current 
 repository. Hence the user eager to test a docking/scoring program with DockBox should 
-first install that program separately on the same machine DockBox is installed. To make
-an installed program usable by the DockBox package, see section **Make a program usable
-by DockBox**.
+first install the program separately on the same system DockBox is installed. To make
+a docking or scoring program usable by DockBox, make sure all the binaries required by
+each program can be directly run on the command line from any location, i.e., are 
+in your PATH (see <other.rst#section>).
 
 .. contents:: **Table of Contents**
 
@@ -50,10 +51,10 @@ Installation
 
 To be written
 
-Make a program usable by DockBox
-********************************
+Binaries required to run docking/scoring programs
+*************************************************
 
-Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the applications mentioned below are in your PATH, depending on which docking/scoring software will be used:
+Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following executables are in your PATH, depending on which docking/scoring software should be used:
 
 * **Autodock**: except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
@@ -289,7 +290,7 @@ Each section relative to a docking/scoring program should be named the way it ap
 
         babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
 
-* **Autodock Vina** (docking/scoring method)
+**Autodock Vina** (docking/scoring method)
 
   * cpu (default: 1)
   * energy_range (default: 3)
@@ -300,7 +301,7 @@ Each section relative to a docking/scoring program should be named the way it ap
 **Note 2**: As is usually the case for Autodock Vina, non polar hydrogens in the ligand structure are removed prior to docking in order to properly use the Autodock force field. Once the docking has been performed, nonpolar hydrogens are reattributed in a way consistent with the input structure. Unless the *minimize* option in the configuration file is set to *yes*, no minimization is performed on those hydrogens.
 
 
-* **DOCK 6** (docking method)
+**DOCK 6** (docking/scoring method)
 
   * attractive_exponent (default: 6)
   * extra_margin (default: 2.0)
@@ -313,20 +314,20 @@ Each section relative to a docking/scoring program should be named the way it ap
   * probe_radius (default: 1.4)
   * repulsive_exponent (default: 12)
 
-* **DSX** (scoring method)
+**DSX** (scoring method)
 
-* **Glide** (docking/scoring)
+**Glide** (docking/scoring method)
 
   * pose_rmsd (default: 0.5):
   * poses_per_lig (default: 10): targeted number of final poses
   * precision (default: SP):
   * use_prepwizard (default: True):
 
-* **GOLD**
+**GOLD** (docking method)
 
   * nposes (default: 20)
 
-* **MOE**
+**MOE** (scoring)
 
   * gtest (default: 0.01)
   * maxpose (default: 5)
@@ -336,8 +337,6 @@ Each section relative to a docking/scoring program should be named the way it ap
   * remaxpose (default: 1)
   * rescoring (default: GBVI/WSA dG)
   * scoring (default: London dG)
-
-
 
 Examples
 ********
