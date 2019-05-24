@@ -70,7 +70,6 @@ Any software intended to be used in conjunction with DockBox should be installed
 
   The autodock4 and autogrid4 executables can be installed by installing `AutoDock4   <http://autodock.scripps.edu/downloads/autodock-registration/autodock-4-2-download-page/>`_. All the .py executable files are included in the `MGLTools <http://mgltools.scripps.edu/downloads>`_ package. It is important to not move those executable to different locations outside of the MGLTools package as DockBox uses those locations to deduce additional MGLTools python modules (PyBabel, MolKit). The babel routine can be set by installing OpenBabel from it official `website <http://openbabel.org/wiki/Main_Page>`_.
 
-
 * **AutoDock Vina**
 
   * babel
@@ -78,7 +77,7 @@ Any software intended to be used in conjunction with DockBox should be installed
   * prepare_receptor4.py
   * vina
 
-  The vina executable is available within the `AutoDock Vina <http://vina.scripps.edu/index.html>`_ package. See autodock 4 for other executables.
+  The vina executable is available within the `AutoDock Vina <http://vina.scripps.edu/index.html>`_ package. See AutoDock 4 section for other executables.
 
 * **DOCK 6.5**
 
@@ -90,33 +89,38 @@ Any software intended to be used in conjunction with DockBox should be installed
   * sphere_selector
   * sphgen_cpp
 
-  The chimera command is accessible when installing `CHIMERA <http://www.cgl.ucsf.edu/chimera>`_. The dock6, grid, showbox and sphere_selector commands are all part of the `DOCK 6.5 package <http://dock.compbio.ucsf.edu/Online_Licensing/index.htm>`_. The dms program can be installed seperately from `here <http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html>`_ while sphgen_cpp is downloaded from `here <http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm>`_.
+  The chimera command is accessible when installing `CHIMERA <http://www.cgl.ucsf.edu/chimera>`_. The dock6, grid, showbox and sphere_selector commands are all part of the `DOCK 6.5 package <http://dock.compbio.ucsf.edu/Online_Licensing/index.htm>`_. The dms program can be installed seperately from `here <http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html>`_ while sphgen_cpp can be downloaded from `here <http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm>`_.
 
-DSX
-####
+* **DSX**
 
-* dsx (symbolic link to dsx_linux_64.lnx or similar executables)
+  * dsx
+
+  The dsx-like routines can be downloaded from the official `website <http://pc1664.pharmazie.uni-marburg.de/drugscore/dsx_download.php>`_. Note that DockBox assumes DSX is run via an executable file called dsx. Therefore, once you selected the appropriate routine to be run (e.g., dsx_linux_64.lnx for linux systems), create a symbolic link via ln. For example, assuming you are located in the same directory as dsx_linux_64.lnx, you can use the following command:
+  
+::
+
+  ln -s dsx_linux_64.lnx dsx
 
 Glide
 #####
 
 All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
 
-* glide
-* glide_sort
-* ligprep
-* pdbconvert
-* prepwizard
+  * glide
+  * glide_sort
+  * ligprep
+  * pdbconvert
+  * prepwizard
 
 Gold
 ####
 
-* gold_auto
+  * gold_auto
 
 MOE
 ####
 
-* moebatch
+  * moebatch
 
 Commands
 ********
