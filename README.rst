@@ -381,32 +381,10 @@ Each section relative to a docking/scoring program should be named the way it ap
 * scoring (default: London dG)
 
 
-Extraction of top poses with *extract_dbx_best_poses*
-******************************************************
-
-To be completed (brief presentation of the routine, mention CD, SBCD and combination of scores, expected outputs)...
-
-Combination of scores
-#####################
-
-To be completed...
-
-Consensus docking (CD)
-######################
-
-To be completed...
-
-Score-based consensus docking (SBCD)
-####################################
-
-To be completed...
-
-
 Examples
-********
+########
 
-Docking with multiple software on a single binding site and minimize the poses
-##############################################################################
+**Docking with multiple software on a single binding site and minimize the poses**
 
 Below is an example of configuration file that can be used as an input of *rundbx*. The docking procedure is carried out on a single binding site specied as a box with dimensions 30.0 x 30.0 x 30.0 centered at the position (x, y, z) = 8.446, 25.365, 4.394.
 
@@ -454,8 +432,7 @@ Below is an example of configuration file that can be used as an input of *rundb
     boxsize = 30.0, 30.0, 30.0
 
 
-Docking on multiple binding site, minimize and rescore the poses with multiple software
-#######################################################################################
+**Docking on multiple binding site, minimize and rescore the poses with multiple software**
 
 Below is another example of configuration file for *rundbx* used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
@@ -497,4 +474,31 @@ Below is another example of configuration file for *rundbx* used to dock on two 
     boxsize = 40.0, 40.0, 40.0
 
 * Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
+
+
+Extraction of top poses with *extract_dbx_best_poses*
+******************************************************
+
+To be completed (brief presentation of the routine, mention CD, SBCD and combination of scores, expected outputs)...
+
+Combination of scores
+#####################
+
+To be completed...
+
+Consensus docking (CD)
+######################
+
+To be completed...
+
+Score-based consensus docking (SBCD)
+####################################
+
+To be completed...
+
+Examples
+########
+
+
+
 
