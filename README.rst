@@ -272,8 +272,8 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 **Autodock** (docking/scoring method)
 
-  * ga_run (default: 100): number of autodock runs = targeted number of final poses
-  * spacing (default: 0.3): grid spacing
+* ga_run (default: 100): number of autodock runs = targeted number of final poses
+* spacing (default: 0.3): grid spacing
 
 **Note 1**: the partial charges of the ligand are obtained from the Gasteiger method using the AutodockTools command *prepare_ligand4.py*
 
@@ -293,9 +293,9 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 **Autodock Vina** (docking/scoring method)
 
-  * cpu (default: 1)
-  * energy_range (default: 3)
-  * num_modes (default: 9): targeted number of final poses
+* cpu (default: 1)
+* energy_range (default: 3)
+* num_modes (default: 9): targeted number of final poses
 
 **Note 1**: the partial charges of the ligand are obtained from the Gasteiger method using the AutodockTools command *prepare_ligand4.py*
 
@@ -304,16 +304,16 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 **DOCK 6** (docking/scoring method)
 
-  * attractive_exponent (default: 6)
-  * extra_margin (default: 2.0)
-  * grid_spacing (default: 0.3)
-  * maximum_sphere_radius (default: 4.0)
-  * max_orientations (default: 10000)
-  * minimum_sphere_radius (default: 1.4)
-  * nposes (default: 20): targeted number of final poses
-  * num_scored_conformers (default 5000)
-  * probe_radius (default: 1.4)
-  * repulsive_exponent (default: 12)
+* attractive_exponent (default: 6)
+* extra_margin (default: 2.0)
+* grid_spacing (default: 0.3)
+* maximum_sphere_radius (default: 4.0)
+* max_orientations (default: 10000)
+* minimum_sphere_radius (default: 1.4)
+* nposes (default: 20): targeted number of final poses
+* num_scored_conformers (default 5000)
+* probe_radius (default: 1.4)
+* repulsive_exponent (default: 12)
 
 **DSX** (scoring method)
 
