@@ -131,8 +131,8 @@ Commands
 
 The DockBox package contains two main routines: *rundbx* and *extract_dbx_best_poses*. The former is intended to be used solely for docking and rescoring while the latter enables to analyze the results and to select the best pose(s) from a combination of scores or among different consensus docking schemes.
 
-rundbx
-######
+*rundbx*
+########
 
 rundbx is used to dock a ligand to a protein structure and possibly minimize and rescore the output poses. When typing "rundbx -h" on the command line, the following help message will pop up:
 
@@ -168,8 +168,8 @@ rundbx is used to dock a ligand to a protein structure and possibly minimize and
 
   To be completed...
 
-extract_dbx_best_poses
-######################
+*extract_dbx_best_poses*
+#########################
 
 *extract_dbx_best_poses* is the routine used to analyze the results and select the best docking poses from the outputs of the *rundbx* command. When typing "extract_dbx_best_poses -h" on the command line, the following help message will pop up:
 
