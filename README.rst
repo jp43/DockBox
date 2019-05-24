@@ -13,7 +13,7 @@ the results using different consensus docking/scoring strategies.
 
   * Autodock (http://autodock.scripps.edu)
   * Autodock Vina (http://autodock.scripps.edu)
-  * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
+  * DOCK 6.5 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * Glide (https://www.schrodinger.com/glide)
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
@@ -58,54 +58,62 @@ Binaries required by each program
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
 Autodock
-~~~~~~~~
+########
 
 Except for babel and autodock4, all the executables below can be found in the AutoDockTools package (http://autodock.scripps.edu/downloads/resources/adt/index_html):
 
-  * autodock4
-  * autogrid4
-  * babel
-  * prepare_dpf4.py
-  * prepare_gpf4.py
-  * prepare_ligand4.py
-  * prepare_receptor4.py
+* autodock4
+* autogrid4
+* babel
+* prepare_dpf4.py
+* prepare_gpf4.py
+* prepare_ligand4.py
+* prepare_receptor4.py
 
-* **Autodock Vina**:
+Autodock Vina
+#############
 
-  * babel
-  * prepare_ligand4.py
-  * prepare_receptor4.py
-  * vina
+* babel
+* prepare_ligand4.py
+* prepare_receptor4.py
+* vina
 
-* **DOCK 6**:
+DOCK 6
+######
 
-  * chimera (http://www.cgl.ucsf.edu/chimera)
-  * dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
-  * dock6
-  * grid
-  * showbox
-  * sphere_selector
-  * sphgen_cpp (http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm)
+* chimera (http://www.cgl.ucsf.edu/chimera)
+* dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
+* dock6
+* grid
+* showbox
+* sphere_selector
+* sphgen_cpp (http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm)
 
-* **DSX**:
+DSX
+####
 
-  * dsx (symbolic link to dsx_linux_64.lnx or similar executables)
+* dsx (symbolic link to dsx_linux_64.lnx or similar executables)
 
-* **Glide**: All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
+Glide
+#####
 
-  * glide
-  * glide_sort
-  * ligprep
-  * pdbconvert
-  * prepwizard
+All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
 
-* **Gold**:
+* glide
+* glide_sort
+* ligprep
+* pdbconvert
+* prepwizard
 
-  * gold_auto
+Gold
+####
 
-* **MOE2015**:
+* gold_auto
 
-  * moebatch
+MOE
+####
+
+* moebatch
 
 Commands
 ********
@@ -273,7 +281,7 @@ Docking/scoring options relative to each software
 
 Each section relative to a docking/scoring program should be named the way it appears through the keys **program** of the **DOCKING** and/or **RESCORING** section. Below is a list of all the options per software that can be specified in the configuration file.
 
-**Autodock** (docking/scoring method)
+**Autodock**
 
 * ga_run (default: 100): number of autodock runs = targeted number of final poses
 * spacing (default: 0.3): grid spacing
@@ -294,7 +302,7 @@ Each section relative to a docking/scoring program should be named the way it ap
 
         babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
 
-**Autodock Vina** (docking/scoring method)
+**Autodock Vina**
 
 * cpu (default: 1)
 * energy_range (default: 3)
@@ -304,8 +312,7 @@ Each section relative to a docking/scoring program should be named the way it ap
 
 **Note 2**: As is usually the case for Autodock Vina, non polar hydrogens in the ligand structure are removed prior to docking in order to properly use the Autodock force field. Once the docking has been performed, nonpolar hydrogens are reattributed in a way consistent with the input structure. Unless the *minimize* option in the configuration file is set to *yes*, no minimization is performed on those hydrogens.
 
-
-**DOCK 6** (docking/scoring method)
+**DOCK 6.5**
 
 * attractive_exponent (default: 6)
 * extra_margin (default: 2.0)
@@ -318,29 +325,29 @@ Each section relative to a docking/scoring program should be named the way it ap
 * probe_radius (default: 1.4)
 * repulsive_exponent (default: 12)
 
-**DSX** (scoring method)
+**DSX**
 
-**Glide** (docking/scoring method)
+**Glide**
 
-  * pose_rmsd (default: 0.5):
-  * poses_per_lig (default: 10): targeted number of final poses
-  * precision (default: SP):
-  * use_prepwizard (default: True):
+* pose_rmsd (default: 0.5):
+* poses_per_lig (default: 10): targeted number of final poses
+* precision (default: SP):
+* use_prepwizard (default: True):
 
-**GOLD** (docking method)
+**GOLD**
 
-  * nposes (default: 20)
+* nposes (default: 20)
 
 **MOE** (scoring)
 
-  * gtest (default: 0.01)
-  * maxpose (default: 5)
-  * placement (default: Triangle Matcher)
-  * placement_maxpose (default: 250)
-  * placement_nsample (default: 10)
-  * remaxpose (default: 1)
-  * rescoring (default: GBVI/WSA dG)
-  * scoring (default: London dG)
+* gtest (default: 0.01)
+* maxpose (default: 5)
+* placement (default: Triangle Matcher)
+* placement_maxpose (default: 250)
+* placement_nsample (default: 10)
+* remaxpose (default: 1)
+* rescoring (default: GBVI/WSA dG)
+* scoring (default: London dG)
 
 Examples
 ********
