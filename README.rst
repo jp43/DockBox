@@ -155,23 +155,23 @@ rundbx is used to dock a ligand to a protein structure and possibly minimize and
 * Mandatory arguments
 
   * -l INPUT_FILE_L: **.mol2** file containing the coordinates of the ligand (only one structure allowed)
+  
   * -r INPUT_FILE_R: **.pdb** file containing the receptor coordinates (only one structure allowed)
+  
   * -f CONFIG_FILE: **.ini** configuration file containing the docking parameters (see the section **preparing the rundbx configuration file**)
 
 * Optional arguments
 
-To be witten
+  To be completed...
 
-Thus, a typical use of **rundbx** is done through the following command:
+* Outputs
 
-::
-
-    rundbx -f config.ini -r receptor.pdb -l ligand.mol2
+  To be completed...
 
 extract_dbx_best_poses
 ######################
 
-When typing "extract_dbx_best_poses -h" on the command line, the following help message will pop up:
+*extract_dbx_best_poses* is the routine used to analyze the results and select the best docking poses from the outputs of the *rundbx* command. When typing "extract_dbx_best_poses -h" on the command line, the following help message will pop up:
 
 ::
 
@@ -206,12 +206,29 @@ When typing "extract_dbx_best_poses -h" on the command line, the following help 
       -r DIRECTORY NAME     Name of results directory. Default: results
 
 
-Preparing the rundbx configuration file
-****************************************
+* Mandatory arguments
 
-Besides one **.mol2** file containing the ligand structure (-l flag) and one **.pdb** file containing the receptor structure (-r flag), running **rundbx** requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
+  To be completed...
 
-The rundbx configuration file should be a .ini file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
+* Optional arguments
+
+  To be completed...
+
+* Outputs
+
+  To be completed...
+
+Docking and rescoring with *rundbx*
+***********************************
+
+To be completed (mentioning what *rundbx* is used for, what inputs are needed, what output are expected)...
+
+Preparing the INI configuration file
+####################################
+
+Besides one MOL2 file containing the ligand structure (-l flag) and one PDB file containing the receptor structure (-r flag), running *rundbx* requires a configuration file (-f flag) that specifies all the parameters needed for the docking procedure.
+
+The *rundbx* configuration file should be a INI file (https://en.wikipedia.org/wiki/INI_file), i.e., the file should be split in sections, each section name appearing on a line by itself, in square brackets ("[" and "]"). Each section contains a certain number of keys which refer to specific options used; all keys after the section declaration are associated with that section. Finally, every key should have a name (option name) and a value (option value), delimited by an equals sign (=).
 
 Below is an example of configuration file used to dock on two binding sites and rescore with DrugScoreX (dsx), Autodock and Autodock Vina.
 
@@ -252,8 +269,8 @@ Below is an example of configuration file used to dock on two binding sites and 
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
 
-General sections
-****************
+General sections of the configuration file
+##########################################
 
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
@@ -274,6 +291,8 @@ Below is a list of all the programs that can be used by DockBox specifying if th
 ==========  ==========  ==========
  Header 1    Header 2    Header 3  
 ==========  ==========  ==========
+Table to be completed...
+
 
 Docking and rescoring options relative to each program are detailed in the section **Docking/scoring options relative to each software**
 
@@ -360,6 +379,28 @@ Each section relative to a docking/scoring program should be named the way it ap
 * remaxpose (default: 1)
 * rescoring (default: GBVI/WSA dG)
 * scoring (default: London dG)
+
+
+Extraction of top poses with *extract_dbx_best_poses*
+******************************************************
+
+To be completed (brief presentation of the routine, mention CD, SBCD and combination of scores, expected outputs)...
+
+Combination of scores
+#####################
+
+To be completed...
+
+Consensus docking (CD)
+######################
+
+To be completed...
+
+Score-based consensus docking (SBCD)
+####################################
+
+To be completed...
+
 
 Examples
 ********
