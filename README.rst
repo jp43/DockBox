@@ -11,8 +11,8 @@ the results using different consensus docking/scoring strategies.
 
 * **Docking**:
 
-  * Autodock 4 (http://autodock.scripps.edu)
-  * Autodock Vina (http://vina.scripps.edu/index.html)
+  * AutoDock 4 (http://autodock.scripps.edu)
+  * AutoDock Vina (http://vina.scripps.edu/index.html)
   * DOCK 6.5 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * Glide (https://www.schrodinger.com/glide)
   * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
@@ -20,8 +20,8 @@ the results using different consensus docking/scoring strategies.
 
 * **Rescoring**:
 
-  * Autodock 4 (http://autodock.scripps.edu)
-  * Autodock Vina (http://vina.scripps.edu/index.html)
+  * AutoDock 4 (http://autodock.scripps.edu)
+  * AutoDock Vina (http://vina.scripps.edu/index.html)
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
   * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
@@ -58,7 +58,7 @@ Executable files required for each program
 
 Any software intended to be used in conjunction with DockBox should be installed separetely and should work as a standalone program. In addition, make sure the following exectuables are in your PATH, depending on which docking/scoring software should be used:
 
-* **Autodock 4** 
+* **AutoDock 4** 
 
   * autodock4
   * autogrid4
@@ -71,25 +71,26 @@ Any software intended to be used in conjunction with DockBox should be installed
   The autodock4 and autogrid4 executables can be installed by installing `AutoDock4   <http://autodock.scripps.edu/downloads/autodock-registration/autodock-4-2-download-page/>`_. All the .py executable files are included in the `MGLTools <http://mgltools.scripps.edu/downloads>`_ package. It is important to not move those executable to different locations outside of the MGLTools package as DockBox uses those locations to deduce additional MGLTools python modules (PyBabel, MolKit). The babel routine can be set by installing OpenBabel from it official `website <http://openbabel.org/wiki/Main_Page>`_.
 
 
-* **Autodock Vina**
+* **AutoDock Vina**
 
   * babel
   * prepare_ligand4.py
   * prepare_receptor4.py
   * vina
 
-  The vina executable is found inside the `AutoDock Vina <http://vina.scripps.edu/index.html>`_ package. See autodock 4 for other executables.
+  The vina executable is available within the `AutoDock Vina <http://vina.scripps.edu/index.html>`_ package. See autodock 4 for other executables.
 
-DOCK 6
-######
+* **DOCK 6.5**
 
-* chimera (http://www.cgl.ucsf.edu/chimera)
-* dms (http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html)
-* dock6
-* grid
-* showbox
-* sphere_selector
-* sphgen_cpp (http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm)
+  * chimera
+  * dms
+  * dock6
+  * grid
+  * showbox
+  * sphere_selector
+  * sphgen_cpp
+
+  The chimera command is accessible when installing `CHIMERA <http://www.cgl.ucsf.edu/chimera>`_. The dock6, grid, showbox and sphere_selector commands are all part of the `DOCK 6.5 package <http://dock.compbio.ucsf.edu/Online_Licensing/index.htm>`_. The dms program can be installed seperately from `here <http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html>`_ while sphgen_cpp is downloaded from `here <http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm>`_.
 
 DSX
 ####
