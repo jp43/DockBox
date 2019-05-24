@@ -33,7 +33,8 @@ install the program separately on the same system DockBox is installed.
 To make a docking or scoring program usable by DockBox, make sure all the executable files
 required for each program can be directly run on the command line from any location,
 i.e., are in your PATH (see section **executable files required for each program** 
-to find out the executables needed to run each docking/scoring programs).
+to find out the executables needed to run each docking/scoring programs). For MOE and 
+Glide, additional environment variables should be set up, MOE and SCHRODINGER, respectively.
 
 .. contents:: **Table of Contents**
 
@@ -101,26 +102,27 @@ Any software intended to be used in conjunction with DockBox should be installed
 
   ln -s dsx_linux_64.lnx dsx
 
-Glide
-#####
-
-All the executables can be found in the Schrodinger package (https://www.schrodinger.com):
+* **Glide**
 
   * glide
   * glide_sort
   * ligprep
   * pdbconvert
   * prepwizard
+  
+  All the executables can be found within the `Schrodinger package <https://www.schrodinger.com>`_. Make sure the SCHRODINGER environment variable (pointing towards Schrodinger's installation directory) has been correctly exported.
 
-Gold
-####
+* **Gold**
 
   * gold_auto
+  
+  gold_auto is the main executable of GOLD.
 
-MOE
-####
+* **MOE**
 
   * moebatch
+  
+  Make sure the MOE environment variable (pointing towards MOE's installation directory) has been correctly exported.
 
 Commands
 ********
