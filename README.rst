@@ -1,8 +1,5 @@
 .. image:: logo.png
-   :height: 20px
-   :width: 40px
-   :scale: 10 %
-   :align: center
+   :align: right
 
 *******
 DockBox
