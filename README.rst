@@ -1,3 +1,9 @@
+.. image:: logo.png
+   :height: 100px
+   :width: 200px
+   :scale: 100 %
+   :align: center
+
 *******
 DockBox
 *******
