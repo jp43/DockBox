@@ -1,7 +1,7 @@
 .. image:: logo.png
-   :height: 100px
-   :width: 200px
-   :scale: 100 %
+   :height: 20px
+   :width: 40px
+   :scale: 10 %
    :align: center
 
 *******
