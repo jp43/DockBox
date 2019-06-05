@@ -404,7 +404,11 @@ else:
 shutil.rmtree(args.resultsdir, ignore_errors=True)
 os.mkdir(args.resultsdir)
 
-features_csv = features_ids + features + scoring_functions_all + ['score']
+features_csv = list(features_ids)
+if args.csvfile:
+    features_csv.append('name')
+features_csv += features + scoring_functions_all + ['score']
+
 if args.sf:
     features_csv.append('score_multi')
 
