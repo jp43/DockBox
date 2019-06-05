@@ -1,6 +1,6 @@
 import os
 import sys
-import glob
+from glob import glob
 import shutil
 import subprocess
 import autodock
@@ -86,21 +86,28 @@ vina --score_only --config vina.config > vina.out"""% locals()
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""
 
-        if os.path.exists('lig_out.pdbqt'): 
+        try:
+            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
+            self.update_output_mol2files(sample=input_file_l)
+            poses_extracted = True
+        except:
+            mol2files = glob('lig-*.mol2')
+            if mol2files: # remove poses if exist
+                for mol2file in mol2files:
+                    os.remove(mol2file)
+            poses_extracted = False
+
+        if os.path.exists('lig_out.pdbqt'):
             # extract structures from .pdbqt file 
             with open('lig_out.pdbqt','r') as pdbqtf:
                 with open(file_s, 'w') as sf:
                     for line in pdbqtf:
                         if line.startswith('REMARK VINA RESULT:'):
-                            score = float(line[19:].split()[0])
-                            print >> sf, score
-
-        try:
-            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
-        except:
-            pass
-
-        self.update_output_mol2files(sample=input_file_l)
+                            if poses_extracted:
+                                score = float(line[19:].split()[0])
+                                print >> sf, score
+                            else:
+                                print >> sf, 'NaN'
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

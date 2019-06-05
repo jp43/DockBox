@@ -267,24 +267,32 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                 file.write(script)
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
-        """extract poses and scores from .dlg file"""
+        """Extract output structures in .mol2 formats"""
+
+        try:
+            subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+            self.update_output_mol2files(sample=input_file_l)
+            poses_extracted = True
+        except:
+            mol2files = glob('lig-*.mol2')
+            if mol2files: # remove poses if exist
+                for mol2file in mol2files:
+                    os.remove(mol2file)
+            poses_extracted = False
 
         if os.path.exists('dock.dlg'):
             with open('dock.dlg','r') as dlgf:
-                with open(file_s, 'w') as sf: 
+                with open(file_s, 'w') as sf:
                     line = '' # initialize line
                     for line in dlgf:
                         if line.startswith('DOCKED: USER    Estimated Free Energy of Binding'):
-                            score = float(line.split()[8])
-                            print >> sf, score
+                            if poses_extracted:
+                                score = float(line.split()[8])
+                                print >> sf, score
+                            else:
+                                print >> sf, 'NaN'
                         if 'CLUSTERING HISTOGRAM' in line:
                             break
-
-            try:
-                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-            except:
-                pass
-            self.update_output_mol2files(sample=input_file_l)
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""

@@ -7,55 +7,43 @@ import argparse
 
 import numpy as np
 import pandas as pd
-from mdkit.utility import mol2
 
-# cutoff for consensus docking
-cutoff = 2.0
+from mdkit.utility import mol2
 
 # prefix to identify ligand, target and isomer directories
 ligdir_prefix = 'lig'
 tardir_prefix = 'target'
 isodir_prefix = 'isomer'
 
+# command-line arguments and options
 parser = argparse.ArgumentParser(description="Extract best docking poses after rundbx finished.")
 
 parser.add_argument('-all-targets',
     dest='combine_targets',
     action='store_true',
     default=False,
-    help='Select best poses over all the targets. If not specified, extract best pose separately for each target.')
+    help='Select best poses over all the targets. If not specified, extract best pose separately for each target. A "%s/%s/%s" architecture \
+of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
 
 parser.add_argument('-all-isomers',
     dest='combine_isomers',
     action='store_true',
     default=False,
-    help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer.')
-
-group = parser.add_mutually_exclusive_group(required=True)
-
-group.add_argument('-cd',
-    dest='cd',
-    nargs='+',
-    metavar='PRGM',
-    help='Docking programs used with standard consensus docking')
-
-group.add_argument('-sbcd',
-    dest='sbcd',
-    nargs='+',
-    metavar='FUNC',
-    help='Scoring functions used with score-based consensus docking')
-
-group.add_argument('-s',
-    nargs='+',
-    dest='sf',
-    metavar='FUNC',
-    help='Scoring functions used to extract the best pose (combination of scores)')
+    help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer. A "%s/%s/%s" architecture \
+of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
 
 parser.add_argument('-csv',
     type=str,
     dest='csvfile',
     metavar='FILE',
-    help='.csv filename with compounds. Used to add names of compounds (default: none)')
+    help='.csv filename with compounds. Used to add names of compounds. Default: none')
+
+parser.add_argument('-cutoff',
+    dest='cutoff',
+    type=float,
+    metavar='RMSD_VALUE',
+    default=2.0,
+    help='RMSD cutoff used for consensus docking or score-based consensus docking. Default: 2.0 A')
 
 parser.add_argument('-d',
     dest='docking_programs',
@@ -68,7 +56,7 @@ parser.add_argument('-dirs',
     nargs='+',
     default=['.'],
     metavar=('DIR1', 'DIR2'),
-    help='Directories considered for analysis. Should contain a folder called "poses". Default: curr. dir.')
+    help='Directories considered for analysis. Should contain a folder called "poses". Default: curr. dir')
 
 parser.add_argument('-r',
     required=False,
@@ -77,19 +65,47 @@ parser.add_argument('-r',
     metavar='DIRECTORY NAME',
     help='Name of results directory. Default: results')
 
+group = parser.add_mutually_exclusive_group(required=False)
+
+group.add_argument('-s',
+    nargs='+',
+    dest='sf',
+    metavar='FUNC',
+    help='Scoring functions used to extract the best pose (combination of scores)')
+
+group.add_argument('-cd',
+    dest='cd',
+    nargs='+',
+    metavar='PRGM',
+    help='Docking programs used for standard consensus docking')
+
+group.add_argument('-sbcd',
+    dest='sbcd',
+    nargs='+',
+    metavar='FUNC',
+    help='Scoring functions used for score-based consensus docking')
+
+# update parsers with arguments
 args = parser.parse_args()
 
 def compute_rmsd(file1, file2):
-    # structures are already aligned, so no need to perform the alignment
-    coords1 = np.array(mol2.get_coordinates(file1, keep_h=False))
-    coords2 = np.array(mol2.get_coordinates(file2, keep_h=False))
+    """Compute RMSD between 2 poses (no fit). Since the protein structures are the same, there is no need to perform the alignment
+on the protein prior to RMSD."""
+
+    # load coordinates of first pose (non-hydrogen atoms)
+    coords1 = mol2.get_coordinates(file1, keep_h=False)
+    coords1 = np.array(coords1)
+
+    # load coordinates of second pose (non-hydrogen atoms)
+    coords2 = mol2.get_coordinates(file2, keep_h=False)
+    coords2 = np.array(coords2)
 
     natoms = coords1.shape[0]
     rmsd = np.sqrt(np.sum((coords1-coords2)**2)/natoms)
     return rmsd
 
 def check_architecture(directory):
-    """check architecture lig/target/isomer of directories provided"""
+    """Check architecture %s*/%s*/%s* of specified directories"""%(ligdir_prefix,tardir_prefix,isodir_prefix)
 
     if os.path.isdir(directory):
         dir_split = directory.split('/')
@@ -126,6 +142,7 @@ def check_architecture(directory):
     return isligID, istargetID, isisomerID
 
 def get_IDs(directory, isligID, istargetID, isisomerID):
+    """Get IDs of ligand target and isomer (if applicable) according to the current architecture."""
 
     if isisomerID:
         isomerID = directory.split('/')[-1]
@@ -169,12 +186,13 @@ def check_directories(dirs):
                 istargetID_ref = istargetID
                 isisomerID_ref = isisomerID
             elif isligID != isligID_ref or istargetID != istargetID_ref or isisomerID != isisomerID_ref:
-                raise ValueError("Lig/target/isomer architecture inconsistent between folders!")
+                raise ValueError("%s*/%s*/%s* architecture architecture inconsistent between folders!"%(ligdir_prefix,tardir_prefix,isodir_prefix))
     else:
         iscwd = True
         isligID = False
         istargetID = False
         isisomerID = False
+
     return iscwd, isligID, istargetID, isisomerID
 
 dirs = []
@@ -185,19 +203,21 @@ for dir in args.dirs:
         raise ValueError('directory '+dir+'/poses does not exist!')
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
+# check options relative to best poses extraction
 scoring_functions_all = []
 if args.sbcd:
     scoring_functions = args.sbcd
     if len(args.sbcd) < 2:
         raise ValueError('Number of functions for score-based consensus docking should be at least 2!')
+    resolve_with = args.sbcd[0] # used to decide which pose to extract when selecting over all targets and isomers
 elif args.cd:
     scoring_functions = None
     if len(args.cd) < 2:
         raise ValueError('Number of programs for consensus docking should be at least 2!')
+    resolve_with = 'score'
 elif args.sf:
     scoring_functions = args.sf
-else:
-    raise IOError("One of -cd, -sbcd or -s options should be used when running extract_best_poses!")
+    resolve_with = 'score_multi'
 
 features = ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose']
 if args.csvfile:
@@ -215,7 +235,7 @@ if isisomerID:
 poses = []
 best_poses = []
 for jdx, dir in enumerate(dirs):
-    posedir = dir+'/poses'
+    posedir = dir + '/poses'
     ligID, targetID, isomerID = get_IDs(dir, isligID, istargetID, isisomerID)
 
     info_dir = {}
@@ -224,6 +244,7 @@ for jdx, dir in enumerate(dirs):
 
     # get location of poses and receptor files
     with open(posedir+'/info.dat', 'r') as inff:
+        # skip the first two lines
         inff.next()
         inff.next()
 
@@ -262,7 +283,7 @@ for jdx, dir in enumerate(dirs):
                     nscores += 1
                     info_dir['score'].append(float(line_s.strip()))
                 if nscores != nposes:
-                    raise ValueError("Number of poses different from number of scores (%s/%s)"%(subdir,instance))
+                    raise ValueError("Number of poses different from number of scores (%s/%s)"%(dir,instance))
 
     # extract all scores
     for score_file in sorted(glob(dir+'/rescoring/*.score')):
@@ -281,25 +302,28 @@ for jdx, dir in enumerate(dirs):
         df_dir = df_dir[df_dir['instance'].isin(args.docking_programs)]
     poses.append(df_dir)
 
+    # TODO: enable to use combination of scores or consensus docking over multiple targets and isomers
     if args.sf:
         # extract best pose from best linear combination of scores
-        df_dir['score_combin'] = df_dir[args.sf].sum(axis=1)
-        df_dir_groupby = df_dir.groupby(['program'])
-        best_poses_dir = df_dir.loc[df_dir_groupby['score'].idxmin]
+        df_dir['score_multi'] = df_dir[scoring_functions].sum(axis=1)
+        best_poses_dir = df_dir.loc[df_dir['score_multi'].idxmin].to_frame().T
+
+        # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
+        best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
+        best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score','score_multi']+scoring_functions_all})
 
     elif args.sbcd:
-        # extract best pose if consensus between poses with best score after rescoring is met
         consensus = True
         file_l_ref = None
-
-        for idx, sf in enumerate(args.sbcd):
+        # extract best pose if consensus between poses with best score after rescoring is reached
+        for idx, sf in enumerate(scoring_functions):
             row = df_dir.loc[df_dir[sf].idxmin]
             if idx == 0:
                 firstrow = row.copy()
                 file_l_ref = row['file_l']
             elif idx > 0:
                 rmsd = compute_rmsd(row['file_l'], file_l_ref)
-                if rmsd > cutoff:
+                if rmsd > args.cutoff:
                     consensus = False
                     break
         if consensus:
@@ -321,14 +345,11 @@ for jdx, dir in enumerate(dirs):
                 file_l_ref = row['file_l']
             elif idx > 0:
                 rmsd = compute_rmsd(row['file_l'], file_l_ref)
-                if rmsd > cutoff:
+                if rmsd > args.cutoff:
                     consensus = False
                     break
         if consensus:
-            best_poses_dir = firstrow.to_frame().T
-            # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
-            best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
-            best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score']+scoring_functions_all})
+            best_poses_dir = rows[rows['program']==args.cd[0]]
 
     if args.sf or consensus:
         best_poses.append(best_poses_dir)
@@ -345,7 +366,7 @@ if poses:
     if args.csvfile and isligID:
         poses = add_names(args.csvfile, poses)
 else:
-    poses = None
+    sys.exit("No poses to extract!")
 
 if best_poses:
     best_poses = pd.concat(best_poses).reset_index()
@@ -361,9 +382,9 @@ if best_poses:
                 groupby_columns += ['targetID']
             if groupby_columns:
                 best_poses_groupby = best_poses.groupby(groupby_columns)
-                best_poses = best_poses.loc[best_poses_groupby['score'].idxmin]
+                best_poses = best_poses.loc[best_poses_groupby[resolve_with].idxmin]
             else:
-                best_poses = best_poses.loc[best_poses['score'].idxmin].T
+                best_poses = best_poses.loc[best_poses[resolve_with].idxmin].T
     # combine results over all targets.
     if args.combine_targets:
         if istargetID:
@@ -374,9 +395,9 @@ if best_poses:
                 groupby_columns += ['isomerID']
             if groupby_columns:
                 best_poses_groupby = best_poses.groupby(groupby_columns)
-                best_poses = best_poses.loc[best_poses_groupby['score'].idxmin]
+                best_poses = best_poses.loc[best_poses_groupby[resolve_with].idxmin]
             else:
-                best_poses = best_poses.loc[best_poses['score'].idxmin].T
+                best_poses = best_poses.loc[best_poses[resolve_with].idxmin].T
 else:
     best_poses = None
 
@@ -385,16 +406,13 @@ os.mkdir(args.resultsdir)
 
 features_csv = features_ids + features + scoring_functions_all + ['score']
 if args.sf:
-    features_csv.append('score_combin')
-
-if args.csvfile and isligID:
-    features_csv.append('name')
+    features_csv.append('score_multi')
 
 features_csv.remove('instance')
 features_csv.remove('index_pose')
 
-if poses is not None:
-    poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.5f')
+# save poses to .csv file
+poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.3f')
 
 if args.combine_isomers and isisomerID:
     features_ids.remove('isomerID')
@@ -402,7 +420,7 @@ if args.combine_targets and istargetID:
     features_ids.remove('targetID')
 
 if best_poses is not None:
-    best_poses[features_csv].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.5f')
+    best_poses[features_csv].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.3f')
 
     for idx, row in best_poses.iterrows():
         newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
@@ -425,3 +443,5 @@ if best_poses is not None:
         if os.path.isdir(origindir+'/'+instance+'/origin'):
             shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig.mol2')
         shutil.copyfile(file_r, newdir+'/protein.pdb')
+else:
+    sys.exit("No poses found for the selected method of extraction!")

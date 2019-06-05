@@ -65,9 +65,9 @@ class DockingConfig(object):
                     resname = line[17:20].strip()
                     if resname in ions_info:
                         sys.exit("Ion %s found in structure %s!" %(resname, args.input_file_r))
-                    elif resname not in proton_info or line.startswith('HETATM'):
-                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
-only contains one protein structure with standard residues!'%(resname, args.input_file_r))
+#                    elif resname not in proton_info or line.startswith('HETATM'):
+#                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
+#only contains one protein structure with standard residues!'%(resname, args.input_file_r))
                     elif is_end_line:
                         sys.exit("More than one structure detected in .pdb file! Check your file again!")
                 elif line.startswith('END'):
