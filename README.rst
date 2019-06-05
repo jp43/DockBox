@@ -52,12 +52,37 @@ The following are the minimal requirements to install the DockBox module
 
 * pip version 1.5 or later
 
-To be completed...
 
 Installation
 ************
 
-To be completed...
+The easiest way to install DockBox is to create a virtual environment. This way, DockBox and its
+dependencies can easily be installed in user-space without clashing with potentially incompatible
+system-wide packages.
+
+Once virtualenv has been properly installed, simply type (and press the return key)
+
+::
+
+ virtualenv env
+  
+on the command line followed by
+
+::
+
+ source env/bin/activate
+ 
+to activate the virtual environment.
+
+The DockBox package can be set up using pip by typing
+
+::
+
+ pip install dockbox
+ 
+ 
+Installation is complete!
+
 
 Executable files required for each program
 ******************************************
