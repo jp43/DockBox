@@ -201,35 +201,40 @@ rundbx is used to dock a ligand to a protein structure and possibly minimize and
 
 ::
 
-    usage: extract_dbx_best_poses [-h] [-all-targets] [-all-isomers]
-                                  (-cd PRGM [PRGM ...] | -sbcd FUNC [FUNC ...] | -s FUNC [FUNC ...])
-                                  [-csv FILE] [-d PRGM1 [PRGM2 ...]]
-                                  [-dirs DIR1 [DIR2 ...]] [-r DIRECTORY NAME]
-    
-    Extract best docking poses after rundbx finished.
-    
-    optional arguments:
-      -h, --help            show this help message and exit
-      -all-targets          Select best poses over all the targets. If not
-                            specified, extract best pose separately for each
-                            target.
-      -all-isomers          Select best poses over all the isomers. If not
-                            specified, extract best pose separately for every
-                            isomer.
-      -cd PRGM [PRGM ...]   Docking programs used with standard consensus docking
-      -sbcd FUNC [FUNC ...]
-                            Scoring functions used with score-based consensus
-                            docking
-      -s FUNC [FUNC ...]    Scoring functions used to extract the best pose
-                            (combination of scores)
-      -csv FILE             .csv filename with compounds. Used to add names of
-                            compounds (default: none)
-      -d PRGM1 [PRGM2 ...]  Docking programs (instances) to be considered when
-                            extracting best poses
-      -dirs DIR1 [DIR2 ...]
-                            Directories considered for analysis. Should contain a
-                            folder called "poses". Default: curr. dir.
-      -r DIRECTORY NAME     Name of results directory. Default: results
+  usage: extract_dbx_best_poses [-h] [-all-targets] [-all-isomers] [-csv FILE]
+                              [-cutoff RMSD_VALUE] [-d PRGM1 [PRGM2 ...]]
+                              [-dirs DIR1 [DIR2 ...]] [-r DIRECTORY NAME]
+                              [-s FUNC [FUNC ...] | -cd PRGM [PRGM ...] |
+                              -sbcd FUNC [FUNC ...]]
+
+  Extract best docking poses after rundbx finished.
+
+  optional arguments:
+  -h, --help            show this help message and exit
+  -all-targets          Select best poses over all the targets. If not
+                        specified, extract best pose separately for each
+                        target. A "lig/target/isomer" architecture of the
+                        folders is assumed
+  -all-isomers          Select best poses over all the isomers. If not
+                        specified, extract best pose separately for every
+                        isomer. A "lig/target/isomer" architecture of the
+                        folders is assumed
+  -csv FILE             .csv filename with compounds. Used to add names of
+                        compounds. Default: none
+  -cutoff RMSD_VALUE    RMSD cutoff used for consensus docking or score-based
+                        consensus docking. Default: 2.0 A
+  -d PRGM1 [PRGM2 ...]  Docking programs (instances) to be considered when
+                        extracting best poses
+  -dirs DIR1 [DIR2 ...]
+                        Directories considered for analysis. Should contain a
+                        folder called "poses". Default: curr. dir
+  -r DIRECTORY NAME     Name of results directory. Default: results
+  -s FUNC [FUNC ...]    Scoring functions used to extract the best pose
+                        (combination of scores)
+  -cd PRGM [PRGM ...]   Docking programs used for standard consensus docking
+  -sbcd FUNC [FUNC ...]
+                        Scoring functions used for score-based consensus
+                        docking
 
 
 Docking and rescoring with *rundbx*
@@ -513,7 +518,7 @@ Below is another example of configuration file for *rundbx* used to dock on two 
 Extraction of top poses with *extract_dbx_best_poses*
 ******************************************************
 
-Coming soon...
+Coming soon.
 
 
 
