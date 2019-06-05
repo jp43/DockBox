@@ -72,7 +72,7 @@ on the command line followed by
 
  source env/bin/activate
  
-to activate the virtual environment (do not forget to activate your environment every time you log into your system).
+to activate the virtual environment (do not forget to activate your environment every time you log into a new shell environment).
 
 Finally, the DockBox package can be set up using pip by typing
 
