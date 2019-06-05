@@ -1,4 +1,4 @@
-.. image:: logo.png
+.. image:: logo_small.png
    :align: right
 
 *******

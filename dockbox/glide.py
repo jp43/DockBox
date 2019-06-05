@@ -11,7 +11,7 @@ import license
 from mdkit.utility import reader
 from mdkit.utility import mol2
 
-required_programs = ['prepwizard', 'glide', 'ligprep', 'glide_sort', 'pdbconvert']
+required_programs = ['prepwizard', 'glide', 'glide_sort', 'pdbconvert']
 
 default_settings = {'poses_per_lig': '10', 'pose_rmsd': '0.5', 'precision': 'SP', 'use_prepwizard': 'True'}
 
