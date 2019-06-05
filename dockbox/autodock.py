@@ -289,8 +289,6 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                             if poses_extracted:
                                 score = float(line.split()[8])
                                 print >> sf, score
-                            else:
-                                print >> sf, 'NaN'
                         if 'CLUSTERING HISTOGRAM' in line:
                             break
 

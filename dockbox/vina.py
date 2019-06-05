@@ -106,8 +106,6 @@ vina --score_only --config vina.config > vina.out"""% locals()
                             if poses_extracted:
                                 score = float(line[19:].split()[0])
                                 print >> sf, score
-                            else:
-                                print >> sf, 'NaN'
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)

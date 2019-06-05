@@ -1,4 +1,4 @@
-.. image:: logo_small.png
+.. image:: https://github.com/jp43/DockBox/raw/master/logo_small.png
    :align: right
 
 *******
@@ -120,13 +120,13 @@ Any software intended to be used in conjunction with DockBox should be installed
   * sphere_selector
   * sphgen_cpp
 
-  The chimera command is accessible when installing `CHIMERA <http://www.cgl.ucsf.edu/chimera>`_. The dock6, grid, showbox and sphere_selector commands are all part of the `DOCK 6.5 package <http://dock.compbio.ucsf.edu/Online_Licensing/index.htm>`_. The dms program can be installed seperately from `here <http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html>`_ while sphgen_cpp can be downloaded from `here <http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm>`_.
+  The chimera command is accessible when installing `CHIMERA <http://www.cgl.ucsf.edu/chimera>`_. The dock6, grid, showbox and sphere_selector commands are all part of the `DOCK 6.5 package <http://dock.compbio.ucsf.edu/Online_Licensing/index.htm>`_. The dms program can be installed seperately from `here <http://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/dms1.html>`_ while sphgen_cpp can be downloaded from the following `url <http://dock.compbio.ucsf.edu/Contributed_Code/sphgen_cpp.htm>`_.
 
 * **DSX**
 
   * dsx
 
-  The dsx-like routines can be downloaded from the official `website <http://pc1664.pharmazie.uni-marburg.de/drugscore/dsx_download.php>`_. Note that DockBox assumes DSX is run via an executable file called dsx. Therefore, once you selected the appropriate routine to be run (e.g., dsx_linux_64.lnx for linux systems), create a symbolic link via ln. For example, assuming you are located in the same directory as dsx_linux_64.lnx, you can use the following command:
+  The dsx-like routines can be downloaded from the official `link <http://pc1664.pharmazie.uni-marburg.de/drugscore/dsx_download.php>`_. Note that DockBox assumes DSX is run via an executable file called dsx. Therefore, once you selected the appropriate routine to be run (e.g., dsx_linux_64.lnx for linux systems), create a symbolic link via ln. For example, assuming you are located in the same directory as dsx_linux_64.lnx, you can use the following command:
   
 ::
 
@@ -346,6 +346,7 @@ Docking and rescoring options relative to each program are detailed in the secti
 
   * **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
+
 Docking/scoring options relative to each software
 #################################################
 
@@ -512,14 +513,11 @@ Below is another example of configuration file for *rundbx* used to dock on two 
     center = 75.5, 40.0, 50.0
     boxsize = 40.0, 40.0, 40.0
 
-* Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
+Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
 
 
 Extraction of top poses with *extract_dbx_best_poses*
 ******************************************************
 
 Coming soon.
-
-
-
 
