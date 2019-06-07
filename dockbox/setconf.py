@@ -4,10 +4,11 @@ from glob import glob
 import subprocess
 
 known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], \
-     'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'mmgbsa', 'dsx', 'colvar']}
+     'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'dsx', 'colvar']}
 known_programs['scoring'] = known_programs['rescoring']
 
 single_run_scoring_programs = ['glide', 'dock']
+programs_handling_ions = ['autodock', 'vina']
 
 default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
 

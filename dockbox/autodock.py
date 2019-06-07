@@ -2,10 +2,10 @@ import os
 import sys
 import subprocess
 import shutil
-import method
-
 from glob import glob
+
 from mdkit.utility import mol2
+import method
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
 
@@ -29,10 +29,10 @@ class ADBased(method.DockingMethod):
             mol2.arrange_hydrogens(mol2file, 'tmp.mol2', path=mgltools_path)
             shutil.move('tmp.mol2', mol2file)
 
-    def write_check_lig_pdbqt_script(self):
+    def write_check_ligand_pdbqt_script(self, filename):
 
-        with open('check_lig_pdbqt.py', 'w') as file:
-            script ="""import os
+        with open(filename, 'w') as ff:
+            content ="""import os
 import sys
 import shutil
 
@@ -65,12 +65,11 @@ if lines_to_be_removed:
                 else:
                     of.write(line)
     shutil.move(file_tmp, input_file)"""
-            file.write(script)
+            ff.write(content)
 
+    def write_check_ions_script(self, filename):
 
-    def write_check_nonstd_residues_script(self):
-
-        with open('check_nonstd_residues.py', 'w') as file:
+        with open(filename, 'w') as file:
             script = """import sys
 import shutil
 from tempfile import mkstemp
@@ -80,65 +79,40 @@ from mdkit.amber.ambertools import load_atomic_ions
 # first all residues are supposed to be recognized
 are_unrecognized_residues = False
 
-# check if and which atoms were not recognized by autodock
-non_standard_residues = []
-with open('prepare_receptor4.log', 'r') as logf:
+# check if and which atoms were not recognized
+unrecognized_residues = []
+with open(sys.argv[2], 'r') as logf:
     for line in logf:
         if line.startswith('Sorry, there are no Gasteiger parameters available for atom'):
             are_unrecognized_residues = True
             resname = line.split()[-1].split(':')[0]
             resname = ''.join([i for i in resname if not i.isdigit()])
-            non_standard_residues.append(resname)
+            unrecognized_residues.append(resname)
 
 if are_unrecognized_residues:
-    if len(sys.argv) > 2:
-       # if some atoms are not recognized, we look if a file with charges has been specified
-        mode = 'custom'
-        file_q = sys.argv[2] # the file should be the second argument
-        lines_file_q = []
-        with open(file_q, 'r') as qf:
-            for line in qf:
-                lines_file_q.append(line.split())
-    else:
-        mode = 'formal'
-        info = load_atomic_ions()
-        print "No charges specified for non std residues " + ', '.join(non_standard_residues)
-        print "Attributing formal charges..."
+
+    ions_amber = load_atomic_ions()
+    print "No charges specified for ion(s) " + ', '.join(unrecognized_residues)
+    print "Attributing formal charges..."
 
     # update .pdbqt file for the receptor
     fh, abs_path = mkstemp()
 
     with open(abs_path, 'w') as tempf:
-        with open(sys.argv[1]) as ff:
+        with open(sys.argv[1], 'r') as ff:
 
             for line in ff:
+                is_ion = False
+
                 if line.startswith(('ATOM', 'HETATM')):
-                    atomnum_pdbqt = int(line[6:11])
-                    atomname_pdbqt = line[12:16].strip()
-                    resname_pdbqt = line[17:20].strip()
+                    resname = line[17:20].strip()
+                    if resname in unrecognized_residues:
+                        assert resname in ions_amber
+                        charge = "%.3f"%ions_amber[resname]
+                        is_ion = True
 
-                    is_atom_recognized = False
-                    if mode == 'custom':
-                        # update the charges of the atoms specified in the charge file
-                        for line_file_q in lines_file_q:
-                            if atomnum_pdbqt == int(line_file_q[0]) and atomname_pdbqt == line_file_q[1]:
-                               charge = "%.3f"%float(line_file_q[-1])
-                               tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
-                               is_atom_recognized = True
-                               break
-
-                    elif mode == 'formal':
-                        if resname_pdbqt in non_standard_residues:
-                            if resname_pdbqt in info:
-                                charge = "%.3f"%info[resname_pdbqt]
-                                is_atom_recognized = True
-                            else:
-                                print "Warning: no formal charge was found for residue " + resname_pdbqt 
-
-                    if is_atom_recognized:
-                        tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
-                    else:
-                        tempf.write(line)
+                if is_ion:
+                    tempf.write(line[:70] + ' '*(6-len(charge)) + charge + line[76:])
                 else:
                     tempf.write(line)
 
@@ -182,8 +156,8 @@ class Autodock(ADBased):
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
         autodock_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autodock_options.iteritems()])
 
-        self.write_check_lig_pdbqt_script()
-        #self.write_check_nonstd_residues_script()
+        self.write_check_ligand_pdbqt_script('check_ligand_pdbqt.py')
+        self.write_check_ions_script('check_ions.py')
 
         if not rescoring:
             if 'ga_num_evals' not in self.options:
@@ -199,7 +173,7 @@ print \'-p ga_num_evals=%i\'%ga_num_evals\"`"""
                 ga_num_evals_lines=""
  
             # write autodock script
-            with open(filename, 'w') as file:
+            with open(filename, 'w') as ff:
                 script ="""#!/bin/bash
 set -e
 
@@ -207,13 +181,13 @@ MGLPATH=`which prepare_ligand4.py`
 MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
-# generate .pdbqt files
 # prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_lig_pdbqt.py lig.pdbqt
+python check_ligand_pdbqt.py lig.pdbqt
 
 # prepare receptor
 prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
+python check_ions.py target.pdbqt prepare_receptor4.log
 
 # run autogrid
 prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
@@ -237,14 +211,14 @@ MGLPATH=`which prepare_ligand4.py`
 MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
-# generate .pdbqt files
 # prepare ligand
 prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_lig_pdbqt.py lig.pdbqt
+python check_ligand_pdbqt.py lig.pdbqt
 
 # prepare receptor only once
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log
+  python check_ions.py target.pdbqt prepare_receptor4.log
 fi
 
 # run autogrid

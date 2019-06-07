@@ -50,30 +50,6 @@ class DockingConfig(object):
         mol2.update_mol2file(file_l_abs, new_file_l, unique=True, ligname='LIG')
         self.input_file_l = os.path.abspath(new_file_l)
 
-        # check if receptor file exists
-        if not os.path.isfile(args.input_file_r):
-            raise IOError("File %s not found!"%(args.input_file_r))
-
-        proton_info = load_PROTON_INFO()
-        ions_info = load_atomic_ions()
-
-        # check if the .pdb file is valid
-        with open(args.input_file_r, 'r') as pdbf:
-            is_end_line = False
-            for line in pdbf:
-                if line.startswith(('ATOM', 'HETATM')):
-                    resname = line[17:20].strip()
-                    if resname in ions_info:
-                        sys.exit("Ion %s found in structure %s!" %(resname, args.input_file_r))
-                    elif resname not in proton_info or line.startswith('HETATM'):
-                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
-only contains one protein structure with standard residues!'%(resname, args.input_file_r))
-                    elif is_end_line:
-                        sys.exit("More than one structure detected in .pdb file! Check your file again!")
-                elif line.startswith('END'):
-                    is_end_line = True
-        self.input_file_r = os.path.abspath(args.input_file_r)
-
         if task == 'docking':
             self.docking = setconf.DockingSetup(config)
             self.rescoring = setconf.RescoringSetup(config)
@@ -81,6 +57,37 @@ only contains one protein structure with standard residues!'%(resname, args.inpu
             self.scoring = setconf.ScoringSetup(config)
         else:
             raise ValueError("Task should be one of docking or scoring")
+
+        self.check_pdbfile(args.input_file_r)
+
+    def check_pdbfile(self, filename):
+
+        # check if receptor file exists
+        if not os.path.isfile(filename):
+            raise IOError("File %s not found!"%(filename))
+
+        proton_info = load_PROTON_INFO()
+        ions_info = load_atomic_ions()
+
+        # check if the .pdb file is valid
+        with open(filename, 'r') as pdbf:
+            is_end_line = False
+            for line in pdbf:
+                if line.startswith(('ATOM', 'HETATM')):
+                    resname = line[17:20].strip()
+                    if resname in ions_info:
+                        for instance, program, options in self.docking.instances:
+                            if program not in setconf.programs_handling_ions:
+                                sys.exit("Ion %s found in structure %s! DockBox is not configured to apply %s with ions!" %(resname, filename, program))
+                    elif resname not in proton_info or line.startswith('HETATM'):
+                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
+only contains one protein structure with standard residues (with possibly ions)!'%(resname, filename))
+                    elif is_end_line:
+                        sys.exit("More than one structure detected in .pdb file! Check your file again!")
+                elif line.startswith('END'):
+                    is_end_line = True
+
+        self.input_file_r = os.path.abspath(filename)
 
 class Scoring(object):
 
