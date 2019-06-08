@@ -43,7 +43,7 @@ class Vina(autodock.ADBased):
 
         # write vina script
         if not rescoring:
-            with open(filename, 'w') as file:
+            with open(filename, 'w') as ff:
                 script ="""#!/bin/bash
 set -e
 
@@ -61,9 +61,9 @@ python check_ions.py target.pdbqt prepare_receptor4.log
 
 # run vina
 vina --config vina.config 1> vina.out 2> vina.err"""% locals()
-                file.write(script)
+                ff.write(script)
         else:
-            with open(filename, 'w') as file:
+            with open(filename, 'w') as ff:
                 script ="""#!/bin/bash
 set -e
 
@@ -82,7 +82,7 @@ fi
 
 # run vina
 vina --score_only --config vina.config > vina.out"""% locals()
-                file.write(script)
+                ff.write(script)
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""

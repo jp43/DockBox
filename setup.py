@@ -10,7 +10,7 @@ if not (sys.version_info[0] == 2 and sys.version_info[1] >= 6):
     exit_with_error("You need Python 2.6.x or Python 2.7.x to install the DockBox package!")
 
 setuptools.setup(name='dockbox',
-    version='0.1.5',
+    version='0.1.6',
     packages=['dockbox'],
     scripts=['bin/rundbx', 'bin/extract_dbx_best_poses', \
 'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],

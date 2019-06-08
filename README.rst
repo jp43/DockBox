@@ -25,6 +25,7 @@ the results using different consensus docking/scoring strategies.
 
   * AutoDock 4 (http://autodock.scripps.edu)
   * AutoDock Vina (http://vina.scripps.edu/index.html)
+  * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
   * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)

@@ -8,7 +8,7 @@ known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'
 known_programs['scoring'] = known_programs['rescoring']
 
 single_run_scoring_programs = ['glide', 'dock']
-programs_handling_ions = ['autodock', 'vina']
+programs_handling_ions = ['vina', 'dock']
 
 default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
 
@@ -74,6 +74,8 @@ Make sure the program has been installed and is in your PATH!'%(exe, program))
                            if value.lower() == known_value.lower():
                                return known_value
                        raise ValueError("Value %s not recognized for option %s in instance %s!"%(value, key, instance))
+                   elif key.endswith('dir'): # path value
+                       return os.path.abspath(value)
                    else:
                        return value
 

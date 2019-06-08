@@ -151,6 +151,7 @@ class Autodock(ADBased):
                 self.autodock_options[name] = options[name]
 
     def write_docking_script(self, filename, file_r, file_l, rescoring=False):
+        #TODO: add treatment of ions for autogrid: http://autodock.scripps.edu/faqs-help/how-to/adding-new-atom-parameters-to-autodock
 
         # create flags with specified options for autogrid and autodock
         autogrid_options_flag = ' '.join(['-p ' + key + '=' + value for key, value in self.autogrid_options.iteritems()])
@@ -199,11 +200,11 @@ prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(aut
 
 # run autodock
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
-                file.write(script)
+                ff.write(script)
  
         else:
             # write autodock script for rescoring
-            with open(filename, 'w') as file:
+            with open(filename, 'w') as ff:
                 script ="""#!/bin/bash
 set -e
 
@@ -238,7 +239,7 @@ fi
 
 # run autodock
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
-                file.write(script)
+                ff.write(script)
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""

@@ -15,7 +15,7 @@ required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox
 
 default_settings = {'probe_radius': '1.4', 'minimum_sphere_radius': '1.4', 'maximum_sphere_radius': '4.0', \
 'grid_spacing': '0.3', 'extra_margin': '2.0', 'attractive_exponent': '6', 'repulsive_exponent': '12', \
-'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20', 'charge_method': 'gas', 'rmsd': '2.0'}
+'max_orientations': '10000', 'num_scored_conformers': '5000', 'nposes': '20', 'charge_method': 'gas', 'rmsd': '2.0', 'grid_dir': None}
 
 class Dock(method.DockingMethod):
 
@@ -55,8 +55,9 @@ class Dock(method.DockingMethod):
                     shutil.copyfile(file_l, 'lig-%i.mol2'%(idx+1))
             subprocess.check_output("cat lig-%i.mol2 >> %s"%(idx+1, file_l_all), shell=True)
 
-        with open(filename, 'w') as file:
-            script ="""#!/bin/bash
+        if self.options['grid_dir'] is None:
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
 set -e
 
 # remove hydrogens from target
@@ -169,8 +170,65 @@ num_scored_conformers 1
 rank_ligands no" > dock6.in
 
 dock6 -i dock6.in > dock.out""" % locals()
-            file.write(script)
+                file.write(script)
+        else:
+            grid_prefix = self.options['grid_dir'] + '/grid'
+            # check if grid file exists
+            if not os.path.isfile(grid_prefix+'.in'):
+                raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
 
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
+
+# shift ligand coordintates
+python prepare_ligand_dock.py lig-1.mol2 lig.mol2 %(center)s
+
+dock6path=`which dock6`
+vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
+flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+
+echo "ligand_atom_file %(file_l_all)s
+limit_max_ligands no
+skip_molecule no
+read_mol_solvation no
+calculate_rmsd no
+use_database_filter no
+orient_ligand no
+use_internal_energy yes
+internal_energy_rep_exp 12
+flexible_ligand no
+bump_filter no
+score_molecules yes
+contact_score_primary no
+contact_score_secondary no
+grid_score_primary yes
+grid_score_secondary no
+grid_score_rep_rad_scale 1
+grid_score_vdw_scale 1
+grid_score_es_scale 1
+grid_score_grid_prefix %(grid_prefix)s
+multigrid_score_secondary no
+dock3.5_score_secondary no
+continuous_score_secondary no
+descriptor_score_secondary no
+gbsa_zou_score_secondary no
+gbsa_hawkins_score_secondary no
+SASA_descriptor_score_secondary no
+amber_score_secondary no
+minimize_ligand no
+atom_model all
+vdw_defn_file $vdwfile
+flex_defn_file $flexfile
+flex_drive_file $flexdfile
+ligand_outfile_prefix lig_out
+write_orientations no
+num_scored_conformers 1
+rank_ligands no" > dock6.in
+
+dock6 -i dock6.in > dock.out""" % locals()
+                file.write(script)
+ 
     def write_docking_script(self, filename, file_r, file_l):
         """Dock using DOCK6 flexible docking with grid scoring as primary score"""
 
@@ -183,9 +241,10 @@ dock6 -i dock6.in > dock.out""" % locals()
         else:
             shutil.copyfile(file_l, 'lig_ref.mol2')
 
-        # write autodock script
-        with open(filename, 'w') as file:
-            script ="""#!/bin/bash
+        if self.options['grid_dir'] is None:
+            # write autodock script
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
 set -e
 
 # remove hydrogens from target
@@ -336,7 +395,109 @@ cluster_rmsd_threshold %(rmsd)s
 rank_ligands no" > dock6.in
 
 dock6 -i dock6.in"""% locals()
-            file.write(script)
+                file.write(script)
+
+        else:
+            grid_prefix = self.options['grid_dir'] + '/grid'
+            # check if grid file exists
+            if not os.path.isfile(grid_prefix+'.in'):
+                raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
+
+            sphfile = self.options['grid_dir'] + '/selected_spheres.sph'
+            # check if grid file exists
+            if not os.path.isfile(sphfile):
+                raise IOError('No selected_spheres.sph file detected in specified location %s'%self.options['grid_dir'])
+
+            with open(filename, 'w') as file:
+                script ="""#!/bin/bash
+
+# shift ligand coordintates
+python prepare_ligand_dock.py lig_ref.mol2 lig.mol2 %(center)s
+
+dock6path=`which dock6`
+vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
+flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+
+# flexible docking using grid score as primary score and no secondary score
+echo "ligand_atom_file lig.mol2
+limit_max_ligands no
+skip_molecule no
+read_mol_solvation no
+calculate_rmsd no
+use_database_filter no
+orient_ligand yes
+automated_matching yes
+receptor_site_file %(sphfile)s
+max_orientations %(max_orientations)s
+critical_points no
+chemical_matching no
+use_ligand_spheres no
+use_internal_energy yes
+internal_energy_rep_exp 12
+flexible_ligand yes
+user_specified_anchor no
+limit_max_anchors no
+min_anchor_size 5
+pruning_use_clustering yes
+pruning_max_orients 1000
+pruning_clustering_cutoff 100
+pruning_conformer_score_cutoff 100
+use_clash_overlap yes
+clash_overlap 0.5
+write_growth_tree no
+bump_filter yes
+bump_grid_prefix %(grid_prefix)s
+max_bumps_anchor 12
+max_bumps_growth 12
+score_molecules yes
+contact_score_primary no
+contact_score_secondary no
+grid_score_primary yes
+grid_score_secondary no
+grid_score_rep_rad_scale 1
+grid_score_vdw_scale 1
+grid_score_es_scale 1
+grid_score_grid_prefix %(grid_prefix)s
+multigrid_score_secondary no
+dock3.5_score_secondary no
+continuous_score_secondary no
+descriptor_score_secondary no
+gbsa_zou_score_secondary no
+gbsa_hawkins_score_secondary no
+SASA_descriptor_score_secondary no
+pbsa_score_secondary no
+amber_score_secondary no
+minimize_ligand yes
+minimize_anchor yes
+minimize_flexible_growth yes
+use_advanced_simplex_parameters no
+simplex_max_cycles 1
+simplex_score_converge 0.1
+simplex_cycle_converge 1.0
+simplex_trans_step 1.0
+simplex_rot_step 0.1
+simplex_tors_step 10.0
+simplex_anchor_max_iterations 1000
+simplex_grow_max_iterations 1000
+simplex_grow_tors_premin_iterations 0
+simplex_random_seed 0
+simplex_restraint_min no
+atom_model all
+vdw_defn_file $vdwfile
+flex_defn_file $flexfile
+flex_drive_file $flexdfile
+ligand_outfile_prefix lig_out
+write_orientations no
+num_scored_conformers %(num_scored_conformers)s
+write_conformations no
+cluster_conformations yes
+cluster_rmsd_threshold %(rmsd)s
+rank_ligands no" > dock6.in
+
+dock6 -i dock6.in"""% locals()
+                file.write(script)
+
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
     
