@@ -10,10 +10,9 @@ if not (sys.version_info[0] == 2 and sys.version_info[1] >= 6):
     exit_with_error("You need Python 2.6.x or Python 2.7.x to install the DockBox package!")
 
 setuptools.setup(name='dockbox',
-    version='1.0',
+    version='1.1',
     packages=['dockbox'],
-    scripts=['bin/rundbx', 'bin/extract_dbx_best_poses', \
-'bin/prepare_compounds', 'bin/prepare_sites', 'bin/prepare_targets', 'bin/prepare_vs'],
+    scripts=['bin/rundbx', 'bin/extract_dbx_best_poses'],
     install_requires=['mdkit', 'cython', 'numpy==1.8.0', 'pandas==0.19.0'],
     license='LICENSE.txt',
     description='Platform package to simplify the use of docking programs and consensus methods',
