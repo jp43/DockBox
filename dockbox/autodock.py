@@ -284,7 +284,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
 
     def cleanup(self):
 
-        to_be_removed = ['run_'+self.program+'.sh', 'prepare_receptor4.log', 'check_lig_pdbqt.py'] + list(glob('*map*')) + list(glob('*pdbqt'))
+        to_be_removed = ['run_'+self.program+'.sh', 'prepare_receptor4.log', 'check_lig_pdbqt.py', 'grid.glg', 'dock.dlg'] + list(glob('*map*')) + list(glob('*pdbqt'))
 
         for filename in to_be_removed:
             if os.path.isfile(filename):

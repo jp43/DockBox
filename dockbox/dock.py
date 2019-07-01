@@ -534,7 +534,7 @@ dock6 -i dock6.in"""% locals()
     def cleanup(self):
         # remove heavy files
         to_be_removed = ['run_'+self.program+'.sh', 'antechamber.log', 'selected_spheres.sph', 'target_noH.ms', \
-'dockprep.py', 'dockprep.pyc', 'INSPH', 'lig.mol2', 'lig_ref.mol2', \
+'dockprep.py', 'dockprep.pyc', 'INSPH', 'lig.mol2', 'lig_ref.mol2', 'lig_out_scored.mol2', \
 'prepare_ligand_dock.py', 'showbox.in', 'target.mol2', 'target_noH_box.pdb', \
 'target_noH.pdb', 'target_noH_site.sph'] + list(glob('grid*'))
         for filename in to_be_removed:
