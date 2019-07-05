@@ -3,8 +3,9 @@ import os
 import sys
 import shutil
 import math
-from glob import glob
 import argparse
+from time import time
+from glob import glob
 
 import numpy as np
 import pandas as pd
@@ -394,6 +395,7 @@ def get_rmsd_rotation_and_translations_all_targets(files_r):
 
     return rmsd_rot_trans
 
+#tcpu1 = time()
 dirs = []
 for dir in args.dirs:
     if os.path.isdir(dir+'/poses'):
@@ -403,16 +405,16 @@ for dir in args.dirs:
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
 if not istargetID and args.combine_targets:
-    sys.exit("selection over all targets was requested but no target ID was found!")
+    sys.exit("Selection over all targets was requested but no target ID was found!")
 
 if not isisomerID and args.combine_isomers:
-    sys.exit("selection over all isomers was requested but no isomer ID was found!")
+    sys.exit("Selection over all isomers was requested but no isomer ID was found!")
 
 # check if info related to targets is there!
 if not args.csvfile_r:
     for dir in args.dirs:
         # check if .pdb files are there
-        if not os.path.isdir(dir+'/poses/rec.pdb'):
+        if not os.path.isfile(dir+'/poses/rec.pdb'):
             sys.exit("PDB file rec.pdb for receptor not found in %s!"%dir)
 elif os.path.isfile(args.csvfile_r):
     df_targets = pd.read_csv(args.csvfile_r)
@@ -423,6 +425,7 @@ elif os.path.isfile(args.csvfile_r):
 else:
     sys.exit("File %s does not exist!"%args.csvfile_r)
 
+#tcpu2 = time()
 # check options relative to best poses extraction
 scoring_functions_all = []
 if args.sbcd:
@@ -451,11 +454,14 @@ if args.csvfile_l:
 features_ids = []
 if isligID:
     features_ids += ['ligID']
+else:
+    features_ids += ['dir']
 if istargetID:
     features_ids += ['targetID']
 if isisomerID:
     features_ids += ['isomerID']
 
+#tcpu3 = time()
 files_r = {}
 poses = []
 for jdx, dir in enumerate(dirs):
@@ -495,6 +501,8 @@ for jdx, dir in enumerate(dirs):
 
                 if isligID:    
                     info_dir['ligID'].append(ligID)
+                else:
+                    info_dir['dir'].append(dir)
                 if istargetID:
                     info_dir['targetID'].append(targetID)
                 if isisomerID:
@@ -536,9 +544,9 @@ for jdx, dir in enumerate(dirs):
         df_dir = df_dir[df_dir['instance'].isin(args.docking_programs)]
     poses.append(df_dir)
 
+#tcpu4 = time()
 if poses:
     poses = pd.concat(poses).reset_index()
-    poses = poses.sort_values(features_ids)
     if args.csvfile_l and isligID:
         poses = add_names(args.csvfile_l, poses)
 else:
@@ -547,6 +555,8 @@ else:
 groupby_columns = []
 if isligID:
     groupby_columns += ['ligID']
+else:
+    groupby_columns += ['dir']
 if not args.combine_targets and istargetID:
     groupby_columns += ['targetID']
 if isisomerID:
@@ -557,7 +567,7 @@ if args.sbcd or args.cd:
     for prgm in programs_consensus:
         if args.sbcd:
             poses_groupby = poses.groupby(groupby_columns)
-            best_poses_prgm = poses_prgm.loc[poses_groupby[prgm].idxmin]
+            best_poses_prgm = poses.loc[poses_groupby[prgm].idxmin]
         elif args.cd:
             poses_prgm = poses[poses['program']==prgm]
             poses_groupby = poses_prgm.groupby(groupby_columns)
@@ -606,7 +616,7 @@ elif args.sf:
         mean = poses[scoring_functions].mean()
         std = poses[scoring_functions].std()
         column_name = '_'.join(scoring_functions)
-        poses[column_name] = ((poses[scoring_functions]-mean)/std).sum(axis=1)
+        poses[column_name] = ((poses[scoring_functions]-mean)/std).sum(axis=1)/len(args.sf)
         best_poses = poses.loc[poses_groupby[column_name].idxmin]
     else:
         best_poses = poses.loc[poses_groupby[args.sf[0]].idxmin]
@@ -625,9 +635,10 @@ if args.combine_isomers:
         best_poses = best_poses.loc[poses[resolve_with].idxmin].T
 
 features_ids_sorted = list(features_ids)
-if 'targetID' not in best_poses.columns.values:
+if istargetID and 'targetID' not in best_poses.columns.values:
     features_ids_sorted.remove('targetID')
-best_poses = best_poses.sort_values(features_ids_sorted)
+if features_ids_sorted:
+    best_poses = best_poses.sort_values(features_ids_sorted)
 
 shutil.rmtree(args.resultsdir, ignore_errors=True)
 os.mkdir(args.resultsdir)
@@ -639,7 +650,7 @@ features_csv += features_ids
 features_csv += ['file_l', 'file_r', 'instance']
 
 is_site = False
-if not poses['site'].empty:
+if list(set(poses['site'])) != ['']:
     is_site = True
     features_csv.append('site')
 features_csv += scoring_functions_all + ['score']
@@ -682,27 +693,48 @@ if best_poses is not None:
     if args.combine_isomers and isisomerID:
         features_ids.remove('isomerID')
 
+    def save_best_poses(suffix=''):
+
+        file_l = row['file_l'+suffix]
+        file_r = row['file_r'+suffix]
+        instance = row['instance'+suffix]
+        index = row['index_pose'+suffix]
+
+        shutil.copyfile(file_l, newdir+'/ligand%s.mol2'%suffix)
+        origindir = '/'.join(file_l.split('/')[:-2])
+
+        poses_idxs = []
+        for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+             poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+             poses_idxs = sorted(poses_idxs)
+        pose_idx = poses_idxs[int(index)]
+
+        if os.path.isdir(origindir+'/'+instance+'/origin'):
+            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig%s.mol2'%suffix)
+            shutil.copyfile(file_r, newdir+'/protein%s.pdb'%suffix)
+
+    #tcpu5 = time()
     for idx, row in best_poses.iterrows():
-        newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+        if isligID:
+            newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+        elif row['dir'] != '.':
+            newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
+        elif row['dir'] == '.' and len(dirs) > 1:
+            newdir = args.resultsdir + '/pwd'
+        else:
+            newdir = args.resultsdir
         if not os.path.isdir(newdir):
             os.makedirs(newdir)
 
         if args.sbcd or args.cd:
             for idx, prgm in enumerate(programs_consensus):
-                file_l = row['file_l_'+prgm]
-                file_r = row['file_r_'+prgm]
-                instance = row['instance_'+prgm]
-                index = row['index_pose_'+prgm]
- 
-                shutil.copyfile(file_l, newdir+'/ligand_%s.mol2'%prgm)
-                origindir = '/'.join(file_l.split('/')[:-2])
-    
-                poses_idxs = []
-                for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-                     poses_idxs = sorted(poses_idxs)
-                pose_idx = poses_idxs[int(index)]
+                save_best_poses(suffix='_'+prgm)
+        else:
+            save_best_poses()
+#tcpu6 = time()
+#print 'tcpu2 - tcpu1', tcpu2 - tcpu1
+#print 'tcpu3 - tcpu2', tcpu3 - tcpu2
+#print 'tcpu4 - tcpu3', tcpu4 - tcpu3
+#print 'tcpu5 - tcpu4', tcpu5 - tcpu4
+#print 'tcpu6 - tcpu5', tcpu6 - tcpu5
 
-                if os.path.isdir(origindir+'/'+instance+'/origin'):
-                    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig_%s.mol2'%prgm)
-                    shutil.copyfile(file_r, newdir+'/protein_%s.pdb'%prgm)
