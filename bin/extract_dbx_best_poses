@@ -701,17 +701,17 @@ if best_poses is not None:
         index = row['index_pose'+suffix]
 
         shutil.copyfile(file_l, newdir+'/ligand%s.mol2'%suffix)
+
         origindir = '/'.join(file_l.split('/')[:-2])
-
-        poses_idxs = []
-        for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-             poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-             poses_idxs = sorted(poses_idxs)
-        pose_idx = poses_idxs[int(index)]
-
         if os.path.isdir(origindir+'/'+instance+'/origin'):
+            poses_idxs = []
+            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+                poses_idxs = sorted(poses_idxs)
+                pose_idx = poses_idxs[int(index)]
             shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig%s.mol2'%suffix)
-            shutil.copyfile(file_r, newdir+'/protein%s.pdb'%suffix)
+
+        shutil.copyfile(file_r, newdir+'/protein%s.pdb'%suffix)
 
     #tcpu5 = time()
     for idx, row in best_poses.iterrows():
@@ -737,4 +737,3 @@ if best_poses is not None:
 #print 'tcpu4 - tcpu3', tcpu4 - tcpu3
 #print 'tcpu5 - tcpu4', tcpu5 - tcpu4
 #print 'tcpu6 - tcpu5', tcpu6 - tcpu5
-
