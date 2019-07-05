@@ -33,7 +33,8 @@ class DockingConfig(object):
             raise IOError("File %s not found!"%(args.input_file_l))
 
         file_l_abs = os.path.abspath(args.input_file_l)
-        pref, ext = os.path.splitext(file_l_abs)
+        base = os.path.basename(args.input_file_l)
+        pref, ext = os.path.splitext(base)
         if ext != '.mol2':
             raise IOError("Ligand file provided with -l option should be in .mol2 format! %s format detected!"%ext)
 
@@ -304,10 +305,14 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
     def do_final_cleanup(self, config):
 
-        shutil.rmtree('poses', ignore_errors=True)
+        posedir = 'poses'
+        if config.docking.cleanup == 2:
+            os.remove(posedir+'/rec.pdb')
+        else:
+            shutil.rmtree(posedir, ignore_errors=True)
+
         for dir in glob('*'):
             scorefile = dir+'/score.out'
-
             if os.path.isfile(scorefile):
                 for filename in glob(dir+'/*'):
                     if scorefile != filename:
@@ -318,7 +323,6 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                         else:
                             raise ValueError('Folder or file not recognized for %s'%filename)
         os.remove(config.input_file_l)
-
 
     def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
@@ -368,5 +372,5 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
             Scoring().run_rescoring(config, args)
 
         # final cleanup if needed
-        if config.docking.cleanup == 2:
+        if config.docking.cleanup >= 2:
             self.do_final_cleanup(config)

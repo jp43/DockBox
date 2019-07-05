@@ -2,13 +2,47 @@
 import os
 import sys
 import shutil
+import math
 from glob import glob
 import argparse
 
 import numpy as np
 import pandas as pd
+import nwalign as nw
 
 from mdkit.utility import mol2
+from dockbox import pyqcprot
+
+residues_3_to_1 = {'ALA': 'A',
+'ARG': 'R',
+'ASN': 'N',
+'ASP': 'D',
+'CYS': 'C',
+'GLU': 'E', 
+'GLY': 'G',
+'HIS': 'H',
+'ILE': 'I',
+'LEU': 'L',
+'LYS': 'K',
+'MET': 'M',
+'PHE': 'F',
+'PRO': 'P',
+'GLN': 'Q',
+'SER': 'S',
+'SEC': 'U',
+'THR': 'T',
+'TRP': 'W',
+'TYR': 'Y',
+'VAL': 'V'}
+
+equivalent_residues = {'CYM': 'CYS',
+'LYN': 'LYS',
+'ASH': 'ASP',
+'CYX': 'CYS',
+'GLH': 'GLU',
+'HID': 'HIS',
+'HIE': 'HIS',
+'HIP': 'HIS'}
 
 # prefix to identify ligand, target and isomer directories
 ligdir_prefix = 'lig'
@@ -32,11 +66,17 @@ parser.add_argument('-all-isomers',
     help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer. A "%s/%s/%s" architecture \
 of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
 
-parser.add_argument('-csv',
+parser.add_argument('-csvl',
     type=str,
-    dest='csvfile',
+    dest='csvfile_l',
     metavar='FILE',
-    help='.csv filename with compounds. Used to add names of compounds. Default: none')
+    help='Filename containing info about compounds. Used to add names of compounds. Default: none')
+
+parser.add_argument('-csvr',
+    dest='csvfile_r',
+    default=None,
+    metavar='FILENAME',
+    help='Filename containing info about targets. If none, will look for a receptor file in the "poses" folders.  Default: none')
 
 parser.add_argument('-cutoff',
     dest='cutoff',
@@ -59,7 +99,6 @@ parser.add_argument('-dirs',
     help='Directories considered for analysis. Should contain a folder called "poses". Default: curr. dir')
 
 parser.add_argument('-r',
-    required=False,
     dest='resultsdir',
     default='results',
     metavar='DIRECTORY NAME',
@@ -87,22 +126,6 @@ group.add_argument('-sbcd',
 
 # update parsers with arguments
 args = parser.parse_args()
-
-def compute_rmsd(file1, file2):
-    """Compute RMSD between 2 poses (no fit). Since the protein structures are the same, there is no need to perform the alignment
-on the protein prior to RMSD."""
-
-    # load coordinates of first pose (non-hydrogen atoms)
-    coords1 = mol2.get_coordinates(file1, keep_h=False)
-    coords1 = np.array(coords1)
-
-    # load coordinates of second pose (non-hydrogen atoms)
-    coords2 = mol2.get_coordinates(file2, keep_h=False)
-    coords2 = np.array(coords2)
-
-    natoms = coords1.shape[0]
-    rmsd = np.sqrt(np.sum((coords1-coords2)**2)/natoms)
-    return rmsd
 
 def check_architecture(directory):
     """Check architecture %s*/%s*/%s* of specified directories"""%(ligdir_prefix,tardir_prefix,isodir_prefix)
@@ -195,6 +218,182 @@ def check_directories(dirs):
 
     return iscwd, isligID, istargetID, isisomerID
 
+def add_names(csvfile, df):
+    df_ligands = pd.read_csv(csvfile)
+    if 'isomer' in df_ligands:
+        df_ligands = df_ligands[df_ligands['isomer']==1]
+
+    df = df.merge(df_ligands[['ligID', 'name']], on='ligID')
+    return df
+
+def get_total_residue_number(filename):
+    indices = []
+    nresidues = 0
+    with open(filename, 'r') as pdbf:
+        for line in pdbf:
+
+            if line.startswith('ATOM'):
+                resnum = line[22:26].strip()
+
+                if resnum not in indices:
+                    indices.append(resnum)
+                    nresidues += 1
+    return nresidues
+
+def get_sequence_from_PDB(filename):
+    indices = []
+    sequence = ''
+
+    with open(filename, 'r') as pdbf:
+        for line in pdbf:
+            if line.startswith('ATOM'):
+                resnum = line[22:26].strip()
+                resname = line[17:20].strip()
+
+                if resname in equivalent_residues:
+                    resname = equivalent_residues[resname]
+
+                if resnum not in indices and resname in residues_3_to_1:
+                    sequence += residues_3_to_1[resname]
+                    indices.append(resnum)
+    return sequence, indices
+
+def get_residues_coordinates(filename, indices):
+    indices_new = []
+    coords = []
+
+    with open(filename, 'r') as pdbf:
+        for line in pdbf:
+            if line.startswith('ATOM'):
+                resnum = line[22:26].strip()
+                resname = line[17:20].strip()
+                atomname = line[12:16].strip()
+
+                if resnum not in indices_new and resnum in indices:
+                    coords.append([])
+                    indices_new.append(resnum)
+                if resnum in indices and resname[0] != 'H':
+                    x = float(line[30:38])
+                    y = float(line[38:46])
+                    z = float(line[46:54])
+                    coords[-1].append([atomname, x, y, z])
+
+    return coords, indices_new
+
+def compute_rmsd(file1, file2, rotmat=np.eye(3), trans1=np.zeros(3), trans2=np.zeros(3)):
+    """Compute RMSD between 2 poses"""
+
+    # load coordinates of first pose (non-hydrogen atoms)
+    coords1 = mol2.get_coordinates(file1, keep_h=False)
+    coords1 = np.array(coords1)
+    natoms = coords1.shape[0]
+
+    coords1_rot = np.empty_like(coords1)
+    for idx in range(natoms):
+        coords1t = coords1[idx,:] + trans1
+        coords1t = coords1t[:,np.newaxis]
+        coords1_rot[idx,:] = np.dot(rotmat, coords1t).flatten() - trans2
+
+    # load coordinates of second pose (non-hydrogen atoms)
+    coords2 = mol2.get_coordinates(file2, keep_h=False)
+    coords2 = np.array(coords2)
+
+    rmsd = np.sqrt(np.sum((coords1_rot-coords2)**2)/natoms)
+    return rmsd
+
+def get_rmsd_rotation_and_translations(file1, file2):
+
+    nres1 = get_total_residue_number(file1)
+    nres2 = get_total_residue_number(file2)
+
+    seq1, ind1 = get_sequence_from_PDB(file1)
+    seq2, ind2 = get_sequence_from_PDB(file2)
+
+    alignment = nw.global_align(seq1, seq2)
+
+    nalign = len(alignment[0])
+    nresidues_min = min(len(seq1), len(seq2))
+
+    ind1new = []
+    ind2new = []
+    idx1, idx2 = 0, 0
+
+    for idx in range(nalign):
+        if (idx < nresidues_min) and seq1[idx] == seq2[idx] and seq1[idx] != '-':
+            ind1new.append(ind1[idx1])
+            ind2new.append(ind2[idx2])
+        if (idx < len(seq1)) and seq1[idx] != '-':
+            idx1 += 1
+        if (idx < len(seq2)) and seq2[idx] != '-':
+            idx2 += 1
+
+    ind1 = ind1new
+    ind2 = ind2new
+
+    #TODO: add a threshold for the number of residues considered
+    frac1 = len(ind1)*100.0/nres1
+    frac2 = len(ind2)*100.0/nres2
+
+    # get coordinates of specific residues 
+    coords1, ind1 = get_residues_coordinates(file1, ind1)
+    coords2, ind2 = get_residues_coordinates(file2, ind2)
+
+    new_coords1 = []
+    new_coords2 = []
+
+    # check if there is consistency in atom names
+    nresidues1 = len(coords1)
+    for idx in range(nresidues1):
+        coords1_res = coords1[idx]
+        coords2_res = coords2[idx]
+
+        atomnames1 = [item[0] for item in coords1_res]
+        atomnames2 = [item[0] for item in coords2_res]
+        if set(atomnames1) != set(atomnames2):
+            sys.exit("Inconsistency found in residue %s in file %s and residue %s in file %s! Missing atom suspected..."%(ind1[idx],file1,ind2[idx],file2))
+
+        # create new coordinates
+        for an1, x1, y1, z1 in coords1_res:
+            for an2, x2, y2, z2 in coords2_res:
+                if an1 == an2:
+                    new_coords1.append([x1, y1, z1])
+                    new_coords2.append([x2, y2, z2])
+                    break
+
+    new_coords1 = np.array(new_coords1).T
+    new_coords2 = np.array(new_coords2).T
+
+    rotation = np.zeros(9)
+    trans1 = -new_coords1[:,0]
+    trans2 = -new_coords2[:,0]
+
+    rmsd = pyqcprot.CalcRMSDRotationalMatrix(new_coords1, new_coords2, rotation, None)
+
+    rotation = rotation.reshape((3, 3))
+    trans1 += new_coords1[:,0]
+    trans2 += new_coords2[:,0]
+
+    return rotation, trans1, trans2
+
+def get_rmsd_rotation_and_translations_all_targets(files_r): 
+    rmsd_rot_trans = {}
+
+    for key1 in files_r:
+        rmsd_rot_trans[key1] = {}
+
+        for key2 in files_r:
+            if key1 == key2:
+                rotation = np.eye(3)
+                trans1 = np.zeros(3)
+                trans2 = np.zeros(3)
+            else:
+                file1 = files_r[key1]
+                file2 = files_r[key2]
+                rotation, trans1, trans2 = get_rmsd_rotation_and_translations(file1, file2)
+            rmsd_rot_trans[key1][key2] = [rotation, trans1, trans2]
+
+    return rmsd_rot_trans
+
 dirs = []
 for dir in args.dirs:
     if os.path.isdir(dir+'/poses'):
@@ -203,43 +402,68 @@ for dir in args.dirs:
         raise ValueError('directory '+dir+'/poses does not exist!')
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
+if not istargetID and args.combine_targets:
+    sys.exit("selection over all targets was requested but no target ID was found!")
+
+if not isisomerID and args.combine_isomers:
+    sys.exit("selection over all isomers was requested but no isomer ID was found!")
+
+# check if info related to targets is there!
+if not args.csvfile_r:
+    for dir in args.dirs:
+        # check if .pdb files are there
+        if not os.path.isdir(dir+'/poses/rec.pdb'):
+            sys.exit("PDB file rec.pdb for receptor not found in %s!"%dir)
+elif os.path.isfile(args.csvfile_r):
+    df_targets = pd.read_csv(args.csvfile_r)
+    csvfile_r_dir = os.path.dirname(args.csvfile_r)
+    # update relative paths
+    for column in ['file_origin', 'pdbfile']:
+        df_targets[column] =  df_targets[column].apply(lambda x: os.path.relpath(csvfile_r_dir+'/'+x))
+else:
+    sys.exit("File %s does not exist!"%args.csvfile_r)
+
 # check options relative to best poses extraction
 scoring_functions_all = []
 if args.sbcd:
     scoring_functions = args.sbcd
+    programs_consensus = args.sbcd
     if len(args.sbcd) < 2:
         raise ValueError('Number of functions for score-based consensus docking should be at least 2!')
-    resolve_with = args.sbcd[0] # used to decide which pose to extract when selecting over all targets and isomers
+    resolve_with = args.sbcd[0] # used to decide which pose to extract when selecting over all isomers
 elif args.cd:
     scoring_functions = None
+    programs_consensus = args.cd
     if len(args.cd) < 2:
         raise ValueError('Number of programs for consensus docking should be at least 2!')
-    resolve_with = 'score'
+    resolve_with = 'score_'+args.cd[0]
 elif args.sf:
     scoring_functions = args.sf
-    resolve_with = 'score_multi'
-
-features = ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose']
-if args.csvfile:
-    if not os.path.isfile(args.csvfile):
-        raise IOError("csvfile %s not found!"%args.csvfile)
+    programs_consensus = None
+    if len(scoring_functions) == 1:
+        resolve_with = scoring_functions[0]
+    else:
+        resolve_with = '_'.join(scoring_functions)
+if args.csvfile_l:
+    if not os.path.isfile(args.csvfile_l):
+        raise IOError("csvfile %s not found!"%args.csvfile_l)
 
 features_ids = []
 if isligID:
     features_ids += ['ligID']
-if istargetID: 
+if istargetID:
     features_ids += ['targetID']
 if isisomerID:
     features_ids += ['isomerID']
 
+files_r = {}
 poses = []
-best_poses = []
 for jdx, dir in enumerate(dirs):
     posedir = dir + '/poses'
     ligID, targetID, isomerID = get_IDs(dir, isligID, istargetID, isisomerID)
 
     info_dir = {}
-    for ft in features_ids + features + ['score']:
+    for ft in features_ids + ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose', 'score']:
         info_dir[ft] = []
 
     # get location of poses and receptor files
@@ -264,18 +488,28 @@ for jdx, dir in enumerate(dirs):
                     info_dir['file_l'].append(os.path.relpath(file_l))
                 else:
                     raise IOError("File %s does not exist!"%file_l)
-                info_dir['file_r'].append(os.path.relpath(posedir+'/rec.pdb'))
                 info_dir['site'].append(site)
                 info_dir['program'].append(program)
                 info_dir['instance'].append(instance)
                 info_dir['index_pose'].append(index)
+
                 if isligID:    
                     info_dir['ligID'].append(ligID)
                 if istargetID:
                     info_dir['targetID'].append(targetID)
                 if isisomerID:
                     info_dir['isomerID'].append(isomerID)
+                # get the filename of the corresponding receptor file
+                if not args.csvfile_r:
+                    file_r = os.path.relpath(posedir+'/rec.pdb')
+                else:
+                    row = df_targets[df_targets['targetID']==targetID]
+                    file_r = row['pdbfile'].values[0]
+                info_dir['file_r'].append(file_r)
 
+                # update the dictionnary of targets
+                if targetID not in files_r:
+                    files_r[targetID] = file_r
             nscores = 0
             # extract original scores
             with open(dir+'/'+instance+'/score.out', 'r') as sout:
@@ -302,150 +536,173 @@ for jdx, dir in enumerate(dirs):
         df_dir = df_dir[df_dir['instance'].isin(args.docking_programs)]
     poses.append(df_dir)
 
-    # TODO: enable to use combination of scores or consensus docking over multiple targets and isomers
-    if args.sf:
-        # extract best pose from best linear combination of scores
-        df_dir['score_multi'] = df_dir[scoring_functions].sum(axis=1)
-        best_poses_dir = df_dir.loc[df_dir['score_multi'].idxmin].to_frame().T
-
-        # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
-        best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
-        best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score','score_multi']+scoring_functions_all})
-
-    elif args.sbcd:
-        consensus = True
-        file_l_ref = None
-        # extract best pose if consensus between poses with best score after rescoring is reached
-        for idx, sf in enumerate(scoring_functions):
-            row = df_dir.loc[df_dir[sf].idxmin]
-            if idx == 0:
-                firstrow = row.copy()
-                file_l_ref = row['file_l']
-            elif idx > 0:
-                rmsd = compute_rmsd(row['file_l'], file_l_ref)
-                if rmsd > args.cutoff:
-                    consensus = False
-                    break
-        if consensus:
-            best_poses_dir = pd.DataFrame(firstrow).T
-            # for some reason, converting to DataFrame make everything become an object, so I need to convert everything back
-            best_poses_dir = best_poses_dir.astype({ft:str for ft in features})
-            best_poses_dir = best_poses_dir.astype({sf:float for sf in ['score']+scoring_functions_all})
-
-    elif args.cd:
-        # extract best pose if consensus between poses with best docking score is met
-        df_dir_prgms = df_dir[df_dir['program'].isin(args.cd)]
-        df_dir_prgms_groupby = df_dir_prgms.groupby(['program'])
-        rows = df_dir_prgms.loc[df_dir_prgms_groupby['score'].idxmin]
-
-        consensus = True
-        for idx, (index, row) in enumerate(rows.iterrows()):
-            if idx == 0:
-                firstrow = row.copy()
-                file_l_ref = row['file_l']
-            elif idx > 0:
-                rmsd = compute_rmsd(row['file_l'], file_l_ref)
-                if rmsd > args.cutoff:
-                    consensus = False
-                    break
-        if consensus:
-            best_poses_dir = rows[rows['program']==args.cd[0]]
-
-    if args.sf or consensus:
-        best_poses.append(best_poses_dir)
-
-def add_names(csvfile, df):
-    df_ligands = pd.read_csv(csvfile)
-    if 'isomer' in df_ligands:
-        df_ligands = df_ligands[df_ligands['isomer']==1]
-    df = df.merge(df_ligands[['ligID', 'name']], on='ligID')
-    return df
-
 if poses:
     poses = pd.concat(poses).reset_index()
-    if args.csvfile and isligID:
-        poses = add_names(args.csvfile, poses)
+    poses = poses.sort_values(features_ids)
+    if args.csvfile_l and isligID:
+        poses = add_names(args.csvfile_l, poses)
 else:
     sys.exit("No poses to extract!")
 
-if best_poses:
-    best_poses = pd.concat(best_poses).reset_index()
-    if args.csvfile and isligID:
-        best_poses = add_names(args.csvfile, best_poses)
-    # combine results over all isomers.
-    if args.combine_isomers:
-        if isisomerID:
-            groupby_columns = []
-            if isligID:
-                groupby_columns += ['ligID']
-            if istargetID:
-                groupby_columns += ['targetID']
-            if groupby_columns:
-                best_poses_groupby = best_poses.groupby(groupby_columns)
-                best_poses = best_poses.loc[best_poses_groupby[resolve_with].idxmin]
+groupby_columns = []
+if isligID:
+    groupby_columns += ['ligID']
+if not args.combine_targets and istargetID:
+    groupby_columns += ['targetID']
+if isisomerID:
+    groupby_columns += ['isomerID']
+
+if args.sbcd or args.cd:
+    best_poses = []
+    for prgm in programs_consensus:
+        if args.sbcd:
+            poses_groupby = poses.groupby(groupby_columns)
+            best_poses_prgm = poses_prgm.loc[poses_groupby[prgm].idxmin]
+        elif args.cd:
+            poses_prgm = poses[poses['program']==prgm]
+            poses_groupby = poses_prgm.groupby(groupby_columns)
+            best_poses_prgm = poses_prgm.loc[poses_groupby['score'].idxmin]
+        best_poses_prgm = best_poses_prgm.drop('index', axis=1)
+
+        new_columns_names = [] # renaming columns according to the scoring function
+        for col in best_poses_prgm.columns.values:
+            if col in groupby_columns+['name']:
+                new_columns_names.append(col)
+            elif args.sbcd and col == prgm:
+                new_columns_names.append(prgm)
             else:
-                best_poses = best_poses.loc[best_poses[resolve_with].idxmin].T
-    # combine results over all targets.
+                new_columns_names.append(col + '_' + prgm)
+        best_poses_prgm.columns = new_columns_names
+        best_poses.append(best_poses_prgm)
+
+    columns_to_be_merged = groupby_columns
+    if 'name' in poses.columns.values:
+       columns_to_be_merged += ['name']
+
+    # merge best poses into single dataframe
+    best_poses_merged = best_poses[0]    
+    for item in best_poses[1:]:
+        best_poses_merged = best_poses_merged.merge(item, on=columns_to_be_merged)
+
+    prgm_first = programs_consensus[0]
     if args.combine_targets:
-        if istargetID:
-            groupby_columns = []
-            if isligID:
-                groupby_columns += ['ligID']
-            if isisomerID and not args.combine_isomers:
-                groupby_columns += ['isomerID']
-            if groupby_columns:
-                best_poses_groupby = best_poses.groupby(groupby_columns)
-                best_poses = best_poses.loc[best_poses_groupby[resolve_with].idxmin]
-            else:
-                best_poses = best_poses.loc[best_poses[resolve_with].idxmin].T
-else:
-    best_poses = None
+        rmsd_rot_trans = get_rmsd_rotation_and_translations_all_targets(files_r)
+        for prgm in programs_consensus[1:]:
+            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm],
+            rotmat=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][0], \
+            trans1=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][1], \
+            trans2=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][2]), axis=1)
+    else:
+        for prgm in programs_consensus[1:]:
+            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm]), axis=1)
+
+    rmsd_columns = [col for col in best_poses_merged.columns.values if col.startswith('rmsd')]
+    best_poses_merged = best_poses_merged.assign(consensus=(best_poses_merged[rmsd_columns]<=args.cutoff).all(axis=1))
+    best_poses = best_poses_merged
+
+elif args.sf:
+    poses_groupby = poses.groupby(groupby_columns)
+    if len(args.sf) > 1:
+        mean = poses[scoring_functions].mean()
+        std = poses[scoring_functions].std()
+        column_name = '_'.join(scoring_functions)
+        poses[column_name] = ((poses[scoring_functions]-mean)/std).sum(axis=1)
+        best_poses = poses.loc[poses_groupby[column_name].idxmin]
+    else:
+        best_poses = poses.loc[poses_groupby[args.sf[0]].idxmin]
+
+# determine best poses over isomers according to strategy provided
+if args.combine_isomers:
+    groupby_columns = []
+    if isligID:
+        groupby_columns += ['ligID']
+    if istargetID and not args.combine_targets:
+        groupby_columns += ['targetID']
+    if groupby_columns:
+        poses_groupby = best_poses.groupby(groupby_columns)
+        best_poses = best_poses.loc[poses_groupby[resolve_with].idxmin]
+    else:
+        best_poses = best_poses.loc[poses[resolve_with].idxmin].T
+
+features_ids_sorted = list(features_ids)
+if 'targetID' not in best_poses.columns.values:
+    features_ids_sorted.remove('targetID')
+best_poses = best_poses.sort_values(features_ids_sorted)
 
 shutil.rmtree(args.resultsdir, ignore_errors=True)
 os.mkdir(args.resultsdir)
 
-features_csv = list(features_ids)
-if args.csvfile:
+features_csv = []
+if args.csvfile_l:
     features_csv.append('name')
-features_csv += features + scoring_functions_all + ['score']
+features_csv += features_ids
+features_csv += ['file_l', 'file_r', 'instance']
 
-if args.sf:
-    features_csv.append('score_multi')
-
-features_csv.remove('instance')
-features_csv.remove('index_pose')
+is_site = False
+if not poses['site'].empty:
+    is_site = True
+    features_csv.append('site')
+features_csv += scoring_functions_all + ['score']
 
 # save poses to .csv file
 poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.3f')
 
-if args.combine_isomers and isisomerID:
-    features_ids.remove('isomerID')
-if args.combine_targets and istargetID:
-    features_ids.remove('targetID')
-
 if best_poses is not None:
-    best_poses[features_csv].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.3f')
+    if args.sbcd or args.cd:
+        features_csv_best_poses = []
+        if args.csvfile_l:
+            features_csv_best_poses.append('name')
+        if isligID:
+            features_csv_best_poses.append('ligID')
+        if istargetID and not args.combine_targets:
+            features_csv_best_poses.append('targetID')
+        if isisomerID:
+            features_csv_best_poses.append('isomerID')
+        for prgm in programs_consensus:
+            if istargetID and args.combine_targets:
+                features_csv_best_poses.append('targetID_'+prgm)
+            features_csv_best_poses.extend([item + prgm for item in ['file_l_', 'file_r_', 'instance_']])
+            if args.sbcd:
+                features_csv_best_poses.append(prgm)
+            else:
+                features_csv_best_poses.append('score_'+prgm)
+            if is_site:
+                features_csv_best_poses.append('site_'+prgm)
+        features_csv_best_poses.extend([col for col in best_poses.columns.values if col.startswith('rmsd')])
+        features_csv_best_poses.append('consensus')
+    elif args.sf:
+        features_csv_best_poses = list(features_csv)
+        if len(args.sf) > 1:
+            features_csv_best_poses.append('_'.join(scoring_functions))
+    best_poses[features_csv_best_poses].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.3f')
+
+    if args.combine_targets and istargetID:
+        features_ids.remove('targetID')
+    
+    if args.combine_isomers and isisomerID:
+        features_ids.remove('isomerID')
 
     for idx, row in best_poses.iterrows():
         newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
         if not os.path.isdir(newdir):
             os.makedirs(newdir)
-        file_l = row['file_l']
-        file_r = row['file_r']
-        instance = row['instance']
-        index = row['index_pose']
+
+        if args.sbcd or args.cd:
+            for idx, prgm in enumerate(programs_consensus):
+                file_l = row['file_l_'+prgm]
+                file_r = row['file_r_'+prgm]
+                instance = row['instance_'+prgm]
+                index = row['index_pose_'+prgm]
+ 
+                shutil.copyfile(file_l, newdir+'/ligand_%s.mol2'%prgm)
+                origindir = '/'.join(file_l.split('/')[:-2])
     
-        shutil.copyfile(file_l, newdir+'/ligand.mol2')
-        origindir = '/'.join(file_l.split('/')[:-2])
-    
-        poses_idxs = []
-        for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-            poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-        poses_idxs = sorted(poses_idxs)
-        pose_idx = poses_idxs[int(index)]
-    
-        if os.path.isdir(origindir+'/'+instance+'/origin'):
-            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig.mol2')
-        shutil.copyfile(file_r, newdir+'/protein.pdb')
-else:
-    sys.exit("No poses found for the selected method of extraction!")
+                poses_idxs = []
+                for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+                     poses_idxs = sorted(poses_idxs)
+                pose_idx = poses_idxs[int(index)]
+
+                if os.path.isdir(origindir+'/'+instance+'/origin'):
+                    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, newdir+'/ligand_orig_%s.mol2'%prgm)
+                    shutil.copyfile(file_r, newdir+'/protein_%s.pdb'%prgm)
