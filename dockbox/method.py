@@ -68,6 +68,7 @@ class DockingMethod(object):
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
 
+
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize_options['minimization']:
             self.backup_files('origin')

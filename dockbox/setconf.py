@@ -133,7 +133,6 @@ Make sure the program has been installed and is in your PATH!'%(exe, program))
         else:
             return default
 
-
     def get_value_cleanup_option(self, config, section, default=0):
 
         if config.has_option(section, 'cleanup'):

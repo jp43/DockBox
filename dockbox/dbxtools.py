@@ -1,9 +1,15 @@
+import os
 import sys
 import numpy as np
 import nwalign as nw
 
 from mdkit.utility import mol2
 from dockbox import pyqcprot
+
+# prefix to identify ligand, target and isomer directories
+ligdir_prefix = 'lig'
+tardir_prefix = 'target'
+isodir_prefix = 'isomer'
 
 residues_3_to_1 = {'ALA': 'A',
 'ARG': 'R',
@@ -200,3 +206,95 @@ def get_rmsd_rotation_and_translations_all_targets(files_r):
             rmsd_rot_trans[key1][key2] = [rotation, trans1, trans2]
 
     return rmsd_rot_trans
+
+def check_architecture(directory):
+    """Check architecture %s*/%s*/%s* of specified directories"""%(ligdir_prefix,tardir_prefix,isodir_prefix)
+
+    if os.path.isdir(directory):
+        dir_split = directory.split('/')
+        if dir_split[-1].startswith(isodir_prefix):
+            isisomerID = True
+            if len(dir_split) > 1 and dir_split[-2].startswith(tardir_prefix):
+                istargetID = True
+                if len(dir_split) > 2 and dir_split[-3].startswith(ligdir_prefix):
+                    isligID = True
+                else:
+                    isligID = False
+            elif len(dir_split) > 1 and dir_split[-2].startswith(ligdir_prefix):
+                istargetID = False
+                isligID = True
+            else:
+                istargetID = False
+                isligID = False
+        elif dir_split[-1].startswith(tardir_prefix):
+            isisomerID = False
+            istargetID = True
+            if len(dir_split) > 1 and dir_split[-2].startswith(ligdir_prefix):
+                isligID = True
+            else:
+                isligID = False
+        elif dir_split[-1].startswith(ligdir_prefix):
+            isisomerID = False
+            istargetID = False
+            isligID = True
+        else:
+            isisomerID = False
+            istargetID = False
+            isligID = False
+
+    return isligID, istargetID, isisomerID
+
+def get_IDs(directory, isligID, istargetID, isisomerID):
+    """Get IDs of ligand target and isomer (if applicable) according to the current architecture."""
+
+    if isisomerID:
+        isomerID = directory.split('/')[-1]
+        if istargetID:
+            targetID = directory.split('/')[-2]
+            if isligID:
+                ligID = directory.split('/')[-3]
+            else:
+                ligID = None
+        elif isligID:
+            targetID = None
+            ligID = directory.split('/')[-2]
+        else:
+            targetID = None
+            ligID = None
+    elif istargetID:
+        isomerID = None
+        targetID = directory.split('/')[-1]
+        if isligID:
+            ligID = directory.split('/')[-2]
+        else:
+            ligID = None
+    elif isligID:
+        isomerID = None
+        targetID = None
+        ligID = directory.split('/')[-1]
+    else:
+        isomerID = None
+        targetID = None
+        ligID = None
+
+    return ligID, targetID, isomerID
+
+def check_directories(dirs):
+    if dirs != ['.']:
+        iscwd = False
+        for jdx, dir in enumerate(dirs):
+            isligID, istargetID, isisomerID = check_architecture(dir)
+            if jdx == 0:
+                isligID_ref = isligID
+                istargetID_ref = istargetID
+                isisomerID_ref = isisomerID
+            elif isligID != isligID_ref or istargetID != istargetID_ref or isisomerID != isisomerID_ref:
+                raise ValueError("%s*/%s*/%s* architecture architecture inconsistent between folders!"%(ligdir_prefix,tardir_prefix,isodir_prefix))
+    else:
+        iscwd = True
+        isligID = False
+        istargetID = False
+        isisomerID = False
+
+    return iscwd, isligID, istargetID, isisomerID
+
