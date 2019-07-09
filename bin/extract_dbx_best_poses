@@ -72,7 +72,7 @@ parser.add_argument('-r',
 
 group = parser.add_mutually_exclusive_group(required=False)
 
-group.add_argument('-s',
+group.add_argument('-sf',
     nargs='+',
     dest='sf',
     metavar='FUNC',
@@ -151,6 +151,7 @@ elif args.sf:
         resolve_with = scoring_functions[0]
     else:
         resolve_with = '_'.join(scoring_functions)
+
 if args.csvfile_l:
     if not os.path.isfile(args.csvfile_l):
         raise IOError("csvfile %s not found!"%args.csvfile_l)
@@ -348,7 +349,8 @@ features_csv = []
 if args.csvfile_l:
     features_csv.append('name')
 features_csv += features_ids
-features_csv += ['file_l', 'file_r', 'instance']
+features_csv += ['instance']
+#features_csv += ['file_l', 'file_r', 'instance']
 
 is_site = False
 if list(set(poses['site'])) != ['']:
@@ -356,8 +358,8 @@ if list(set(poses['site'])) != ['']:
     features_csv.append('site')
 features_csv += scoring_functions_all + ['score']
 
-# save poses to .csv file
-poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.3f')
+# TODO: add an option to save all the poses to .csv file
+#poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.3f')
 
 if best_poses is not None:
     if args.sbcd or args.cd:
@@ -373,7 +375,8 @@ if best_poses is not None:
         for prgm in programs_consensus:
             if istargetID and args.combine_targets:
                 features_csv_best_poses.append('targetID_'+prgm)
-            features_csv_best_poses.extend([item + prgm for item in ['file_l_', 'file_r_', 'instance_']])
+            features_csv_best_poses.append('instance_'+prgm)
+            #features_csv_best_poses.extend([item + prgm for item in ['file_l_', 'file_r_', 'instance_']])
             if args.sbcd:
                 features_csv_best_poses.append(prgm)
             else:
@@ -397,22 +400,23 @@ if best_poses is not None:
     def save_best_poses(dir, row, suffix=''):
 
         file_l = row['file_l'+suffix]
-        file_r = row['file_r'+suffix]
-        instance = row['instance'+suffix]
-        index = row['index_pose'+suffix]
-
         shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
 
-        origindir = '/'.join(file_l.split('/')[:-2])
-        if os.path.isdir(origindir+'/'+instance+'/origin'):
-            poses_idxs = []
-            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-                poses_idxs = sorted(poses_idxs)
-            pose_idx = poses_idxs[int(index)]
-            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
+        #file_r = row['file_r'+suffix]
+        # TODO: add an option for saving the target file
+        #shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
 
-        shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
+        # saving ligand files prior to minimization
+        #instance = row['instance'+suffix]
+        #index = row['index_pose'+suffix]
+        #origindir = '/'.join(file_l.split('/')[:-2])
+        #if os.path.isdir(origindir+'/'+instance+'/origin'):
+        #    poses_idxs = []
+        #    for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+        #        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+        #        poses_idxs = sorted(poses_idxs)
+        #    pose_idx = poses_idxs[int(index)]
+        #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
 
     for idx, row in best_poses.iterrows():
         if isligID:

@@ -12,6 +12,8 @@ programs_handling_ions = ['vina', 'dock']
 
 default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
 
+path_options = {'dock': ['grid_dir']}
+
 class ConfigSetup(object):
 
     def __init__(self, task, config):
@@ -83,6 +85,8 @@ Make sure the program has been installed and is in your PATH!'%(exe, program))
                 if config.has_section(instance.upper()):
                    config_d = dict(config.items(instance.upper()))
                    for key, value in config_d.iteritems(): 
+                       if program in path_options and key in path_options[program]:
+                           value = os.path.abspath(value) 
                        options[key] = check_value(key, value, instance)
 
                 self.instances.append((instance, program, options))

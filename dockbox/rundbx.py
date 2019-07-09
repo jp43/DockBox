@@ -15,6 +15,7 @@ import subprocess
 from mdkit.utility import mol2
 from mdkit.amber.ambertools import load_PROTON_INFO
 from mdkit.amber.ambertools import load_atomic_ions
+
 import setconf
 
 class DockingConfig(object):
@@ -305,23 +306,17 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
     def do_final_cleanup(self, config):
 
-        posedir = 'poses'
-        if config.docking.cleanup == 2:
-            os.remove(posedir+'/rec.pdb')
-        else:
-            shutil.rmtree(posedir, ignore_errors=True)
-
-        for dir in glob('*'):
-            scorefile = dir+'/score.out'
-            if os.path.isfile(scorefile):
-                for filename in glob(dir+'/*'):
-                    if scorefile != filename:
-                        if os.path.isfile(filename):
-                            os.remove(filename)
-                        elif os.path.isdir(filename):
-                            shutil.rmtree(filename, ignore_errors=True)
-                        else:
-                            raise ValueError('Folder or file not recognized for %s'%filename)
+        if config.docking.cleanup >= 2:
+            os.remove('poses/rec.pdb')
+            config_d = config.docking
+            # iterate over all the binding sites
+            for kdx in range(len(config_d.site)):
+                for instance, program, options in config_d.instances: # iterate over all the instances
+                    for item in glob(instance+'/*'):
+                        if os.path.isfile(item) and item != instance+'/score.out':
+                            os.remove(item)
+                        elif os.path.isdir(item):
+                            shutil.rmtree(item)
         os.remove(config.input_file_l)
 
     def run_docking(self, config, args):
@@ -372,5 +367,5 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
             Scoring().run_rescoring(config, args)
 
         # final cleanup if needed
-        if config.docking.cleanup >= 2:
+        if config.docking.cleanup >= 1:
             self.do_final_cleanup(config)

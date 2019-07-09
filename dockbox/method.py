@@ -60,14 +60,14 @@ class DockingMethod(object):
             except subprocess.CalledProcessError as e:
                 print e
                 print "Check %s file for more details!"%(dockdir+'/'+self.program+'.log')
-                pass
+                os.chdir(curdir)
+                return
 
         if prepare_only:
             return
 
         # (B) extract docking results
         self.extract_docking_results('score.out', file_r, file_l)
-
 
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize_options['minimization']:
@@ -257,6 +257,11 @@ ncyc=ncyc, maxcyc=maxcyc, cut=cut, amber_version=amber_version)
 
                 shutil.move('score.tmp.out', file_s)
 
+    def cleanup(self):
+        for filename in glob('*'):
+            if os.path.isfile(filename) and not filename.startswith('lig-') and filename != 'score.out':
+                os.remove(filename)
+
     def write_rescoring_script(self, script_name, file_r, file_l):
         pass
 
@@ -267,9 +272,6 @@ ncyc=ncyc, maxcyc=maxcyc, cut=cut, amber_version=amber_version)
         pass
 
     def extract_docking_results(self, file_r, file_l, file_s, input_file_r):
-        pass
-
-    def cleanup(self):
         pass
 
 class ScoringMethod(DockingMethod):
