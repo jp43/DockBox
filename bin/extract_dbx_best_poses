@@ -110,25 +110,25 @@ for dir in args.dirs:
 iscwd, isligID, istargetID, isisomerID = dbxtools.check_directories(dirs)
 
 if not istargetID and args.combine_targets:
-    sys.exit("Selection over all targets was requested but no target ID was found!")
+    args.combine_targets = False
 
 if not isisomerID and args.combine_isomers:
-    sys.exit("Selection over all isomers was requested but no isomer ID was found!")
+    args.combine_isomers = False
 
 # check if info related to targets is there!
-if not args.csvfile_r:
-    for dir in args.dirs:
-        # check if .pdb files are there
-        if not os.path.isfile(dir+'/poses/rec.pdb'):
-            sys.exit("PDB file rec.pdb for receptor not found in %s!"%dir)
-elif os.path.isfile(args.csvfile_r):
+is_rec_pdb = True
+if args.csvfile_r and istargetID: 
     df_targets = pd.read_csv(args.csvfile_r)
     csvfile_r_dir = os.path.dirname(args.csvfile_r)
     # update relative paths
     for column in ['file_origin', 'pdbfile']:
         df_targets[column] =  df_targets[column].apply(lambda x: os.path.relpath(csvfile_r_dir+'/'+x))
 else:
-    sys.exit("File %s does not exist!"%args.csvfile_r)
+    for dir in args.dirs:
+        # check if .pdb files are there
+        if not os.path.isfile(dir+'/poses/rec.pdb'):
+            is_rec_pdb = False
+            break
 
 # check options relative to best poses extraction
 scoring_functions_all = []
@@ -173,7 +173,12 @@ for jdx, dir in enumerate(dirs):
     ligID, targetID, isomerID = dbxtools.get_IDs(dir, isligID, istargetID, isisomerID)
 
     info_dir = {}
-    for ft in features_ids + ['file_l', 'file_r', 'site', 'program', 'instance', 'index_pose', 'score']:
+    for ft in features_ids:
+        info_dir[ft] = []
+    info_dir['file_l'] = []
+    if (args.csvfile_r and istargetID) or is_rec_pdb:
+        info_dir['file_r'] = []
+    for ft in ['site', 'program', 'instance', 'index_pose', 'score']:
         info_dir[ft] = []
 
     # get location of poses and receptor files
@@ -211,15 +216,16 @@ for jdx, dir in enumerate(dirs):
                 if isisomerID:
                     info_dir['isomerID'].append(isomerID)
                 # get the filename of the corresponding receptor file
-                if not args.csvfile_r:
-                    file_r = os.path.relpath(posedir+'/rec.pdb')
-                else:
+                if istargetID and args.csvfile_r:
                     row = df_targets[df_targets['targetID']==targetID]
                     file_r = row['pdbfile'].values[0]
-                info_dir['file_r'].append(file_r)
+                    info_dir['file_r'].append(file_r)
+                elif is_rec_pdb:
+                    file_r = os.path.relpath(posedir+'/rec.pdb')
+                    info_dir['file_r'].append(file_r)
 
                 # update the dictionnary of targets
-                if targetID not in files_r:
+                if istargetID and targetID not in files_r:
                     files_r[targetID] = file_r
             nscores = 0
             # extract original scores
@@ -244,7 +250,7 @@ for jdx, dir in enumerate(dirs):
 
     df_dir = pd.DataFrame(info_dir)
     if args.docking_programs: 
-        df_dir = df_dir[df_dir['instance'].isin(args.docking_programs)]
+        df_dir = df_dir[df_dir['program'].isin(args.docking_programs)]
     poses.append(df_dir)
 
 if poses:
@@ -419,19 +425,20 @@ if best_poses is not None:
         #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
 
     for idx, row in best_poses.iterrows():
-        if isligID:
-            newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
-        elif row['dir'] != '.':
-            newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
-        elif row['dir'] == '.' and len(dirs) > 1:
-            newdir = args.resultsdir + '/pwd'
-        else:
-            newdir = args.resultsdir
-        if not os.path.isdir(newdir):
-            os.makedirs(newdir)
-
-        if args.sbcd or args.cd:
-            for idx, prgm in enumerate(programs_consensus):
-                save_best_poses(newdir, row, suffix='_'+prgm)
-        else:
-            save_best_poses(newdir, row)
+        if args.sf or ((args.sbcd or args.cd) and row['consensus']):
+            if isligID:
+                newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+            elif row['dir'] != '.':
+                newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
+            elif row['dir'] == '.' and len(dirs) > 1:
+                newdir = args.resultsdir + '/pwd'
+            else:
+                newdir = args.resultsdir
+            if not os.path.isdir(newdir):
+                os.makedirs(newdir)
+ 
+            if args.sbcd or args.cd:
+                for idx, prgm in enumerate(programs_consensus):
+                    save_best_poses(newdir, row, suffix='_'+prgm)
+            else:
+                save_best_poses(newdir, row)
