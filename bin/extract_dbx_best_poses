@@ -9,11 +9,11 @@ from glob import glob
 import pandas as pd
 
 from mdkit.utility import mol2
-from dockbox import dbxtools
 
-ligdir_prefix = dbxtools.ligdir_prefix
-tardir_prefix = dbxtools.tardir_prefix
-isodir_prefix = dbxtools.isodir_prefix
+from dockbox.dbxtools import ligdir_prefix
+from dockbox.dbxtools import tardir_prefix
+from dockbox.dbxtools import isodir_prefix
+from dockbox import dbxtools
 
 # command-line arguments and options
 parser = argparse.ArgumentParser(description="Extract best docking poses after rundbx finished.")
@@ -121,8 +121,9 @@ if args.csvfile_r and istargetID:
     df_targets = pd.read_csv(args.csvfile_r)
     csvfile_r_dir = os.path.dirname(args.csvfile_r)
     # update relative paths
-    for column in ['file_origin', 'pdbfile']:
-        df_targets[column] =  df_targets[column].apply(lambda x: os.path.relpath(csvfile_r_dir+'/'+x))
+    if not csvfile_r_dir:
+        csvfile_r_dir = '.'
+    df_targets['pdbfile'] =  df_targets['pdbfile'].apply(lambda x: os.path.relpath(csvfile_r_dir+'/'+x))
 else:
     for dir in args.dirs:
         # check if .pdb files are there
@@ -408,9 +409,9 @@ if best_poses is not None:
         file_l = row['file_l'+suffix]
         shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
 
-        #file_r = row['file_r'+suffix]
+        file_r = row['file_r'+suffix]
         # TODO: add an option for saving the target file
-        #shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
+        shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
 
         # saving ligand files prior to minimization
         #instance = row['instance'+suffix]
@@ -424,21 +425,22 @@ if best_poses is not None:
         #    pose_idx = poses_idxs[int(index)]
         #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
 
-    for idx, row in best_poses.iterrows():
-        if args.sf or ((args.sbcd or args.cd) and row['consensus']):
-            if isligID:
-                newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
-            elif row['dir'] != '.':
-                newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
-            elif row['dir'] == '.' and len(dirs) > 1:
-                newdir = args.resultsdir + '/pwd'
-            else:
-                newdir = args.resultsdir
-            if not os.path.isdir(newdir):
-                os.makedirs(newdir)
+    #for idx, row in best_poses.iterrows():
+    #    #if args.sf or args.sbcd or args.cd:
+    #    if args.sf or ((args.sbcd or args.cd) and row['consensus']):
+    #        if isligID:
+    #            newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+    #        elif row['dir'] != '.':
+    #            newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
+    #        elif row['dir'] == '.' and len(dirs) > 1:
+    #            newdir = args.resultsdir + '/pwd'
+    #        else:
+    #            newdir = args.resultsdir
+    #        if not os.path.isdir(newdir):
+    #            os.makedirs(newdir)
  
-            if args.sbcd or args.cd:
-                for idx, prgm in enumerate(programs_consensus):
-                    save_best_poses(newdir, row, suffix='_'+prgm)
-            else:
-                save_best_poses(newdir, row)
+    #        if args.sbcd or args.cd:
+    #            for idx, prgm in enumerate(programs_consensus):
+    #                save_best_poses(newdir, row, suffix='_'+prgm)
+    #        else:
+    #            save_best_poses(newdir, row)

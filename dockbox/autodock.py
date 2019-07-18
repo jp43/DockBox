@@ -266,6 +266,8 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                                 print >> sf, score
                         if 'CLUSTERING HISTOGRAM' in line:
                             break
+        else:
+            open(file_s, 'w').close()
 
     def extract_rescoring_results(self, filename):
         """extract scores from .dlg file"""
@@ -281,4 +283,3 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
                         print >> ff, 'NaN'
             else:
                 print >> ff, 'NaN'
-

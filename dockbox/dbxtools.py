@@ -85,7 +85,8 @@ def get_residues_coordinates(filename, indices):
                 if resnum not in indices_new and resnum in indices:
                     coords.append([])
                     indices_new.append(resnum)
-                if resnum in indices and atomname[0] != 'H':
+                #if resnum in indices and atomname[0] != 'H':
+                if resnum in indices and atomname in ['CA', 'C', 'N', 'O']:
                     x = float(line[30:38])
                     y = float(line[38:46])
                     z = float(line[46:54])

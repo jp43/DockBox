@@ -255,6 +255,8 @@ endfunction;"""% locals()
                         if line.startswith("> <S>"):
                             print  >> sf, sdff.next().strip()
             os.remove(sdffile)
+        else:
+            open(file_s, 'w').close()
     
     def write_rescoring_script(self, filename, file_r, file_l):
 

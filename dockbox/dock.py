@@ -516,6 +516,8 @@ dock6 -i dock6.in"""% locals()
             # create multiple mol2 files
             ligname = reader.open('lig_out_scored.mol2').ligname
             mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
+        else:
+            open(file_s, 'w').close()
 
     def extract_rescoring_results(self, filename, nligands=None):
 
