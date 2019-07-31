@@ -7,13 +7,10 @@ import argparse
 
 from glob import glob
 import pandas as pd
+import numpy as np
 
 from mdkit.utility import mol2
-
-from dockbox.dbxtools import ligdir_prefix
-from dockbox.dbxtools import tardir_prefix
-from dockbox.dbxtools import isodir_prefix
-from dockbox import dbxtools
+from dockbox.dbxtools import *
 
 # command-line arguments and options
 parser = argparse.ArgumentParser(description="Extract best docking poses after rundbx finished.")
@@ -107,7 +104,7 @@ for dir in args.dirs:
         dirs.append(os.path.relpath(dir))
     else:
         raise ValueError('directory '+dir+'/poses does not exist!')
-iscwd, isligID, istargetID, isisomerID = dbxtools.check_directories(dirs)
+iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
 if not istargetID and args.combine_targets:
     args.combine_targets = False
@@ -171,7 +168,7 @@ files_r = {}
 poses = []
 for jdx, dir in enumerate(dirs):
     posedir = dir + '/poses'
-    ligID, targetID, isomerID = dbxtools.get_IDs(dir, isligID, istargetID, isisomerID)
+    ligID, targetID, isomerID = get_IDs(dir, isligID, istargetID, isisomerID)
 
     info_dir = {}
     for ft in features_ids:
@@ -196,7 +193,6 @@ for jdx, dir in enumerate(dirs):
                 instance += '.' + site
             poses_idxs = range(firstidx, firstidx+nposes)
 
-            nposes = len(poses_idxs)
             for index, idx in enumerate(poses_idxs):
                 file_l = posedir + '/lig-%s.mol2'%idx
                 if os.path.isfile(file_l):
@@ -237,6 +233,8 @@ for jdx, dir in enumerate(dirs):
                 if nscores != nposes:
                     raise ValueError("Number of poses different from number of scores (%s/%s)"%(dir,instance))
 
+    #print dir
+    #print firstidx+nposes-1
     # extract all scores
     for score_file in sorted(glob(dir+'/rescoring/*.score')):
         sf = os.path.basename(score_file).split('.')[0]
@@ -248,6 +246,7 @@ for jdx, dir in enumerate(dirs):
         with open(score_file, 'r') as sout:
             for line_s in sout:
                 info_dir[sf].append(float(line_s))
+        #print sf, len(info_dir[sf])
 
     df_dir = pd.DataFrame(info_dir)
     if args.docking_programs: 
@@ -276,11 +275,24 @@ if args.sbcd or args.cd:
     for prgm in programs_consensus:
         if args.sbcd:
             poses_groupby = poses.groupby(groupby_columns)
-            best_poses_prgm = poses.loc[poses_groupby[prgm].idxmin]
+            minidxs = poses_groupby[prgm].idxmin()
+            # handle cases where all the scores provided by a program are nans (to be changed when istargetID or isisomerID is True)
+            lignans = minidxs[minidxs.apply(np.isnan)]
+            for ligID, row in lignans.iteritems():
+                row_poses = poses[poses['ligID']==ligID].iloc[0]
+                minidxs[ligID] = float(row_poses.name)
+            minidxs = minidxs.astype(int)
+            # get best poses from indices
+            best_poses_prgm = poses.loc[minidxs].copy()
+            # set file_l to nan for those with no score
+            for ligID, row in lignans.iteritems():
+                best_poses_prgm_row = best_poses_prgm[best_poses_prgm['ligID']==ligID]
+                indices = best_poses_prgm_row.index.values
+                best_poses_prgm.at[indices, 'file_l'] = np.nan
         elif args.cd:
             poses_prgm = poses[poses['program']==prgm]
             poses_groupby = poses_prgm.groupby(groupby_columns)
-            best_poses_prgm = poses_prgm.loc[poses_groupby['score'].idxmin]
+            best_poses_prgm = poses_prgm.loc[poses_groupby['score'].idxmin()]
         best_poses_prgm = best_poses_prgm.drop('index', axis=1)
 
         new_columns_names = [] # renaming columns according to the scoring function
@@ -301,19 +313,19 @@ if args.sbcd or args.cd:
     # merge best poses into single dataframe
     best_poses_merged = best_poses[0]    
     for item in best_poses[1:]:
-        best_poses_merged = best_poses_merged.merge(item, on=columns_to_be_merged)
+        best_poses_merged = best_poses_merged.merge(item, on=columns_to_be_merged, how='outer')
 
     prgm_first = programs_consensus[0]
     if args.combine_targets:
-        rmsd_rot_trans = dbxtools.get_rmsd_rotation_and_translations_all_targets(files_r)
+        rmsd_rot_trans = get_rmsd_rotation_and_translations_all_targets(files_r)
         for prgm in programs_consensus[1:]:
-            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: dbxtools.compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm],
+            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm],
             rotmat=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][0], \
             trans1=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][1], \
             trans2=rmsd_rot_trans[row['targetID_'+prgm_first]][row['targetID_'+prgm]][2]), axis=1)
     else:
         for prgm in programs_consensus[1:]:
-            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: dbxtools.compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm]), axis=1)
+            best_poses_merged['rmsd_'+prgm_first+'_'+prgm] = best_poses_merged.apply(lambda row: compute_rmsd(row['file_l_'+prgm_first], row['file_l_'+prgm]), axis=1)
 
     rmsd_columns = [col for col in best_poses_merged.columns.values if col.startswith('rmsd')]
     best_poses_merged = best_poses_merged.assign(consensus=(best_poses_merged[rmsd_columns]<=args.cutoff).all(axis=1))
@@ -349,8 +361,8 @@ if istargetID and 'targetID' not in best_poses.columns.values:
 if features_ids_sorted:
     best_poses = best_poses.sort_values(features_ids_sorted)
 
-shutil.rmtree(args.resultsdir, ignore_errors=True)
-os.mkdir(args.resultsdir)
+#shutil.rmtree(args.resultsdir, ignore_errors=True)
+#os.mkdir(args.resultsdir)
 
 features_csv = []
 if args.csvfile_l:
@@ -396,7 +408,7 @@ if best_poses is not None:
         features_csv_best_poses = list(features_csv)
         if len(args.sf) > 1:
             features_csv_best_poses.append('_'.join(scoring_functions))
-    best_poses[features_csv_best_poses].to_csv(args.resultsdir+'/best_poses.csv', index=False, float_format='%.3f')
+    best_poses[features_csv_best_poses].to_csv(args.resultsdir+'.csv', index=False, float_format='%.3f')
 
     if args.combine_targets and istargetID:
         features_ids.remove('targetID')
@@ -404,43 +416,43 @@ if best_poses is not None:
     if args.combine_isomers and isisomerID:
         features_ids.remove('isomerID')
 
-    def save_best_poses(dir, row, suffix=''):
-
-        file_l = row['file_l'+suffix]
-        shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
-
-        file_r = row['file_r'+suffix]
-        # TODO: add an option for saving the target file
-        shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
-
-        # saving ligand files prior to minimization
-        #instance = row['instance'+suffix]
-        #index = row['index_pose'+suffix]
-        #origindir = '/'.join(file_l.split('/')[:-2])
-        #if os.path.isdir(origindir+'/'+instance+'/origin'):
-        #    poses_idxs = []
-        #    for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-        #        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-        #        poses_idxs = sorted(poses_idxs)
-        #    pose_idx = poses_idxs[int(index)]
-        #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
-
-    #for idx, row in best_poses.iterrows():
-    #    #if args.sf or args.sbcd or args.cd:
-    #    if args.sf or ((args.sbcd or args.cd) and row['consensus']):
-    #        if isligID:
-    #            newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
-    #        elif row['dir'] != '.':
-    #            newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
-    #        elif row['dir'] == '.' and len(dirs) > 1:
-    #            newdir = args.resultsdir + '/pwd'
-    #        else:
-    #            newdir = args.resultsdir
-    #        if not os.path.isdir(newdir):
-    #            os.makedirs(newdir)
- 
-    #        if args.sbcd or args.cd:
-    #            for idx, prgm in enumerate(programs_consensus):
-    #                save_best_poses(newdir, row, suffix='_'+prgm)
-    #        else:
-    #            save_best_poses(newdir, row)
+#    def save_best_poses(dir, row, suffix=''):
+#
+#        file_l = row['file_l'+suffix]
+#        shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
+#
+#        file_r = row['file_r'+suffix]
+#        # TODO: add an option for saving the target file
+#        shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
+#
+#        # saving ligand files prior to minimization
+#        instance = row['instance'+suffix]
+#        index = row['index_pose'+suffix]
+#        origindir = '/'.join(file_l.split('/')[:-2])
+#        if os.path.isdir(origindir+'/'+instance+'/origin'):
+#            poses_idxs = []
+#            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+#                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+#                poses_idxs = sorted(poses_idxs)
+#            pose_idx = poses_idxs[int(index)]
+#            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
+#
+#    for idx, row in best_poses.iterrows():
+#        #if args.sf or args.sbcd or args.cd:
+#        if args.sf or ((args.sbcd or args.cd) and row['consensus']):
+#            if isligID:
+#                newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
+#            elif row['dir'] != '.':
+#                newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
+#            elif row['dir'] == '.' and len(dirs) > 1:
+#                newdir = args.resultsdir + '/pwd'
+#            else:
+#                newdir = args.resultsdir
+#            if not os.path.isdir(newdir):
+#                os.makedirs(newdir)
+# 
+#            if args.sbcd or args.cd:
+#                for idx, prgm in enumerate(programs_consensus):
+#                    save_best_poses(newdir, row, suffix='_'+prgm)
+#            else:
+#                save_best_poses(newdir, row)

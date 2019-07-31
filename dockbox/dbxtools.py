@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import numpy as np
 import nwalign as nw
 
@@ -96,6 +97,10 @@ def get_residues_coordinates(filename, indices):
 
 def compute_rmsd(file1, file2, rotmat=np.eye(3), trans1=np.zeros(3), trans2=np.zeros(3)):
     """Compute RMSD between 2 poses"""
+
+    for file in [file1, file2]:
+        if isinstance(file, float) and math.isnan(file):
+            return float('nan')
 
     # load coordinates of first pose (non-hydrogen atoms)
     coords1 = mol2.get_coordinates(file1, keep_h=False)

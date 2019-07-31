@@ -307,7 +307,8 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
     def do_final_cleanup(self, config):
 
         if config.docking.cleanup >= 2:
-            os.remove('poses/rec.pdb')
+            if os.path.isfile('poses/rec.pdb'):
+                os.remove('poses/rec.pdb')
             config_d = config.docking
             # iterate over all the binding sites
             for kdx in range(len(config_d.site)):
