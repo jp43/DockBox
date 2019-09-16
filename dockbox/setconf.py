@@ -8,7 +8,7 @@ known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'
 known_programs['scoring'] = known_programs['rescoring']
 
 single_run_scoring_programs = ['glide', 'dock']
-programs_handling_ions = ['vina', 'dock']
+programs_handling_ions = ['autodock', 'vina', 'dock']
 
 default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
 

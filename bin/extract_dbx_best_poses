@@ -29,6 +29,11 @@ parser.add_argument('-all-isomers',
     help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer. A "%s/%s/%s" architecture \
 of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
 
+parser.add_argument('-copy',
+    default=False,
+    action='store_true',
+    help='Copy best poses in folder.')
+
 parser.add_argument('-csvl',
     type=str,
     dest='csvfile_l',
@@ -61,11 +66,11 @@ parser.add_argument('-dirs',
     metavar=('DIR1', 'DIR2'),
     help='Directories considered for analysis. Should contain a folder called "poses". Default: curr. dir')
 
-parser.add_argument('-r',
-    dest='resultsdir',
+parser.add_argument('-label',
+    dest='label',
     default='results',
-    metavar='DIRECTORY NAME',
-    help='Name of results directory. Default: results')
+    metavar='LABEL NAME',
+    help='Name of results label. Default: results')
 
 group = parser.add_mutually_exclusive_group(required=False)
 
@@ -157,7 +162,7 @@ if args.csvfile_l:
 features_ids = []
 if isligID:
     features_ids += ['ligID']
-else:
+elif not istargetID and not isisomerID:
     features_ids += ['dir']
 if istargetID:
     features_ids += ['targetID']
@@ -206,7 +211,7 @@ for jdx, dir in enumerate(dirs):
 
                 if isligID:    
                     info_dir['ligID'].append(ligID)
-                else:
+                elif not istargetID and not isisomerID:
                     info_dir['dir'].append(dir)
                 if istargetID:
                     info_dir['targetID'].append(targetID)
@@ -263,18 +268,24 @@ else:
 groupby_columns = []
 if isligID:
     groupby_columns += ['ligID']
-else:
-    groupby_columns += ['dir']
 if not args.combine_targets and istargetID:
     groupby_columns += ['targetID']
 if isisomerID:
     groupby_columns += ['isomerID']
 
+if not isligID and not isisomerID:
+    if not istargetID:
+        groupby_columns += ['dir']
+    elif args.combine_targets:
+        poses['dummy'] = 0
+        groupby_columns += ['dummy']
+
 if args.sbcd or args.cd:
     best_poses = []
     for prgm in programs_consensus:
         if args.sbcd:
-            poses_groupby = poses.groupby(groupby_columns)
+            if groupby_columns:
+                poses_groupby = poses.groupby(groupby_columns)
             minidxs = poses_groupby[prgm].idxmin()
             # handle cases where all the scores provided by a program are nans (to be changed when istargetID or isisomerID is True)
             lignans = minidxs[minidxs.apply(np.isnan)]
@@ -298,6 +309,8 @@ if args.sbcd or args.cd:
         new_columns_names = [] # renaming columns according to the scoring function
         for col in best_poses_prgm.columns.values:
             if col in groupby_columns+['name']:
+                new_columns_names.append(col)
+            elif not isligID and col == 'dir':
                 new_columns_names.append(col)
             elif args.sbcd and col == prgm:
                 new_columns_names.append(prgm)
@@ -330,7 +343,6 @@ if args.sbcd or args.cd:
     rmsd_columns = [col for col in best_poses_merged.columns.values if col.startswith('rmsd')]
     best_poses_merged = best_poses_merged.assign(consensus=(best_poses_merged[rmsd_columns]<=args.cutoff).all(axis=1))
     best_poses = best_poses_merged
-
 elif args.sf:
     poses_groupby = poses.groupby(groupby_columns)
     if len(args.sf) > 1:
@@ -361,8 +373,8 @@ if istargetID and 'targetID' not in best_poses.columns.values:
 if features_ids_sorted:
     best_poses = best_poses.sort_values(features_ids_sorted)
 
-#shutil.rmtree(args.resultsdir, ignore_errors=True)
-#os.mkdir(args.resultsdir)
+shutil.rmtree(args.label, ignore_errors=True)
+os.mkdir(args.label)
 
 features_csv = []
 if args.csvfile_l:
@@ -378,7 +390,7 @@ if list(set(poses['site'])) != ['']:
 features_csv += scoring_functions_all + ['score']
 
 # TODO: add an option to save all the poses to .csv file
-#poses[features_csv].to_csv(args.resultsdir+'/poses.csv', index=False, float_format='%.3f')
+poses[features_csv].to_csv(args.label+'/poses.csv', index=False, float_format='%.3f')
 
 if best_poses is not None:
     if args.sbcd or args.cd:
@@ -408,7 +420,8 @@ if best_poses is not None:
         features_csv_best_poses = list(features_csv)
         if len(args.sf) > 1:
             features_csv_best_poses.append('_'.join(scoring_functions))
-    best_poses[features_csv_best_poses].to_csv(args.resultsdir+'.csv', index=False, float_format='%.3f')
+    filename = args.label + '/best_poses.csv'
+    best_poses[features_csv_best_poses].to_csv(filename, index=False, float_format='%.3f')
 
     if args.combine_targets and istargetID:
         features_ids.remove('targetID')
@@ -416,43 +429,44 @@ if best_poses is not None:
     if args.combine_isomers and isisomerID:
         features_ids.remove('isomerID')
 
-#    def save_best_poses(dir, row, suffix=''):
-#
-#        file_l = row['file_l'+suffix]
-#        shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
-#
-#        file_r = row['file_r'+suffix]
-#        # TODO: add an option for saving the target file
-#        shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
-#
-#        # saving ligand files prior to minimization
-#        instance = row['instance'+suffix]
-#        index = row['index_pose'+suffix]
-#        origindir = '/'.join(file_l.split('/')[:-2])
-#        if os.path.isdir(origindir+'/'+instance+'/origin'):
-#            poses_idxs = []
-#            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-#                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-#                poses_idxs = sorted(poses_idxs)
-#            pose_idx = poses_idxs[int(index)]
-#            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
-#
-#    for idx, row in best_poses.iterrows():
-#        #if args.sf or args.sbcd or args.cd:
-#        if args.sf or ((args.sbcd or args.cd) and row['consensus']):
-#            if isligID:
-#                newdir = args.resultsdir + '/' + '/'.join(row[features_ids])
-#            elif row['dir'] != '.':
-#                newdir = args.resultsdir + '/' + '_'.join(row['dir'].split('/'))
-#            elif row['dir'] == '.' and len(dirs) > 1:
-#                newdir = args.resultsdir + '/pwd'
-#            else:
-#                newdir = args.resultsdir
-#            if not os.path.isdir(newdir):
-#                os.makedirs(newdir)
-# 
-#            if args.sbcd or args.cd:
-#                for idx, prgm in enumerate(programs_consensus):
-#                    save_best_poses(newdir, row, suffix='_'+prgm)
-#            else:
-#                save_best_poses(newdir, row)
+    def copy_best_poses(dir, row, suffix=''):
+
+        file_l = row['file_l'+suffix]
+        shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
+
+        if 'file_r'+suffix in row:
+            file_r = row['file_r'+suffix]
+            # TODO: add an option for saving the target file
+            shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
+
+        # saving ligand files prior to minimization
+        instance = row['instance'+suffix]
+        index = row['index_pose'+suffix]
+        origindir = '/'.join(file_l.split('/')[:-2])
+        if os.path.isdir(origindir+'/'+instance+'/origin'):
+            poses_idxs = []
+            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+                poses_idxs = sorted(poses_idxs)
+            pose_idx = poses_idxs[int(index)]
+            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
+
+    if args.copy:
+        for idx, row in best_poses.iterrows():
+            if args.sf or ((args.sbcd or args.cd) and row['consensus']):
+                if isligID:
+                    newdir = args.label + '/' + '/'.join(row[features_ids])
+                elif row['dir'] != '.':
+                    newdir = args.label + '/' + '_'.join(row['dir'].split('/'))
+                elif row['dir'] == '.' and len(dirs) > 1:
+                    newdir = args.label + '/pwd'
+                else:
+                    newdir = args.label
+                if not os.path.isdir(newdir):
+                    os.makedirs(newdir)
+
+                if args.sbcd or args.cd:
+                    for idx, prgm in enumerate(programs_consensus):
+                        copy_best_poses(newdir, row, suffix='_'+prgm)
+                else:
+                    copy_best_poses(newdir, row)
