@@ -516,9 +516,3 @@ Below is another example of configuration file for *rundbx* used to dock on two 
 
 Note that the DOCKING section includes the label of the binding sites through the keyword *site*, here, site1 and site2. Each label refers to the section of the same name SITE1 and SITE2, respectively. 
 
-
-Using *extract_dbx_best_poses*
-******************************************************
-
-Coming soon.
-
