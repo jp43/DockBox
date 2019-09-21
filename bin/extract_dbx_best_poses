@@ -15,18 +15,24 @@ from dockbox.dbxtools import *
 # command-line arguments and options
 parser = argparse.ArgumentParser(description="Extract best docking poses after rundbx finished.")
 
-parser.add_argument('-all-targets',
-    dest='combine_targets',
-    action='store_true',
-    default=False,
-    help='Select best poses over all the targets. If not specified, extract best pose separately for each target. A "%s/%s/%s" architecture \
-of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
-
 parser.add_argument('-all-isomers',
     dest='combine_isomers',
     action='store_true',
     default=False,
     help='Select best poses over all the isomers. If not specified, extract best pose separately for every isomer. A "%s/%s/%s" architecture \
+of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
+
+parser.add_argument('-all-sites',
+    dest='combine_sites',
+    action='store_true',
+    default=False,
+    help='Select best poses over all the sites. If not specified, extract best pose separately for each site')
+
+parser.add_argument('-all-targets',
+    dest='combine_targets',
+    action='store_true',
+    default=False,
+    help='Select best poses over all the targets. If not specified, extract best pose separately for each target. A "%s/%s/%s" architecture \
 of the folders is assumed'%(ligdir_prefix,tardir_prefix,isodir_prefix))
 
 parser.add_argument('-copy',
@@ -238,8 +244,6 @@ for jdx, dir in enumerate(dirs):
                 if nscores != nposes:
                     raise ValueError("Number of poses different from number of scores (%s/%s)"%(dir,instance))
 
-    #print dir
-    #print firstidx+nposes-1
     # extract all scores
     for score_file in sorted(glob(dir+'/rescoring/*.score')):
         sf = os.path.basename(score_file).split('.')[0]
@@ -251,7 +255,6 @@ for jdx, dir in enumerate(dirs):
         with open(score_file, 'r') as sout:
             for line_s in sout:
                 info_dir[sf].append(float(line_s))
-        #print sf, len(info_dir[sf])
 
     df_dir = pd.DataFrame(info_dir)
     if args.docking_programs: 
@@ -259,7 +262,7 @@ for jdx, dir in enumerate(dirs):
     poses.append(df_dir)
 
 if poses:
-    poses = pd.concat(poses).reset_index()
+    poses = pd.concat(poses).reset_index(drop=True)
     if args.csvfile_l and isligID:
         poses = add_names(args.csvfile_l, poses)
 else:
@@ -272,6 +275,10 @@ if not args.combine_targets and istargetID:
     groupby_columns += ['targetID']
 if isisomerID:
     groupby_columns += ['isomerID']
+
+is_site = list(set(poses['site'])) != ['']
+if is_site and not args.combine_sites:
+    groupby_columns += ['site']
 
 if not isligID and not isisomerID:
     if not istargetID:
@@ -383,9 +390,7 @@ features_csv += features_ids
 features_csv += ['instance']
 #features_csv += ['file_l', 'file_r', 'instance']
 
-is_site = False
-if list(set(poses['site'])) != ['']:
-    is_site = True
+if is_site:
     features_csv.append('site')
 features_csv += scoring_functions_all + ['score']
 

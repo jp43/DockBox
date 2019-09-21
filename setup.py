@@ -24,7 +24,7 @@ ext_modules = [Extension(
     include_dirs=[numpy_include])]
 
 setup(name='dockbox',
-    version='1.2',
+    version='1.3',
     packages=['dockbox'],
     scripts=['bin/rundbx', 'bin/extract_dbx_best_poses'],
     install_requires=['mdkit', 'cython', 'numpy==1.8.0', 'pandas==0.19.0', 'nwalign'],
