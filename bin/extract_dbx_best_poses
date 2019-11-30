@@ -43,12 +43,13 @@ parser.add_argument('-copy',
 parser.add_argument('-csvl',
     type=str,
     dest='csvfile_l',
+    default='compounds.csv',
     metavar='FILE',
     help='Filename containing info about compounds. Used to add names of compounds. Default: none')
 
 parser.add_argument('-csvr',
     dest='csvfile_r',
-    default=None,
+    default='targets.csv',
     metavar='FILENAME',
     help='Filename containing info about targets. If none, will look for a receptor file in the "poses" folders.  Default: none')
 
@@ -77,6 +78,18 @@ parser.add_argument('-label',
     default='results',
     metavar='LABEL NAME',
     help='Name of results label. Default: results')
+
+parser.add_argument('-skip-errors',
+    dest='skip_errors',
+    action='store_true',
+    default=False,
+    help='Skip ligands that were not done')
+
+parser.add_argument('-site',
+    dest='sites',
+    nargs='+',
+    metavar=('SITE1', 'SITE2'),
+    help='Sites to be considered when extracting best poses')
 
 group = parser.add_mutually_exclusive_group(required=False)
 
@@ -113,8 +126,8 @@ dirs = []
 for dir in args.dirs:
     if os.path.isdir(dir+'/poses'):
         dirs.append(os.path.relpath(dir))
-    else:
-        raise ValueError('directory '+dir+'/poses does not exist!')
+    elif not args.skip_errors:
+        raise ValueError('directory '+dir+'poses does not exist!')
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
 if not istargetID and args.combine_targets:
@@ -244,9 +257,11 @@ for jdx, dir in enumerate(dirs):
                 if nscores != nposes:
                     raise ValueError("Number of poses different from number of scores (%s/%s)"%(dir,instance))
 
+    nposes += firstidx - 1
     # extract all scores
     for score_file in sorted(glob(dir+'/rescoring/*.score')):
         sf = os.path.basename(score_file).split('.')[0]
+        nscores = 0
         if jdx == 0:
             scoring_functions_all.append(sf)
         elif sf not in scoring_functions_all:
@@ -255,10 +270,16 @@ for jdx, dir in enumerate(dirs):
         with open(score_file, 'r') as sout:
             for line_s in sout:
                 info_dir[sf].append(float(line_s))
+                nscores += 1
+        #print nscores, nposes
+        if nscores != nposes:
+            info_dir[sf] = [float('nan') for idx in range(nposes)]
 
     df_dir = pd.DataFrame(info_dir)
     if args.docking_programs: 
         df_dir = df_dir[df_dir['program'].isin(args.docking_programs)]
+    if args.sites:
+        df_dir = df_dir[df_dir['site'].isin(["site%s"%idx_site for idx_site in args.sites])]
     poses.append(df_dir)
 
 if poses:
@@ -311,8 +332,6 @@ if args.sbcd or args.cd:
             poses_prgm = poses[poses['program']==prgm]
             poses_groupby = poses_prgm.groupby(groupby_columns)
             best_poses_prgm = poses_prgm.loc[poses_groupby['score'].idxmin()]
-        best_poses_prgm = best_poses_prgm.drop('index', axis=1)
-
         new_columns_names = [] # renaming columns according to the scoring function
         for col in best_poses_prgm.columns.values:
             if col in groupby_columns+['name']:
@@ -335,6 +354,15 @@ if args.sbcd or args.cd:
     for item in best_poses[1:]:
         best_poses_merged = best_poses_merged.merge(item, on=columns_to_be_merged, how='outer')
 
+    if args.cd: # handle cases when poses were generated with one program but not with the other one (only for CD)
+        for prgm in programs_consensus:
+            best_poses_merged_null = best_poses_merged[best_poses_merged['targetID_'+prgm].isnull()]
+            for idx, row in best_poses_merged_null.iterrows():
+                for prgm2 in programs_consensus:
+                    if isinstance(row['targetID_'+prgm2], str): # occuring when the target ID is not nan
+                        best_poses_merged.loc[idx,'targetID_'+prgm] = row['targetID_'+prgm2]
+                        break
+
     prgm_first = programs_consensus[0]
     if args.combine_targets:
         rmsd_rot_trans = get_rmsd_rotation_and_translations_all_targets(files_r)
@@ -353,8 +381,10 @@ if args.sbcd or args.cd:
 elif args.sf:
     poses_groupby = poses.groupby(groupby_columns)
     if len(args.sf) > 1:
-        mean = poses[scoring_functions].mean()
-        std = poses[scoring_functions].std()
+        # I don't want to include pathological cases in the mean and std (to be change for GOLD and SASA)
+        poses_for_mean = poses[~(poses[scoring_functions]>0).any(axis=1)]
+        mean = poses_for_mean[scoring_functions].mean()
+        std = poses_for_mean[scoring_functions].std()
         column_name = '_'.join(scoring_functions)
         poses[column_name] = ((poses[scoring_functions]-mean)/std).sum(axis=1)/len(args.sf)
         best_poses = poses.loc[poses_groupby[column_name].idxmin]
@@ -418,7 +448,10 @@ if best_poses is not None:
             else:
                 features_csv_best_poses.append('score_'+prgm)
             if is_site:
-                features_csv_best_poses.append('site_'+prgm)
+                if args.combine_sites:
+                    features_csv_best_poses.append('site_'+prgm)
+                else:
+                    features_csv_best_poses.append('site')
         features_csv_best_poses.extend([col for col in best_poses.columns.values if col.startswith('rmsd')])
         features_csv_best_poses.append('consensus')
     elif args.sf:
@@ -439,22 +472,22 @@ if best_poses is not None:
         file_l = row['file_l'+suffix]
         shutil.copyfile(file_l, dir+'/ligand%s.mol2'%suffix)
 
-        if 'file_r'+suffix in row:
-            file_r = row['file_r'+suffix]
-            # TODO: add an option for saving the target file
-            shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
+        #if 'file_r'+suffix in row:
+        #    file_r = row['file_r'+suffix]
+        #    # TODO: add an option for saving the target file
+        #    shutil.copyfile(file_r, dir+'/protein%s.pdb'%suffix)
 
-        # saving ligand files prior to minimization
-        instance = row['instance'+suffix]
-        index = row['index_pose'+suffix]
-        origindir = '/'.join(file_l.split('/')[:-2])
-        if os.path.isdir(origindir+'/'+instance+'/origin'):
-            poses_idxs = []
-            for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
-                poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-                poses_idxs = sorted(poses_idxs)
-            pose_idx = poses_idxs[int(index)]
-            shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
+        ## saving ligand files prior to minimization
+        #instance = row['instance'+suffix]
+        #index = row['index_pose'+suffix]
+        #origindir = '/'.join(file_l.split('/')[:-2])
+        #if os.path.isdir(origindir+'/'+instance+'/origin'):
+        #    poses_idxs = []
+        #    for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+        #        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
+        #        poses_idxs = sorted(poses_idxs)
+        #    pose_idx = poses_idxs[int(index)]
+        #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
 
     if args.copy:
         for idx, row in best_poses.iterrows():

@@ -24,9 +24,16 @@ class Dock(method.DockingMethod):
         super(Dock, self).__init__(instance, site, options)
         self.options['center'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"' # set box center
 
+        self.options['site'] = site[0]
+
         # set box size
         self.options['boxsize'] = map(float, map(str.strip, site[2].split(',')))
         self.options['sphgen_radius'] = str(max(self.options['boxsize'])/2)
+
+        if self.options['site'] is None:
+            self.options['dockdir'] = 'dock'
+        else:
+            self.options['dockdir'] = 'dock.' + self.options['site']
 
     def write_rescoring_script(self, filename, file_r, files_l):
         """Rescore using DOCK6 grid scoring function"""
@@ -172,7 +179,7 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in > dock.out""" % locals()
                 file.write(script)
         else:
-            grid_prefix = self.options['grid_dir'] + '/grid'
+            grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
             # check if grid file exists
             if not os.path.isfile(grid_prefix+'.in'):
                 raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
@@ -398,12 +405,12 @@ dock6 -i dock6.in"""% locals()
                 file.write(script)
 
         else:
-            grid_prefix = self.options['grid_dir'] + '/grid'
+            grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
             # check if grid file exists
             if not os.path.isfile(grid_prefix+'.in'):
                 raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
 
-            sphfile = self.options['grid_dir'] + '/selected_spheres.sph'
+            sphfile = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/selected_spheres.sph'
             # check if grid file exists
             if not os.path.isfile(sphfile):
                 raise IOError('No selected_spheres.sph file detected in specified location %s'%self.options['grid_dir'])
