@@ -318,6 +318,8 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                             os.remove(item)
                         elif os.path.isdir(item):
                             shutil.rmtree(item)
+            if config.docking.cleanup == 3:
+                shutil.rmtree('poses', ignore_errors=True)
         os.remove(config.input_file_l)
 
     def run_docking(self, config, args):
@@ -340,12 +342,10 @@ cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_
 
         if args.prepare_only:
             return
-
         tcpu2 = time.time()
         print "Docking procedure done. Total time needed: %i s" %(tcpu2-tcpu1)
 
     def run(self):
-
         parser = self.create_arg_parser()
         args = parser.parse_args()    
 

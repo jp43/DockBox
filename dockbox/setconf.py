@@ -145,10 +145,10 @@ Make sure the program has been installed and is in your PATH!'%(exe, program))
                 return 0
             elif value == 'yes' or value == '1':
                 return 1
-            elif value == '2':
-                return 2
+            elif value == '2' or value == '3':
+                return int(value)
             else:
-                raise ValueError("cleanup option in section DOCKING should be yes, no or 0, 1 or 2!")
+                raise ValueError("cleanup option in section DOCKING should be yes, no or 0 to 3!")
         else:
             return default
 
