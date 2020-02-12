@@ -4,7 +4,7 @@ import stat
 from glob import glob
 import shutil
 import subprocess
-import setconf
+import configure
 
 from mdkit.amber import minimization
 from mdkit.utility import mol2
@@ -103,7 +103,7 @@ class DockingMethod(object):
         # change directory
         os.chdir(scordir)
 
-        if self.program in setconf.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
+        if self.program in configure.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
             # if the program rescores in one run, provides a list of files
             files_l = [files_l]
 
@@ -123,7 +123,7 @@ class DockingMethod(object):
                     pass
 
                 # (C) extract docking results
-                if self.program in setconf.single_run_scoring_programs:
+                if self.program in configure.single_run_scoring_programs:
                     nligands = len(files_l[0])
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:

@@ -16,7 +16,7 @@ from mdkit.utility import mol2
 from mdkit.amber.ambertools import load_PROTON_INFO
 from mdkit.amber.ambertools import load_atomic_ions
 
-import setconf
+import configure
 
 class DockingConfig(object):
 
@@ -53,10 +53,10 @@ class DockingConfig(object):
         self.input_file_l = os.path.abspath(new_file_l)
 
         if task == 'docking':
-            self.docking = setconf.DockingSetup(config)
-            self.rescoring = setconf.RescoringSetup(config)
+            self.docking = configure.DockingSetup(config)
+            self.rescoring = configure.RescoringSetup(config)
         elif task == 'scoring':
-            self.scoring = setconf.ScoringSetup(config)
+            self.scoring = configure.ScoringSetup(config)
         else:
             raise ValueError("Task should be one of docking or scoring")
 
@@ -79,7 +79,7 @@ class DockingConfig(object):
                     resname = line[17:20].strip()
                     if resname in ions_info:
                         for instance, program, options in self.docking.instances:
-                            if program not in setconf.programs_handling_ions:
+                            if program not in configure.programs_handling_ions:
                                 sys.exit("Ion %s found in structure %s! DockBox is not configured to apply %s with ions!" %(resname, filename, program))
                     elif resname not in proton_info or line.startswith('HETATM'):
                         sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
