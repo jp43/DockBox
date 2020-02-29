@@ -188,7 +188,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 site = config_r.site['site'+str(kdx+1)]
 
                 # get complex filenames
-                files_l = [os.path.abspath('../'+posedir+'/lig-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
+                files_l = [os.path.abspath('../'+posedir+'/pose-%s.mol2'%idx) for idx in range(nposes[kdx], nposes[kdx+1])]
                 # get docking class
                 ScoringClass = getattr(sys.modules[program], program.capitalize())
 
@@ -272,13 +272,13 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 if bs[0]:
                     instdir += '.' + bs[0]                
                 poses_idxs = []
-                for filename in glob(instdir+'/lig-*.mol2'):
+                for filename in glob(instdir+'/pose-*.mol2'):
                     poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
                 poses_idxs = sorted(poses_idxs)
                 nposes_idxs = len(poses_idxs)
 
                 for idx, pose_idx in enumerate(poses_idxs):
-                    shutil.copyfile(instdir+'/lig-%s.mol2'%pose_idx, posedir+'/lig-%s.mol2'%(idx+sh))
+                    shutil.copyfile(instdir+'/pose-%s.mol2'%pose_idx, posedir+'/pose-%s.mol2'%(idx+sh))
 
                 # update info
                 info['program'].append(name)
@@ -338,7 +338,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 # create docking instance and run docking
                 DockingInstance = DockingClass(instance, config_d.site['site'+str(kdx+1)], options)
                 DockingInstance.run_docking(config.input_file_r, config.input_file_l, minimize_options=config_d.minimize, \
-cleanup=config_d.cleanup, cutoff_clustering=config_d.cutoff_clustering, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
+cleanup=config_d.cleanup, prepare_only=args.prepare_only, skip_docking=args.skip_docking)
 
         if args.prepare_only:
             return

@@ -1,11 +1,11 @@
 import os
 import sys
-from glob import glob
 import shutil
 import subprocess
-import autodock
+from glob import glob
 
 from mdkit.utility import mol2
+import autodock
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
@@ -87,39 +87,36 @@ vina --score_only --config vina.config > vina.out"""% locals()
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""
 
-        try:
-            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-            self.update_output_mol2files(sample=input_file_l)
-            poses_extracted = True
-        except:
-            mol2files = glob('lig-*.mol2')
-            if mol2files: # remove poses if exist
-                for mol2file in mol2files:
-                    os.remove(mol2file)
-            poses_extracted = False
-
+        poses_extracted = False
         if os.path.exists('lig_out.pdbqt'):
-            # extract structures from .pdbqt file 
-            with open('lig_out.pdbqt','r') as pdbqtf:
+            try:
+                subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                self.update_output_mol2files(sample=input_file_l)
+                poses_extracted = True
+            except:
+                for mol2file in glob('pose-*.mol2'):
+                    os.remove(mol2file)
+                poses_extracted = False
+
+        if poses_extracted:
+            with open('lig_out.pdbqt','r') as dlgf:
                 with open(file_s, 'w') as sf:
-                    for line in pdbqtf:
+                    for line in dlgf:
                         if line.startswith('REMARK VINA RESULT:'):
-                            if poses_extracted:
-                                score = float(line[19:].split()[0])
-                                print >> sf, score
-        else: 
+                            score = line[19:].split()[0].strip()
+                            sf.write(score+'\n')
+        else:
             open(file_s, 'w').close()
 
     def write_rescoring_script(self, filename, file_r, file_l):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
     
     def extract_rescoring_results(self, filename):
-
         with open(filename, 'a') as ff:
             with open('vina.out', 'r') as outf:
                 for line in outf:
                     if line.startswith('Affinity:'):
-                        print >> ff, line.split()[1]
+                        ff.write(line.split()[1].strip()+'\n')
         filenames = ['lig.pdbqt', 'target.pdbqt']
         for ff in filenames:
             if os.path.isfile(ff):

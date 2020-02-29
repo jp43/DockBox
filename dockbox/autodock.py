@@ -18,13 +18,13 @@ class ADBased(method.DockingMethod):
 
     def update_output_mol2files(self, sample=None):
         # number of mol2 files generated
-        n_files_l = len(glob('lig-*.mol2'))
+        n_files_l = len(glob('pose-*.mol2'))
 
         mgltools_path = subprocess.check_output('which prepare_ligand4.py', shell=True, executable='/bin/bash')
         mgltools_path = '/'.join(mgltools_path.split('/')[:-3]) 
 
         for idx in range(n_files_l):
-            mol2file = 'lig-%s.mol2'%(idx+1)
+            mol2file = 'pose-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, mol2file, ADupdate=sample, unique=True, mask=['h','H'])
             mol2.arrange_hydrogens(mol2file, 'tmp.mol2', path=mgltools_path)
             shutil.move('tmp.mol2', mol2file)
@@ -244,26 +244,24 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
         """Extract output structures in .mol2 formats"""
 
-        try:
-            subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
-            self.update_output_mol2files(sample=input_file_l)
-            poses_extracted = True
-        except:
-            mol2files = glob('lig-*.mol2')
-            if mol2files: # remove poses if exist
-                for mol2file in mol2files:
-                    os.remove(mol2file)
-            poses_extracted = False
-
+        poses_extracted = False
         if os.path.exists('dock.dlg'):
+            try:
+                subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                self.update_output_mol2files(sample=input_file_l)
+                poses_extracted = True
+            except:
+                for mol2file in glob('pose-*.mol2'):
+                    os.remove(mol2file)
+                poses_extracted = False
+
+        if poses_extracted:
             with open('dock.dlg','r') as dlgf:
                 with open(file_s, 'w') as sf:
-                    line = '' # initialize line
                     for line in dlgf:
                         if line.startswith('DOCKED: USER    Estimated Free Energy of Binding'):
-                            if poses_extracted:
-                                score = float(line.split()[8])
-                                print >> sf, score
+                            score = line.split()[8].strip()
+                            sf.write(score+'\n')
                         if 'CLUSTERING HISTOGRAM' in line:
                             break
         else:
@@ -274,12 +272,12 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         with open(filename, 'a') as ff:
             if os.path.exists('dock.dlg'):
                 with open('dock.dlg', 'r') as outf:
-                    has_fe_line = False
+                    has_score_line = False
                     for line in outf:
                         if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
-                            print >> ff, line.split()[8]
-                            has_fe_line = True
-                    if not has_fe_line:
-                        print >> ff, 'NaN'
+                            ff.write(line.split()[8].strip()+'\n')
+                            has_score_line = True
+                    if not has_score_line:
+                        ff.write('NaN\n')
             else:
-                print >> ff, 'NaN'
+                ff.write('NaN\n')

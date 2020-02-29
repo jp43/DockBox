@@ -40,26 +40,28 @@ class Dock(method.DockingMethod):
         locals().update(self.options)
         self.write_script_ligand_prep()
 
-        # cat mol2 files in a single mol2
-        file_l_all = 'lig_all.mol2'
+        # cat mol2 files into a single mol2
+        file_all_poses = 'poses.mol2'
 
         if self.options['charge_method']:
             amber_version = utils.check_amber_version()
-            ambertools.run_antechamber(files_l[0], 'lig-1.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
+            ambertools.run_antechamber(files_l[0], 'pose-1.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
         else:
-            shutil.copyfile(files_l[0], 'lig-1.mol2')
+            shutil.copyfile(files_l[0], 'pose-1.mol2')
 
         for idx, file_l in enumerate(files_l):
             if idx > 0:
                 if self.options['charge_method']:
                     # if not first one, do not regenerate the charges, copy charges generated the first time
                     coords_l = mol2.get_coordinates(file_l)
-                    struct = mol2.Reader('lig-1.mol2').next()
+                    struct = mol2.Reader('pose-1.mol2').next()
                     struct = mol2.replace_coordinates(struct, coords_l)
-                    mol2.Writer().write('lig-%i.mol2'%(idx+1), struct)
+                    mol2.Writer().write('pose-%i.mol2'%(idx+1), struct)
                 else:
-                    shutil.copyfile(file_l, 'lig-%i.mol2'%(idx+1))
-            subprocess.check_output("cat lig-%i.mol2 >> %s"%(idx+1, file_l_all), shell=True)
+                    shutil.copyfile(file_l, 'pose-%i.mol2'%(idx+1))
+            subprocess.check_output("cat pose-%i.mol2 >> %s"%(idx+1, file_all_poses), shell=True)
+            if idx > 0:
+                os.remove('pose-%i.mol2'%(idx+1))
 
         if self.options['grid_dir'] is None:
             with open(filename, 'w') as file:
@@ -96,11 +98,11 @@ X
 target_noH_site.sph" > INSPH
 sphgen_cpp
 
-# shift ligand coordintates
-python prepare_ligand_dock.py lig-1.mol2 lig.mol2 %(center)s
+# shift ligand coordinates
+python prepare_ligand_dock.py pose-1.mol2 pose-1-centered.mol2 %(center)s
 
 # selecting spheres within a user-defined radius (sphgen_radius)
-sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
+sphere_selector target_noH_site.sph pose-1-centered.mol2 %(sphgen_radius)s
 
 # create box - the second argument in the file showbox.in
 # is the extra margin to also be enclosed to the box (angstroms)
@@ -137,7 +139,7 @@ score_grid_prefix grid
 contact_cutoff_distance 4.5" > grid.in
 grid -i grid.in
 
-echo "ligand_atom_file %(file_l_all)s
+echo "ligand_atom_file %(file_all_poses)s
 limit_max_ligands no
 skip_molecule no
 read_mol_solvation no
@@ -170,7 +172,7 @@ atom_model all
 vdw_defn_file $vdwfile
 flex_defn_file $flexfile
 flex_drive_file $flexdfile
-ligand_outfile_prefix lig_out
+ligand_outfile_prefix poses_out
 write_orientations no
 num_scored_conformers 1
 rank_ligands no" > dock6.in
@@ -186,15 +188,12 @@ dock6 -i dock6.in > dock.out""" % locals()
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 
-# shift ligand coordintates
-python prepare_ligand_dock.py lig-1.mol2 lig.mol2 %(center)s
-
 dock6path=`which dock6`
 vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
 flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
 flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
 
-echo "ligand_atom_file %(file_l_all)s
+echo "ligand_atom_file %(file_all_poses)s
 limit_max_ligands no
 skip_molecule no
 read_mol_solvation no
@@ -227,7 +226,7 @@ atom_model all
 vdw_defn_file $vdwfile
 flex_defn_file $flexfile
 flex_drive_file $flexdfile
-ligand_outfile_prefix lig_out
+ligand_outfile_prefix poses_out
 write_orientations no
 num_scored_conformers 1
 rank_ligands no" > dock6.in
@@ -243,9 +242,9 @@ dock6 -i dock6.in > dock.out""" % locals()
 
         if self.options['charge_method']:
             amber_version = utils.check_amber_version()
-            ambertools.run_antechamber(file_l, 'lig_ref.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
+            ambertools.run_antechamber(file_l, 'ligand-ref.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
         else:
-            shutil.copyfile(file_l, 'lig_ref.mol2')
+            shutil.copyfile(file_l, 'ligand-ref.mol2')
 
         if self.options['grid_dir'] is None:
             # write autodock script
@@ -283,11 +282,11 @@ X
 target_noH_site.sph" > INSPH
 sphgen_cpp
 
-# shift ligand coordintates
-python prepare_ligand_dock.py lig_ref.mol2 lig.mol2 %(center)s
+# shift ligand coordinates
+python prepare_ligand_dock.py ligand-ref.mol2 ligand-ref-centered.mol2 %(center)s
 
 # selecting spheres within a user-defined radius (sphgen_radius)
-sphere_selector target_noH_site.sph lig.mol2 %(sphgen_radius)s
+sphere_selector target_noH_site.sph ligand-ref-centered.mol2 %(sphgen_radius)s
 
 # create box - the second argument in the file showbox.in
 # is the extra margin to also be enclosed to the box (angstroms)
@@ -325,7 +324,7 @@ contact_cutoff_distance 4.5" > grid.in
 grid -i grid.in
 
 # flexible docking using grid score as primary score and no secondary score
-echo "ligand_atom_file lig.mol2
+echo "ligand_atom_file ligand-ref-centered.mol2
 limit_max_ligands no
 skip_molecule no
 read_mol_solvation no
@@ -392,7 +391,7 @@ atom_model all
 vdw_defn_file $vdwfile
 flex_defn_file $flexfile
 flex_drive_file $flexdfile
-ligand_outfile_prefix lig_out
+ligand_outfile_prefix poses_out
 write_orientations no
 num_scored_conformers %(num_scored_conformers)s
 write_conformations no
@@ -417,8 +416,8 @@ dock6 -i dock6.in"""% locals()
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
 
-# shift ligand coordintates
-python prepare_ligand_dock.py lig_ref.mol2 lig.mol2 %(center)s
+# shift ligand coordinates
+python prepare_ligand_dock.py ligand-ref.mol2 ligand-ref-centered.mol2 %(center)s
 
 dock6path=`which dock6`
 vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
@@ -426,7 +425,7 @@ flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters
 flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
 
 # flexible docking using grid score as primary score and no secondary score
-echo "ligand_atom_file lig.mol2
+echo "ligand_atom_file ligand-ref-centered.mol2
 limit_max_ligands no
 skip_molecule no
 read_mol_solvation no
@@ -493,7 +492,7 @@ atom_model all
 vdw_defn_file $vdwfile
 flex_defn_file $flexfile
 flex_drive_file $flexdfile
-ligand_outfile_prefix lig_out
+ligand_outfile_prefix poses_out
 write_orientations no
 num_scored_conformers %(num_scored_conformers)s
 write_conformations no
@@ -504,24 +503,23 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in"""% locals()
                 file.write(script)
 
-
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
     
         # save scores
-        if os.path.isfile('lig_out_scored.mol2'):
-            with open('lig_out_scored.mol2', 'r') as ffin:
+        if os.path.isfile('poses_out_scored.mol2'):
+            with open('poses_out_scored.mol2', 'r') as ffin:
                 with open(file_s, 'w') as ffout:
                     idx = 0
                     for line in ffin:
                         if line.startswith('##########    Grid Score:'):
-                            print >> ffout, line.split()[3]
+                            ffout.write(line.split()[3]+'\n')
                             idx += 1
                         if idx == int(self.options['nposes']):
                             break 
 
             # create multiple mol2 files
-            ligname = reader.open('lig_out_scored.mol2').ligname
-            mol2.update_mol2file('lig_out_scored.mol2', 'lig-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
+            ligname = reader.open('poses_out_scored.mol2').ligname
+            mol2.update_mol2file('poses_out_scored.mol2', 'pose-.mol2', ligname=ligname, multi=True, last=int(self.options['nposes']))
         else:
             open(file_s, 'w').close()
 

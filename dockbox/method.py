@@ -131,20 +131,20 @@ class DockingMethod(object):
             open('score.out', 'w').close()
 
         os.chdir(curdir)
-        return scordir + '/score.out'
+        return rescordir + '/score.out'
 
     def get_output_mol2files(self):
         """Get output mol2files sorted by pose ranking after docking"""
 
         filenames_idxs = []
-        for filename in glob('lig-*.mol2'):
+        for filename in glob('pose-*.mol2'):
             suffix, ext = os.path.splitext(filename)
             filenames_idxs.append(int(suffix.split('-')[-1]))
         filenames_idxs = sorted(filenames_idxs)
 
         mol2files = []
         for idx in filenames_idxs:
-            mol2files.append('lig-%s.mol2'%idx)
+            mol2files.append('pose-%s.mol2'%idx)
         return mol2files
 
     def backup_files(self, dir):
@@ -163,7 +163,7 @@ class DockingMethod(object):
             with open(file_s, 'r') as sf:
                 for idx, line in enumerate(sf):
                     if idx not in indices:
-                        new_content.append(idx)
+                        new_content.append(line)
             if nligands:
                 # consistency check
                 assert nligands == idx+1, "number of ligand mol2files should be equal to number of lines in score.out"
@@ -183,11 +183,10 @@ ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_o
             failed_idxs = []
             # extract results from minimization and purge out
             for idx, filename_before_min in enumerate(mol2files):
-                suffix, ext = os.path.split(filename_before_min)
+                suffix, ext = os.path.splitext(filename_before_min)
                 filename = 'em/' + suffix + '-out' + ext
                 if os.path.isfile(filename): # the minimization succeeded
                     shutil.copyfile(filename, filename_before_min)
-
                 else: # the minimization failed
                     os.remove(filename_before_min)
                     failed_idxs.append(idx)
@@ -238,7 +237,7 @@ ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_o
     def cleanup(self):
         """Remove all intermediate files"""
         for filename in glob('*'):
-            if not filename.startswith('lig-') and filename != 'score.out':
+            if not filename.startswith('pose-') and filename != 'score.out':
                 os.remove(filename)
 
     def write_rescoring_script(self, script_name, file_r, file_l):

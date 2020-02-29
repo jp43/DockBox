@@ -10,7 +10,7 @@ known_programs['scoring'] = known_programs['rescoring']
 single_run_scoring_programs = ['glide', 'dock']
 programs_handling_ions = ['autodock', 'vina', 'dock']
 
-default_minimize_options = {'charge_method': 'gas', 'ncyc': 5000, 'maxcyc': 10000, 'cut': 999.0, 'solvent': 'vacuo'}
+default_minimize_options = {'charge_method': 'gas', 'ncyc': 1000, 'maxcyc': 2000, 'cut': 999.0, 'solvent': 'vacuo'}
 
 path_options = {'dock': ['grid_dir']}
 
@@ -160,11 +160,6 @@ class DockingSetup(ConfigSetup):
 
         self.cleanup = self.get_value_cleanup_option(config, 'DOCKING')
         self.minimize = self.set_minimization_options(config)
-
-        if config.has_option('DOCKING', 'clustering'):
-            self.cutoff_clustering = config.getfloat('DOCKING', 'clustering')
-        else:
-            self.cutoff_clustering = 0.0
 
     def set_minimization_options(self, config):
         """set options for minimization"""
