@@ -88,7 +88,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
         """Extract output structures in .mol2 formats"""
 
         try:
-            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null',shell=True, executable='/bin/bash')
+            subprocess.check_output('babel -ipdbqt lig_out.pdbqt -omol2 lig-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
             self.update_output_mol2files(sample=input_file_l)
             poses_extracted = True
         except:

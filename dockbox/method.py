@@ -1,18 +1,20 @@
 import os
 import sys
 import stat
-from glob import glob
 import shutil
 import subprocess
-import configure
+
+from glob import glob
 
 from mdkit.amber import minimization
 from mdkit.utility import mol2
-from mdkit.amber import clustering
+
+import configure
 
 class DockingMethod(object):
 
     def __init__(self, instance, site, options):
+        """Initialize docking instance"""
 
         self.instance = instance
         self.site = site
@@ -20,8 +22,8 @@ class DockingMethod(object):
 
         self.program = self.__class__.__name__.lower()
 
-    def run_docking(self, file_r, file_l, minimize_options=None, cleanup=0, cutoff_clustering=0.0, prepare_only=False, skip_docking=False):
-        """Run docking on one receptor (file_r) and one ligand (file_l)"""
+    def run_docking(self, file_r, file_l, minimize_options=None, cleanup=0, prepare_only=False, skip_docking=False):
+        """Run docking one (file per ligand and receptor)"""
 
         curdir = os.getcwd()
         # find name for docking directory
@@ -59,7 +61,7 @@ class DockingMethod(object):
                 subprocess.check_output('./' + script_name + " &> " + self.program + ".log", shell=True, executable='/bin/bash')
             except subprocess.CalledProcessError as e:
                 print e
-                print "Check %s file for more details!"%(dockdir+'/'+self.program+'.log')
+                print "Error: check %s file for more details!"%(dockdir+'/'+self.program+'.log')
                 os.chdir(curdir)
                 return
 
@@ -75,9 +77,6 @@ class DockingMethod(object):
             self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup, **minimize_options)
         self.remove_out_of_range_poses('score.out')
 
-        if cutoff_clustering != 0.0:
-            self.remove_duplicates('score.out', cutoff=cutoff_clustering)
-
         # (D) remove intermediate files if required
         if cleanup >= 1:
             self.cleanup()
@@ -89,27 +88,26 @@ class DockingMethod(object):
         """Rescore multiple ligands on one receptor"""
 
         curdir = os.getcwd()
-        # find name for scoring directory
-        if 'name' in self.options:
-            scordir = self.options['name']
-        else:
-            scordir = self.instance
-
+        # get name of rescoring from instance
+        rescordir = self.instance
         if self.site[0]:
-            scordir += '.' + self.site[0]
-        shutil.rmtree(scordir, ignore_errors=True)
-        os.mkdir(scordir)
+            rescordir += '.' + self.site[0]
+
+        # overwrite previous directory if exists
+        shutil.rmtree(rescordir, ignore_errors=True)
+        os.mkdir(rescordir)
 
         # change directory
-        os.chdir(scordir)
+        os.chdir(rescordir)
 
+        mol2files = files_l
         if self.program in configure.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
             # if the program rescores in one run, provides a list of files
-            files_l = [files_l]
+            mol2files = [mol2files]
 
-        if files_l:
+        if mol2files:
             # iterate over all the poses
-            for idx, file_l in enumerate(files_l):
+            for idx, file_l in enumerate(mol2files):
                 # (A) write script
                 script_name = "run_scoring_" + self.program + ".sh"
                 self.write_rescoring_script(script_name, file_r, file_l)
@@ -122,9 +120,9 @@ class DockingMethod(object):
                     print e.output
                     pass
 
-                # (C) extract docking results
+                # (C) extract rescoring results
                 if self.program in configure.single_run_scoring_programs:
-                    nligands = len(files_l[0])
+                    nligands = len(file_l)
                     self.extract_rescoring_results('score.out', nligands=nligands)
                 else:
                     self.extract_rescoring_results('score.out')
@@ -135,131 +133,112 @@ class DockingMethod(object):
         os.chdir(curdir)
         return scordir + '/score.out'
 
+    def get_output_mol2files(self):
+        """Get output mol2files sorted by pose ranking after docking"""
 
-    def get_output_files_l(self):
-
-        poses_idxs = []
+        filenames_idxs = []
         for filename in glob('lig-*.mol2'):
-            poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
-        poses_idxs = sorted(poses_idxs)
+            suffix, ext = os.path.splitext(filename)
+            filenames_idxs.append(int(suffix.split('-')[-1]))
+        filenames_idxs = sorted(filenames_idxs)
 
-        files_l = []
-        for pose_idx in poses_idxs:
-            files_l.append('lig-%s.mol2'%pose_idx)
-
-        return files_l
+        mol2files = []
+        for idx in filenames_idxs:
+            mol2files.append('lig-%s.mol2'%idx)
+        return mol2files
 
     def backup_files(self, dir):
+        """Do a backup of output mol2files""" 
 
-        files_l = self.get_output_files_l()
+        mol2files = self.get_output_mol2files()
         shutil.rmtree(dir, ignore_errors=True)
         os.mkdir(dir)
-        for file_l in files_l:
-            shutil.copyfile(file_l, dir+'/'+file_l) 
+        for filename in mol2files:
+            shutil.copyfile(filename, dir+'/'+filename) 
+
+    def remove_scores_from_scorefile(self, file_s, indices, nligands=None):
+        """Remove scores of bad poses (failed minimization, out of the box...) from score.out"""
+        if os.path.exists(file_s):
+            new_content = []
+            with open(file_s, 'r') as sf:
+                for idx, line in enumerate(sf):
+                    if idx not in indices:
+                        new_content.append(idx)
+            if nligands:
+                # consistency check
+                assert nligands == idx+1, "number of ligand mol2files should be equal to number of lines in score.out"
+            with open(file_s, 'w') as sf:
+                for line in new_content:
+                    sf.write(line)
 
     def minimize_extracted_poses(self, file_r, file_s, cleanup=0, **minimize_options):
         """Perform AMBER minimization on extracted poses"""
 
-        files_l = self.get_output_files_l()
-        nfiles_l = len(files_l)
-
-        # get minimization options
-        charge_method = minimize_options['charge_method']
-        ncyc = minimize_options['ncyc']
-        maxcyc = minimize_options['maxcyc']
-        cut = minimize_options['cut']
-        amber_version = minimize_options['amber_version']
-
-        if files_l:
+        mol2files = self.get_output_mol2files()
+        if mol2files:
             # do energy minimization on ligand
-            minimization.do_minimization_after_docking(file_r, files_l, keep_hydrogens=True, charge_method=charge_method,\
-ncyc=ncyc, maxcyc=maxcyc, cut=cut, amber_version=amber_version)
+            minimization.do_minimization_after_docking(file_r, mol2files, keep_hydrogens=True, charge_method=minimize_options['charge_method'],\
+ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_options['cut'], amber_version=minimize_options['amber_version'])
 
-        failed_idxs = []
-        # extract results from minimization and purge out
-        for idx in range(nfiles_l):
-            mol2file = 'lig-%s-out.mol2'%(idx+1)
-            if os.path.isfile('em/'+mol2file): # the minimization succeeded
-                shutil.copyfile('em/'+mol2file, 'lig-%s.mol2'%(idx+1))
-            else: # the minimization failed
-                os.remove('lig-%s.mol2'%(idx+1))
-                failed_idxs.append(idx)
+            failed_idxs = []
+            # extract results from minimization and purge out
+            for idx, filename_before_min in enumerate(mol2files):
+                suffix, ext = os.path.split(filename_before_min)
+                filename = 'em/' + suffix + '-out' + ext
+                if os.path.isfile(filename): # the minimization succeeded
+                    shutil.copyfile(filename, filename_before_min)
 
-        if files_l:
-            if os.path.exists(file_s):
-                with open(file_s, 'r') as sf:
-                    with open('score.tmp.out', 'w') as sft:
-                        for idx, line in enumerate(sf):
-                            if idx not in failed_idxs:
-                                sft.write(line)
-                shutil.move('score.tmp.out', file_s)
+                else: # the minimization failed
+                    os.remove(filename_before_min)
+                    failed_idxs.append(idx)
+
+            # remove scores of failed poses
+            self.remove_scores_from_scorefile(file_s, failed_idxs, nligands=len(mol2files))
+
+            if failed_idxs:
+                # display warning message
+                failed_mol2files = [mol2files[idx] for idx in failed_idxs]
+                print "Warning: minimization of poses %s failed, poses were removed!"%(', '.join(failed_mol2files))
 
         if cleanup >= 1:
+            # if cleanup is more than 1, remove EM directory
             shutil.rmtree('em', ignore_errors=True)
 
     def remove_out_of_range_poses(self, file_s):
         """Get rid of poses which were predicted outside the box"""
 
-        files_l = self.get_output_files_l()
-
-        center = map(float, self.site[1].split(','))
-        boxsize = map(float, self.site[2].split(','))
-
-        out_of_range_idxs = []
-        for jdx, file_l in enumerate(files_l):
-            isout = False
-            coords = mol2.get_coordinates(file_l)
-            for kdx, coord in enumerate(coords):
-                for idx, xyz in enumerate(coord):
-                    # check if the pose is out of the box
-                    if abs(float(xyz)-center[idx]) > boxsize[idx]*1./2:
-                        isout = True
+        mol2files = self.get_output_mol2files()
+        if mol2files:
+            sitename, center, boxsize = self.site
+            # get values of docking box center and boxsize
+            center = map(float, center.split(','))
+            boxsize = map(float, boxsize.split(','))
+ 
+            out_of_range_idxs = []
+            for jdx, filename in enumerate(mol2files):
+                is_out = False
+                for coord in mol2.get_coordinates(filename):
+                    for idx, value in enumerate(coord):
+                        # check if the pose is out of the box
+                        if abs(value - center[idx]) > boxsize[idx]*1./2:
+                            is_out = True
+                            break
+                    if is_out:
+                        os.remove(filename)
+                        out_of_range_idxs.append(jdx)
                         break
-            if isout:
-                #print file_l, "out"
-                os.remove(file_l)
-                out_of_range_idxs.append(jdx)
+            # remove scores of failed poses
+            self.remove_scores_from_scorefile(file_s, out_of_range_idxs, nligands=len(mol2files))
 
-        if files_l:
-            if os.path.exists(file_s):
-                with open(file_s, 'r') as sf:
-                    with open('score.tmp.out', 'w') as sft:
-                        for idx, line in enumerate(sf):
-                            if idx not in out_of_range_idxs:
-                                sft.write(line)
-                shutil.move('score.tmp.out', file_s)
-
-    def remove_duplicates(self, file_s, cutoff=0.0):
-
-        files_l = self.get_output_files_l()
-        files_r = [file_r for idx in range(len(files_l))]
-
-        nfiles_l = len(files_l)
-        if nfiles_l > 1:
-            # cluster poses
-            clustering.cluster_poses(files_r, files_l, cutoff=cutoff, cleanup=True)
-
-            with open('clustering/info.dat', 'r') as ff:
-                for line in ff:
-                    if line.startswith('#Representative frames:'):
-                        rep_structures = map(int, line.split()[2:])
-
-            for idx, file_l in enumerate(files_l):
-                if idx+1 not in rep_structures:
-                    os.remove(file_l)
-
-            if os.path.exists(file_s):
-                with open(file_s, 'r') as sf:
-                    with open('score.tmp.out', 'w') as sft:
-                        for idx, line in enumerate(sf):
-                            if idx+1 in rep_structures:
-                                sft.write(line)
-
-                shutil.move('score.tmp.out', file_s)
+            if out_of_range_idxs:
+                # display warning message
+                out_of_range_mol2files = [mol2files[idx] for idx in out_of_range_idxs]
+                print "Warning: poses %s were found out of the box, poses were removed!"%(', '.join(out_of_range_mol2files))
 
     def cleanup(self):
+        """Remove all intermediate files"""
         for filename in glob('*'):
-            if os.path.isfile(filename) and not filename.startswith('lig-') and filename != 'score.out':
+            if not filename.startswith('lig-') and filename != 'score.out':
                 os.remove(filename)
 
     def write_rescoring_script(self, script_name, file_r, file_l):

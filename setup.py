@@ -10,13 +10,9 @@ try:
 except AttributeError:
     numpy_include = np.get_numpy_include()
 
-def exit_with_error(head, body=''):
-    _print_admonition('error', head, body)
-    sys.exit(1)
-
 # check Python version
 if not (sys.version_info[0] == 2 and sys.version_info[1] >= 6):
-    exit_with_error("You need Python 2.6.x or Python 2.7.x to install the DockBox package!")
+    sys.exit("You need Python 2.6.x or Python 2.7.x to install the DockBox package!")
 
 ext_modules = [Extension(
     name='dockbox.pyqcprot',
@@ -27,7 +23,7 @@ setup(name='dockbox',
     version='1.3',
     packages=['dockbox'],
     scripts=['bin/rundbx', 'bin/extract_dbx_best_poses'],
-    install_requires=['cython', 'numpy', 'pandas', 'nwalign'],
+    install_requires=['mdkit', 'pandas==0.23.4', 'nwalign', 'oldnumeric'],
     ext_modules = cythonize(ext_modules),
     license='LICENSE.txt',
     description='Platform package to simplify the use of docking programs and consensus methods',

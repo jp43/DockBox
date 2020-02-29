@@ -23,7 +23,6 @@ class Dock(method.DockingMethod):
 
         super(Dock, self).__init__(instance, site, options)
         self.options['center'] = '\"' + ' '.join(map(str.strip, site[1].split(','))) + '\"' # set box center
-
         self.options['site'] = site[0]
 
         # set box size
@@ -182,7 +181,7 @@ dock6 -i dock6.in > dock.out""" % locals()
             grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
             # check if grid file exists
             if not os.path.isfile(grid_prefix+'.in'):
-                raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
+                raise IOError('No grid file detected in specified location %s'%(self.options['grid_dir']+'/'+self.options['dockdir']))
 
             with open(filename, 'w') as file:
                 script ="""#!/bin/bash
