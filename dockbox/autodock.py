@@ -162,7 +162,7 @@ class Autodock(ADBased):
 
         if not rescoring:
             if 'ga_num_evals' not in self.options:
-                ga_num_evals_lines="""prepare_dpf4.py -l lig.pdbqt -r target.pdbqt -o dock.dpf -p move=lig.pdbqt
+                ga_num_evals_lines="""prepare_dpf4.py -l ligand.pdbqt -r target.pdbqt -o dock.dpf -p move=ligand.pdbqt
 ga_num_evals_flag=`python -c \"with open('dock.dpf') as ff:
     for line in ff:
         if line.startswith('torsdof'):
@@ -183,20 +183,20 @@ MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
 # prepare ligand
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_ligand_pdbqt.py lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o ligand.pdbqt
+python check_ligand_pdbqt.py ligand.pdbqt
 
 # prepare receptor
 prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
 python check_ions.py target.pdbqt prepare_receptor4.log
 
 # run autogrid
-prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
+prepare_gpf4.py -l ligand.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
 autogrid4 -p grid.gpf -l grid.glg
 
 # prepare .dpf file
 %(ga_num_evals_lines)s
-prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
+prepare_dpf4.py -l ligand.pdbqt -r target.pbdqt -o dock.dpf -p move=ligand.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
 
 # run autodock
 autodock4 -p dock.dpf -l dock.dlg"""% locals()
@@ -213,8 +213,8 @@ MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
 # prepare ligand
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_ligand_pdbqt.py lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o ligand.pdbqt
+python check_ligand_pdbqt.py ligand.pdbqt
 
 # prepare receptor only once
 if [ ! -f target.pdbqt ]; then
@@ -224,13 +224,13 @@ fi
 
 # run autogrid
 if [ ! -f grid.glg ]; then
-  prepare_gpf4.py -l lig.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
+  prepare_gpf4.py -l ligand.pdbqt -r target.pdbqt -o grid.gpf %(autogrid_options_flag)s
   autogrid4 -p grid.gpf -l grid.glg
 fi
 
 # prepare .dpf file
 if [ ! -f dock.dpf ]; then
-  prepare_dpf4.py -l lig.pdbqt -r target.pbdqt -o dock.dpf -p move=lig.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
+  prepare_dpf4.py -l ligand.pdbqt -r target.pbdqt -o dock.dpf -p move=ligand.pdbqt %(autodock_options_flag)s $ga_num_evals_flag
   # construct new dock.dpf with rescoring options only
   sed -e "1,/about/w tmp.dpf" dock.dpf > /dev/null
   mv tmp.dpf dock.dpf
@@ -247,7 +247,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         poses_extracted = False
         if os.path.exists('dock.dlg'):
             try:
-                subprocess.check_call('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True)
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:

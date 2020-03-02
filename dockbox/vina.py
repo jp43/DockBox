@@ -35,12 +35,12 @@ class Vina(autodock.ADBased):
         # write vina config file
         with open('vina.config', 'w') as cf:
             # write mandatory options
-            print >> cf, 'receptor = target.pdbqt'
-            print >> cf, 'ligand = lig.pdbqt'
+            cf.write('receptor = target.pdbqt\n')
+            cf.write('ligand = ligand.pdbqt\n')
             # write other options
             for key, value in self.options.iteritems():
                 if value is not None:
-                    print >> cf, key + ' = ' + value
+                    cf.write(key+' = '+value+'\n')
 
         # write vina script
         if not rescoring:
@@ -53,8 +53,8 @@ MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
 # prepare ligand
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_ligand_pdbqt.py lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o ligand.pdbqt
+python check_ligand_pdbqt.py ligand.pdbqt
 
 # prepare receptor
 prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt &> prepare_receptor4.log
@@ -73,8 +73,8 @@ MGLPATH=`python -c "print '/'.join('$MGLPATH'.split('/')[:-3])"`
 export PYTHONPATH=$PYTHONPATH:$MGLPATH
 
 # prepare ligand
-prepare_ligand4.py -l %(file_l)s -o lig.pdbqt
-python check_ligand_pdbqt.py lig.pdbqt
+prepare_ligand4.py -l %(file_l)s -o ligand.pdbqt
+python check_ligand_pdbqt.py ligand.pdbqt
 
 if [ ! -f target.pdbqt ]; then
   prepare_receptor4.py -U nphs_lps_waters -r %(file_r)s -o target.pdbqt > prepare_receptor4.log
@@ -89,9 +89,9 @@ vina --score_only --config vina.config > vina.out"""% locals()
         """Extract output structures in .mol2 formats"""
 
         poses_extracted = False
-        if os.path.exists('lig_out.pdbqt'):
+        if os.path.exists('ligand_out.pdbqt'):
             try:
-                subprocess.check_call('babel -ipdbqt lig_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                subprocess.check_output('babel -ipdbqt ligand_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True)
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:
@@ -100,7 +100,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
                 poses_extracted = False
 
         if poses_extracted:
-            with open('lig_out.pdbqt','r') as dlgf:
+            with open('ligand_out.pdbqt','r') as dlgf:
                 with open(file_s, 'w') as sf:
                     for line in dlgf:
                         if line.startswith('REMARK VINA RESULT:'):
@@ -118,7 +118,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
                 for line in outf:
                     if line.startswith('Affinity:'):
                         ff.write(line.split()[1].strip()+'\n')
-        filenames = ['lig.pdbqt', 'target.pdbqt']
+        filenames = ['ligand.pdbqt', 'target.pdbqt']
         for ff in filenames:
             if os.path.isfile(ff):
                 os.remove(ff)
