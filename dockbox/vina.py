@@ -9,7 +9,7 @@ import autodock
 
 required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
 
-default_settings = {'cpu': '1', 'num_modes': '9', 'energy_range': '3'}
+default_settings = {'cpu': '1', 'num_modes': '9', 'energy_range': '3', 'seed': None}
 
 class Vina(autodock.ADBased):
 
@@ -39,7 +39,8 @@ class Vina(autodock.ADBased):
             print >> cf, 'ligand = lig.pdbqt'
             # write other options
             for key, value in self.options.iteritems():
-                print >> cf, key + ' = ' + value
+                if value is not None:
+                    print >> cf, key + ' = ' + value
 
         # write vina script
         if not rescoring:

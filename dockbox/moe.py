@@ -239,12 +239,12 @@ endfunction;"""% locals()
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
-        subprocess.check_output(license.wrap_command("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'lig.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
+        subprocess.check_output(license.wrap_command("moebatch -exec \"db_ExportTriposMOL2 ['dock.mdb', 'poses.mol2', 'mol', []]\"", 'moe'), shell=True, executable='/bin/bash')
 
-        if os.path.exists('lig.mol2'):
+        if os.path.exists('poses.mol2'):
             ligname = reader.open(input_file_l).ligname
-            mol2.update_mol2file('lig.mol2', 'lig-.mol2', ligname=ligname, multi=True)
-            os.remove('lig.mol2')
+            mol2.update_mol2file('poses.mol2', 'pose-.mol2', ligname=ligname, multi=True)
+            os.remove('poses.mol2')
 
             # get SDF to extract scores
             sdffile = 'lig.sdf'

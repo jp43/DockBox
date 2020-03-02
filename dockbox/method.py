@@ -237,7 +237,7 @@ ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_o
     def cleanup(self):
         """Remove all intermediate files"""
         for filename in glob('*'):
-            if not filename.startswith('pose-') and filename != 'score.out':
+            if os.path.isfile(filename) and not filename.startswith('pose-') and filename != 'score.out':
                 os.remove(filename)
 
     def write_rescoring_script(self, script_name, file_r, file_l):
