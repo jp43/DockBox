@@ -6,10 +6,11 @@ import shutil
 import subprocess
 from glob import glob
 
+from mdkit.amber import ambertools
+
 from mdkit.utility import reader
 from mdkit.utility import mol2
 from mdkit.utility import utils
-from mdkit.amber import ambertools
 
 required_programs = ['chimera', 'dms', 'sphgen_cpp', 'sphere_selector', 'showbox', 'grid', 'dock6']
 

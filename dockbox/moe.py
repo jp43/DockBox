@@ -34,29 +34,28 @@ class Moe(method.DockingMethod):
     def write_docking_script(self, filename, file_r, file_l):
    
         self.write_moe_docking_script('moe_dock.svl')
-    
-        convertmol2_cmd = license.wrap_command("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
-db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
-    
-        dock_cmd = license.wrap_command("moebatch -run moe_dock.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
+
+        convertmol2_cmd = license.wrap_command("moebatch -exec \"mdb_key = db_Open ['ligand.mdb','create']; db_Close mdb_key;\
+db_ImportMOL2 ['%(file_l)s','ligand.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
+
+        dock_cmd = license.wrap_command("moebatch -run moe_dock.svl -rec %(file_r)s -lig ligand.mdb"%locals(), 'moe') # cmd for docking
 
         # write script
-        with open(filename, 'w') as file:
+        with open(filename, 'w') as ff:
             script ="""#!/bin/bash
 # convert .mol2 file to mdb
 %(convertmol2_cmd)s
 
 # run docking
-%(dock_cmd)s
-"""% locals()
-            file.write(script)
+%(dock_cmd)s\n"""% locals()
+            ff.write(script)
     
     def write_moe_docking_script(self, filename):
     
         locals().update(self.options)
     
         # write vina script
-        with open(filename, 'w') as file:
+        with open(filename, 'w') as ff:
             script ="""#svl
 function DockAtoms, DockFile;
 function DockMDBwAtoms, DockMDBwFile;
@@ -235,7 +234,7 @@ ArgvReset ArgvExpand argv;
     write ['Docking finished at {}.\\n', asctime []];
 
 endfunction;"""% locals()
-            file.write(script)
+            ff.write(script)
     
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
 
@@ -247,13 +246,13 @@ endfunction;"""% locals()
             os.remove('poses.mol2')
 
             # get SDF to extract scores
-            sdffile = 'lig.sdf'
+            sdffile = 'ligand.sdf'
             subprocess.check_output(license.wrap_command("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
             with open(sdffile, 'r') as sdff:
                 with open(file_s, 'w') as sf:
                     for line in sdff:
                         if line.startswith("> <S>"):
-                            print  >> sf, sdff.next().strip()
+                            sf.write(sdff.next().strip()+'\n')
             os.remove(sdffile)
         else:
             open(file_s, 'w').close()
@@ -308,9 +307,9 @@ endfunction;" > moe_rescoring.svl
                 file.write(script)
 
         else:
-            convertmol2_cmd = license.wrap_command("moebatch -exec \"mdb_key = db_Open ['lig.mdb','create']; db_Close mdb_key;\
-db_ImportMOL2 ['%(file_l)s','lig.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
-            rescoring_cmd = license.wrap_command("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig lig.mdb"%locals(), 'moe') # cmd for docking
+            convertmol2_cmd = license.wrap_command("moebatch -exec \"mdb_key = db_Open ['ligand.mdb','create']; db_Close mdb_key;\
+db_ImportMOL2 ['%(file_l)s','ligand.mdb', 'molecule']\""%locals(), 'moe') # create mdb for ligand
+            rescoring_cmd = license.wrap_command("moebatch -run moe_rescoring.svl -rec %(file_r)s -lig ligand.mdb"%locals(), 'moe') # cmd for docking
 
             # write vina script
             with open(filename, 'w') as file:
@@ -470,27 +469,27 @@ endfunction;" > moe_rescoring.svl
                         is_interaction_energy = False
                         for line in logf:
                             if line.startswith("Interaction energy:"):
-                                print >> sf, line.split()[-2]
+                                sf.write(line.split()[-2]+'\n')
                                 is_interaction_energy = True
                                 break
                         if not is_interaction_energy:
-                            print >> sf, 'NaN'
+                            sf.write('NaN\n')
                 else:
-                     print >> sf, 'NaN'
+                     sf.write('NaN\n')
         else:
             # get SDF to extract scores
-            sdffile = 'lig.sdf'
+            sdffile = 'ligand.sdf'
             subprocess.check_output(license.wrap_command("moebatch -exec \"db_ExportSD ['dock.mdb', '%s', ['mol','S'], []]\""%sdffile, 'moe'), shell=True, executable='/bin/bash')
             with open(file_s, 'a') as sf:
                 if os.path.exists(sdffile):
                     with open(sdffile, 'r') as sdff:
                         for line in sdff:
                             if line.startswith("> <S>"):
-                                print >> sf, sdff.next().strip()
+                                sf.write(sdff.next().strip()+'\n')
                                 break
                         os.remove(sdffile)
                 else:
-                    print >> sf, 'NaN'
+                    sf.write('NaN\n')
 
 def write_sitefinder_script(filename, file_r, args):
     

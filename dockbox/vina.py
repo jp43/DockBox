@@ -91,7 +91,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
         poses_extracted = False
         if os.path.exists('ligand_out.pdbqt'):
             try:
-                subprocess.check_output('babel -ipdbqt ligand_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                subprocess.check_output('babel -ipdbqt ligand_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:

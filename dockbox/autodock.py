@@ -247,7 +247,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         poses_extracted = False
         if os.path.exists('dock.dlg'):
             try:
-                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True)
+                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:
@@ -271,9 +271,9 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         """extract scores from .dlg file"""
         with open(filename, 'a') as ff:
             if os.path.exists('dock.dlg'):
-                with open('dock.dlg', 'r') as outf:
+                with open('dock.dlg', 'r') as dlgf:
                     has_score_line = False
-                    for line in outf:
+                    for line in dlgf:
                         if line.startswith('epdb: USER    Estimated Free Energy of Binding'):
                             ff.write(line.split()[8].strip()+'\n')
                             has_score_line = True
