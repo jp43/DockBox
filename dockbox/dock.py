@@ -64,12 +64,14 @@ class Dock(method.DockingMethod):
             if idx > 0:
                 os.remove('pose-%i.mol2'%(idx+1))
 
-        if self.options['grid_dir'] is None:
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
+        script ="""#!/bin/bash
 set -e
 
-# remove hydrogens from target
+# shift ligand coordinates
+python prepare_ligand_dock.py pose-1.mol2 pose-1-centered.mol2 %(center)s\n"""%locals()
+
+        if self.options['grid_dir'] is None:
+            script += """\n# remove hydrogens from target
 echo "delete element.H
 write format pdb #0 target_noH.pdb" > removeH.cmd
 chimera --nogui %(file_r)s removeH.cmd
@@ -98,9 +100,6 @@ X
 %(minimum_sphere_radius)s
 target_noH_site.sph" > INSPH
 sphgen_cpp
-
-# shift ligand coordinates
-python prepare_ligand_dock.py pose-1.mol2 pose-1-centered.mol2 %(center)s
 
 # selecting spheres within a user-defined radius (sphgen_radius)
 sphere_selector target_noH_site.sph pose-1-centered.mol2 %(sphgen_radius)s
@@ -178,18 +177,22 @@ write_orientations no
 num_scored_conformers 1
 rank_ligands no" > dock6.in
 
-dock6 -i dock6.in > dock.out""" % locals()
-                file.write(script)
+dock6 -i dock6.in > dock.out\n"""%locals()
+            file.write(script)
         else:
+            # get directory where grid files are located
             grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
+
             # check if grid file exists
-            if not os.path.isfile(grid_prefix+'.in'):
-                raise IOError('No grid file detected in specified location %s'%(self.options['grid_dir']+'/'+self.options['dockdir']))
+            if os.path.isfile(grid_prefix+'.in'):
+                # copy grid files to avoid opening the same file from multiple locations
+                for gridfile in glob(grid_prefix+'*'):
+                    basename = os.path.basename(gridfile)
+                    shutil.copyfile(gridfile, basename)
+            else:
+                raise ValueError('No grid file detected in specified location %s'%self.options['grid_dir'])
 
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
-
-dock6path=`which dock6`
+        script += """\ndock6path=`which dock6`
 vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
 flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
 flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
@@ -213,7 +216,7 @@ grid_score_secondary no
 grid_score_rep_rad_scale 1
 grid_score_vdw_scale 1
 grid_score_es_scale 1
-grid_score_grid_prefix %(grid_prefix)s
+grid_score_grid_prefix grid
 multigrid_score_secondary no
 dock3.5_score_secondary no
 continuous_score_secondary no
@@ -232,9 +235,12 @@ write_orientations no
 num_scored_conformers 1
 rank_ligands no" > dock6.in
 
-dock6 -i dock6.in > dock.out""" % locals()
+dock6 -i dock6.in > dock.out\n"""%locals()
+
+        # write DOCK6 rescoring script
+        with open(filename, 'w') as file:
                 file.write(script)
- 
+
     def write_docking_script(self, filename, file_r, file_l):
         """Dock using DOCK6 flexible docking with grid scoring as primary score"""
 
@@ -247,13 +253,14 @@ dock6 -i dock6.in > dock.out""" % locals()
         else:
             shutil.copyfile(file_l, 'ligand-ref.mol2')
 
-        if self.options['grid_dir'] is None:
-            # write autodock script
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
+        script ="""#!/bin/bash
 set -e
 
-# remove hydrogens from target
+# shift ligand coordinates
+python prepare_ligand_dock.py ligand-ref.mol2 ligand-ref-centered.mol2 %(center)s\n"""%locals()
+
+        if self.options['grid_dir'] is None:
+            script += """\n# remove hydrogens from target
 echo "delete element.H
 write format pdb #0 target_noH.pdb" > removeH.cmd
 chimera --nogui %(file_r)s removeH.cmd
@@ -283,9 +290,6 @@ X
 target_noH_site.sph" > INSPH
 sphgen_cpp
 
-# shift ligand coordinates
-python prepare_ligand_dock.py ligand-ref.mol2 ligand-ref-centered.mol2 %(center)s
-
 # selecting spheres within a user-defined radius (sphgen_radius)
 sphere_selector target_noH_site.sph ligand-ref-centered.mol2 %(sphgen_radius)s
 
@@ -297,11 +301,6 @@ selected_spheres.sph
 1
 target_noH_box.pdb" > showbox.in
 showbox < showbox.in
-
-dock6path=`which dock6`
-vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
-flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
-flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
 
 # create grid
 echo "compute_grids yes
@@ -323,6 +322,39 @@ vdw_definition_file $vdwfile
 score_grid_prefix grid
 contact_cutoff_distance 4.5" > grid.in
 grid -i grid.in
+
+# create box - the second argument in the file showbox.in
+# is the extra margin to also be enclosed to the box (angstroms)
+echo "Y
+%(extra_margin)s
+selected_spheres.sph
+1
+target_noH_box.pdb" > showbox.in
+showbox < showbox.in\n"""%locals()
+        else:
+            # get directory where grid files are located
+            grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
+
+            # check if grid file exists
+            if os.path.isfile(grid_prefix+'.in'):
+                # copy grid files to avoid opening the same file from multiple locations
+                for gridfile in glob(grid_prefix+'*'):
+                    basename = os.path.basename(gridfile)
+                    shutil.copyfile(gridfile, basename)
+            else:
+                raise ValueError('No grid file detected in specified location %s'%self.options['grid_dir'])
+
+            sphfile = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/selected_spheres.sph'
+            # check if sphere file exists
+            if os.path.isfile(sphfile):
+                shutil.copyfile(sphfile, 'selected_spheres.sph')
+            else:
+                raise ValueError('No selected_spheres.sph file detected in specified location %s'%self.options['grid_dir'])
+
+        script += """\ndock6path=`which dock6`
+vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
+flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
 
 # flexible docking using grid score as primary score and no secondary score
 echo "ligand_atom_file ligand-ref-centered.mol2
@@ -400,108 +432,10 @@ cluster_conformations yes
 cluster_rmsd_threshold %(rmsd)s
 rank_ligands no" > dock6.in
 
-dock6 -i dock6.in"""% locals()
-                file.write(script)
+dock6 -i dock6.in\n"""%locals()
 
-        else:
-            grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
-            # check if grid file exists
-            if not os.path.isfile(grid_prefix+'.in'):
-                raise IOError('No grid file detected in specified location %s'%self.options['grid_dir'])
-
-            sphfile = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/selected_spheres.sph'
-            # check if grid file exists
-            if not os.path.isfile(sphfile):
-                raise IOError('No selected_spheres.sph file detected in specified location %s'%self.options['grid_dir'])
-
-            with open(filename, 'w') as file:
-                script ="""#!/bin/bash
-
-# shift ligand coordinates
-python prepare_ligand_dock.py ligand-ref.mol2 ligand-ref-centered.mol2 %(center)s
-
-dock6path=`which dock6`
-vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
-flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
-flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
-
-# flexible docking using grid score as primary score and no secondary score
-echo "ligand_atom_file ligand-ref-centered.mol2
-limit_max_ligands no
-skip_molecule no
-read_mol_solvation no
-calculate_rmsd no
-use_database_filter no
-orient_ligand yes
-automated_matching yes
-receptor_site_file %(sphfile)s
-max_orientations %(max_orientations)s
-critical_points no
-chemical_matching no
-use_ligand_spheres no
-use_internal_energy yes
-internal_energy_rep_exp 12
-flexible_ligand yes
-user_specified_anchor no
-limit_max_anchors no
-min_anchor_size 5
-pruning_use_clustering yes
-pruning_max_orients 1000
-pruning_clustering_cutoff 100
-pruning_conformer_score_cutoff 100
-use_clash_overlap yes
-clash_overlap 0.5
-write_growth_tree no
-bump_filter yes
-bump_grid_prefix %(grid_prefix)s
-max_bumps_anchor 12
-max_bumps_growth 12
-score_molecules yes
-contact_score_primary no
-contact_score_secondary no
-grid_score_primary yes
-grid_score_secondary no
-grid_score_rep_rad_scale 1
-grid_score_vdw_scale 1
-grid_score_es_scale 1
-grid_score_grid_prefix %(grid_prefix)s
-multigrid_score_secondary no
-dock3.5_score_secondary no
-continuous_score_secondary no
-descriptor_score_secondary no
-gbsa_zou_score_secondary no
-gbsa_hawkins_score_secondary no
-SASA_descriptor_score_secondary no
-pbsa_score_secondary no
-amber_score_secondary no
-minimize_ligand yes
-minimize_anchor yes
-minimize_flexible_growth yes
-use_advanced_simplex_parameters no
-simplex_max_cycles 1
-simplex_score_converge 0.1
-simplex_cycle_converge 1.0
-simplex_trans_step 1.0
-simplex_rot_step 0.1
-simplex_tors_step 10.0
-simplex_anchor_max_iterations 1000
-simplex_grow_max_iterations 1000
-simplex_grow_tors_premin_iterations 0
-simplex_random_seed 0
-simplex_restraint_min no
-atom_model all
-vdw_defn_file $vdwfile
-flex_defn_file $flexfile
-flex_drive_file $flexdfile
-ligand_outfile_prefix poses_out
-write_orientations no
-num_scored_conformers %(num_scored_conformers)s
-write_conformations no
-cluster_conformations yes
-cluster_rmsd_threshold %(rmsd)s
-rank_ligands no" > dock6.in
-
-dock6 -i dock6.in"""% locals()
+        # write DOCK6 script
+        with open(filename, 'w') as file:
                 file.write(script)
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):

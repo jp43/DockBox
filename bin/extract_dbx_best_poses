@@ -127,7 +127,7 @@ for dir in args.dirs:
     if os.path.isdir(dir+'/poses'):
         dirs.append(os.path.relpath(dir))
     elif not args.skip_errors:
-        raise ValueError('directory '+dir+'poses does not exist!')
+        raise ValueError('directory '+dir+'/poses does not exist!')
 iscwd, isligID, istargetID, isisomerID = check_directories(dirs)
 
 if not istargetID and args.combine_targets:
@@ -218,7 +218,7 @@ for jdx, dir in enumerate(dirs):
             poses_idxs = range(firstidx, firstidx+nposes)
 
             for index, idx in enumerate(poses_idxs):
-                file_l = posedir + '/lig-%s.mol2'%idx
+                file_l = posedir + '/pose-%s.mol2'%idx
                 if os.path.isfile(file_l):
                     info_dir['file_l'].append(os.path.relpath(file_l))
                 else:
@@ -418,7 +418,7 @@ if args.csvfile_l:
     features_csv.append('name')
 features_csv += features_ids
 features_csv += ['instance']
-#features_csv += ['file_l', 'file_r', 'instance']
+features_csv += ['file_l', 'file_r', 'instance']
 
 if is_site:
     features_csv.append('site')
