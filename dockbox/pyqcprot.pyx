@@ -275,7 +275,7 @@ cdef double FastCalcRMSDAndRotation(np.ndarray[np.float64_t,ndim=1] rot, np.ndar
     # the fabs() is to guard against extremely small, but *negative* numbers due to npfloat point error
     rms = sqrt(fabs(2.0 * (E0 - mxEigenV)/N))
 
-    if (rot == None):
+    if (rot is None):
         return rms # Don't bother with rotation.
 
     a11 = SxxpSyy + Szz-mxEigenV; a12 = SyzmSzy; a13 = - SxzmSzx; a14 = SxymSyx

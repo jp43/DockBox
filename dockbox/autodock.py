@@ -17,13 +17,12 @@ class ADBased(method.DockingMethod):
         self.write_docking_script(filename, file_r, file_l, rescoring=True)
 
     def update_output_mol2files(self, sample=None):
-        # number of mol2 files generated
-        n_files_l = len(glob('pose-*.mol2'))
+        nfiles = len(glob('pose-*.mol2'))
 
         mgltools_path = subprocess.check_output('which prepare_ligand4.py', shell=True, executable='/bin/bash')
         mgltools_path = '/'.join(mgltools_path.split('/')[:-3]) 
 
-        for idx in range(n_files_l):
+        for idx in range(nfiles):
             mol2file = 'pose-%s.mol2'%(idx+1)
             mol2.update_mol2file(mol2file, mol2file, ADupdate=sample, unique=True, mask=['h','H'])
             mol2.arrange_hydrogens(mol2file, 'tmp.mol2', path=mgltools_path)
