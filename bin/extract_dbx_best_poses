@@ -218,7 +218,7 @@ for jdx, dir in enumerate(dirs):
             poses_idxs = range(firstidx, firstidx+nposes)
 
             for index, idx in enumerate(poses_idxs):
-                file_l = posedir + '/lig-%s.mol2'%idx
+                file_l = posedir + '/pose-%s.mol2'%idx
                 if os.path.isfile(file_l):
                     info_dir['file_l'].append(os.path.relpath(file_l))
                 else:
@@ -483,11 +483,11 @@ if best_poses is not None:
         #origindir = '/'.join(file_l.split('/')[:-2])
         #if os.path.isdir(origindir+'/'+instance+'/origin'):
         #    poses_idxs = []
-        #    for filename in glob(origindir+'/'+instance+'/lig-*.mol2'):
+        #    for filename in glob(origindir+'/'+instance+'/pose-*.mol2'):
         #        poses_idxs.append(int((filename.split('.')[-2]).split('-')[-1]))
         #        poses_idxs = sorted(poses_idxs)
         #    pose_idx = poses_idxs[int(index)]
-        #    shutil.copyfile(origindir+'/'+instance+'/origin/lig-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
+        #    shutil.copyfile(origindir+'/'+instance+'/origin/pose-%i.mol2'%pose_idx, dir+'/ligand_orig%s.mol2'%suffix)
 
     if args.copy:
         for idx, row in best_poses.iterrows():
