@@ -218,7 +218,7 @@ for jdx, dir in enumerate(dirs):
             poses_idxs = range(firstidx, firstidx+nposes)
 
             for index, idx in enumerate(poses_idxs):
-                file_l = posedir + '/pose-%s.mol2'%idx
+                file_l = posedir + '/lig-%s.mol2'%idx
                 if os.path.isfile(file_l):
                     info_dir['file_l'].append(os.path.relpath(file_l))
                 else:

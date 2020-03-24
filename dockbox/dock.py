@@ -137,48 +137,7 @@ box_file target_noH_box.pdb
 vdw_definition_file $vdwfile
 score_grid_prefix grid
 contact_cutoff_distance 4.5" > grid.in
-grid -i grid.in
-
-echo "ligand_atom_file %(file_all_poses)s
-limit_max_ligands no
-skip_molecule no
-read_mol_solvation no
-calculate_rmsd no
-use_database_filter no
-orient_ligand no
-use_internal_energy yes
-internal_energy_rep_exp 12
-flexible_ligand no
-bump_filter no
-score_molecules yes
-contact_score_primary no
-contact_score_secondary no
-grid_score_primary yes
-grid_score_secondary no
-grid_score_rep_rad_scale 1
-grid_score_vdw_scale 1
-grid_score_es_scale 1
-grid_score_grid_prefix grid
-multigrid_score_secondary no
-dock3.5_score_secondary no
-continuous_score_secondary no
-descriptor_score_secondary no
-gbsa_zou_score_secondary no
-gbsa_hawkins_score_secondary no
-SASA_descriptor_score_secondary no
-amber_score_secondary no
-minimize_ligand no
-atom_model all
-vdw_defn_file $vdwfile
-flex_defn_file $flexfile
-flex_drive_file $flexdfile
-ligand_outfile_prefix poses_out
-write_orientations no
-num_scored_conformers 1
-rank_ligands no" > dock6.in
-
-dock6 -i dock6.in > dock.out\n"""%locals()
-            file.write(script)
+grid -i grid.in\n"""%locals()
         else:
             # get directory where grid files are located
             grid_prefix = self.options['grid_dir'] + '/' + self.options['dockdir'] + '/grid'
@@ -192,12 +151,12 @@ dock6 -i dock6.in > dock.out\n"""%locals()
             else:
                 raise ValueError('No grid file detected in specified location %s'%self.options['grid_dir'])
 
-        script += """\ndock6path=`which dock6`
+            script += """\ndock6path=`which dock6`
 vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
 flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
-flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`\n"""
 
-echo "ligand_atom_file %(file_all_poses)s
+        script += """\necho "ligand_atom_file %(file_all_poses)s
 limit_max_ligands no
 skip_molecule no
 read_mol_solvation no
@@ -238,8 +197,8 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in > dock.out\n"""%locals()
 
         # write DOCK6 rescoring script
-        with open(filename, 'w') as file:
-                file.write(script)
+        with open(filename, 'w') as ff:
+            ff.write(script)
 
     def write_docking_script(self, filename, file_r, file_l):
         """Dock using DOCK6 flexible docking with grid scoring as primary score"""
@@ -302,6 +261,11 @@ selected_spheres.sph
 target_noH_box.pdb" > showbox.in
 showbox < showbox.in
 
+dock6path=`which dock6`
+vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
+flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+
 # create grid
 echo "compute_grids yes
 grid_spacing %(grid_spacing)s
@@ -351,12 +315,12 @@ showbox < showbox.in\n"""%locals()
             else:
                 raise ValueError('No selected_spheres.sph file detected in specified location %s'%self.options['grid_dir'])
 
-        script += """\ndock6path=`which dock6`
+            script += """\ndock6path=`which dock6`
 vdwfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/vdw_AMBER_parm99.defn'"`
 flexfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex.defn'"`
-flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`
+flexdfile=`python -c "print '/'.join('$dock6path'.split('/')[:-2]) + '/parameters/flex_drive.tbl'"`\n"""
 
-# flexible docking using grid score as primary score and no secondary score
+        script += """\n# flexible docking using grid score as primary score and no secondary score
 echo "ligand_atom_file ligand-ref-centered.mol2
 limit_max_ligands no
 skip_molecule no
@@ -435,8 +399,8 @@ rank_ligands no" > dock6.in
 dock6 -i dock6.in\n"""%locals()
 
         # write DOCK6 script
-        with open(filename, 'w') as file:
-                file.write(script)
+        with open(filename, 'w') as ff:
+            ff.write(script)
 
     def extract_docking_results(self, file_s, input_file_r, input_file_l):
     
@@ -474,7 +438,7 @@ dock6 -i dock6.in\n"""%locals()
 
     def write_script_ligand_prep(self):
 
-        with open('prepare_ligand_dock.py', 'w') as file:
+        with open('prepare_ligand_dock.py', 'w') as ff:
             script ="""import os
 import sys
 import numpy as np
@@ -511,4 +475,4 @@ with open(new_mol2file, 'w') as nmol2f:
                 idx += 1
             else:
                 nmol2f.write(line)"""%locals()
-            file.write(script)
+            ff.write(script)
