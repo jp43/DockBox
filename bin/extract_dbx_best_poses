@@ -43,7 +43,6 @@ parser.add_argument('-copy',
 parser.add_argument('-csvl',
     type=str,
     dest='csvfile_l',
-    default='compounds.csv',
     metavar='FILE',
     help='Filename containing info about compounds. Used to add names of compounds. Default: none')
 
@@ -174,7 +173,7 @@ elif args.sf:
     else:
         resolve_with = '_'.join(scoring_functions)
 
-if args.csvfile_l:
+if args.csvfile_l is not None:
     if not os.path.isfile(args.csvfile_l):
         raise IOError("csvfile %s not found!"%args.csvfile_l)
 
@@ -283,7 +282,7 @@ for jdx, dir in enumerate(dirs):
     poses.append(df_dir)
 
 if poses:
-    poses = pd.concat(poses).reset_index(drop=True)
+    poses = pd.concat(poses, sort=False).reset_index(drop=True)
     if args.csvfile_l and isligID:
         poses = add_names(args.csvfile_l, poses)
 else:
@@ -318,6 +317,8 @@ if args.sbcd or args.cd:
             # handle cases where all the scores provided by a program are nans (to be changed when istargetID or isisomerID is True)
             lignans = minidxs[minidxs.apply(np.isnan)]
             for ligID, row in lignans.iteritems():
+                if isinstance(ligID, tuple):
+                    ligID = ligID[0]
                 row_poses = poses[poses['ligID']==ligID].iloc[0]
                 minidxs[ligID] = float(row_poses.name)
             minidxs = minidxs.astype(int)
@@ -418,11 +419,16 @@ if args.csvfile_l:
     features_csv.append('name')
 features_csv += features_ids
 features_csv += ['instance']
-features_csv += ['file_l', 'file_r', 'instance']
+
+if (args.csvfile_r and istargetID) or is_rec_pdb:
+    features_csv += ['file_l', 'file_r', 'instance']
+else:
+    features_csv += ['file_l', 'instance']
 
 if is_site:
     features_csv.append('site')
 features_csv += scoring_functions_all + ['score']
+
 
 # TODO: add an option to save all the poses to .csv file
 poses[features_csv].to_csv(args.label+'/poses.csv', index=False, float_format='%.3f')
