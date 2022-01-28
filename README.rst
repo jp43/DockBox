@@ -109,7 +109,7 @@ Any docking/scoring software intended to be used by DockBox should be installed 
   * prepare_receptor4.py
   * vina
 
-  The vina executable is available within the `AutoDock Vina <http://vina.scripps.edu/index.html>`_ package. See AutoDock 4 section for other executables.
+  The vina executable is available within the `AutoDock Vina <https://vina.scripps.edu>`_ package. See AutoDock 4 section for other executables.
 
 * **DOCK 6**
 
@@ -127,7 +127,7 @@ Any docking/scoring software intended to be used by DockBox should be installed 
 
   * dsx
 
-  The dsx-like routines can be downloaded from the official `link <http://pc1664.pharmazie.uni-marburg.de/drugscore/dsx_download.php>`_. Note that DockBox assumes DSX is run via an executable file called dsx. Therefore, once you selected the appropriate routine to be run (e.g., dsx_linux_64.lnx for linux systems), create a symbolic link via ln. For example, assuming you are located in the same directory as dsx_linux_64.lnx, you can use the following command:
+  The dsx-like routines can be downloaded from the official `link <https://agklebe.pharmazie.uni-marburg.de/?id=11&lang=en>`_. Note that DockBox assumes DSX is run via an executable file called dsx. Therefore, once you selected the appropriate routine to be run (e.g., dsx_linux_64.lnx for linux systems), create a symbolic link via ln. For example, assuming you are located in the same directory as dsx_linux_64.lnx, you can use the following command:
   
 ::
 
@@ -153,6 +153,8 @@ Any docking/scoring software intended to be used by DockBox should be installed 
   * moebatch
   
   Can be downloaded over `there <https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm>`_. Make sure the MOE environment variable (pointing towards MOE's installation directory) has been correctly exported. Note that a valid license of MOE is required.
+
+**Note**: In case rescoring is enabled (*rescoring=yes* in the configuration file, see below), it is recommended to also enable minimization of the poses (*minimize=yes* in the configuration file). In this case, AmberTools (serial version) 14, 15, 16 or 17 is required for minimization. Make sure main AMBER executables are accessible from the PATH variable including sander, tleap, antechamber and parmchk which are used by DockBox.
 
 Commands
 ********

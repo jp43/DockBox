@@ -1,7 +1,9 @@
 import sys
-import numpy as np
 
+import numpy as np
 from setuptools import setup, Extension
+
+import Cython
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
@@ -20,7 +22,7 @@ ext_modules = [Extension(
     include_dirs=[numpy_include])]
 
 setup(name='dockbox',
-    version='1.3',
+    version='1.4',
     packages=['dockbox'],
     scripts=['bin/rundbx', 'bin/extract_dbx_best_poses'],
     install_requires=['mdkit', 'pandas==0.23.4', 'nwalign', 'oldnumeric'],
