@@ -24,9 +24,9 @@ the results using different consensus docking/scoring strategies.
 * **Rescoring**:
 
   * AutoDock 4 (http://autodock.scripps.edu)
-  * AutoDock Vina (http://vina.scripps.edu/index.html)
+  * AutoDock Vina (https://vina.scripps.edu)
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
-  * DSX (http://pc1664.pharmazie.uni-marburg.de/drugscore/)
+  * DSX (https://agklebe.pharmazie.uni-marburg.de/?id=11&lang=en)
   * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
@@ -51,8 +51,6 @@ The following are the minimal requirements to install the DockBox module
 
 * virtualenv version 1.11 or later
 
-* pip version 1.5 or later
-
 
 Installation
 ************
@@ -75,11 +73,11 @@ on the command line followed by
  
 to activate the virtual environment (do not forget to activate your environment every time you log into a new shell environment).
 
-Finally, the DockBox package can be set up using pip by typing
+Finally, the DockBox package can be set up by going in DockBox installation directory and typing:
 
 ::
 
- pip install dockbox
+ python setup.py install
  
  
 Installation is complete!
