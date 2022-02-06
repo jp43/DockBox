@@ -11,5 +11,4 @@ Here each */best_poses.csv file includes 103 actives followed by 5850 decoys. Th
 
     python compute_hit_rates.py -n 103
 
-Running the above command will generate a directory called top_hits containing the top 100 deduced from each strategy. It will also contain a file called ranking.csv 
-where different are ranked according to their hit rates (where EFs are also provided).
+Running the above command will generate a directory called top_hits containing the top 100 deduced from each strategy. It will also contain a file called ranking.csv where different strategies are ranked according to their hit rates (where EFs are also provided).
