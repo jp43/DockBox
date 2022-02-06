@@ -1,0 +1,12 @@
+The current directory includes the input files to run rundbx on target #12 and one TLR7 active compound. The config.ini file is the same as the one originally used in our study.
+
+The rundbx command can be simply executed using:
+
+    rundbx -f config.ini -l ligand.mol2 -r target12.pdb
+
+* The analysis folder contains results for all the active molecules (103) and decoys (5850). It shows the performance of different docking, rescoring and 
+consensus strategies in terms of hit-rates and Enrichment Factors (EF).
+
+* The mol2files folder contains MOL2 file including all the active molecules and decoys (note that rundbx does not work with MOL2 or PDB files containing
+multiple structures, thus, in order to be used with rundbx, MOL2 files inside that folder should be first split in multiple files containing one molecule
+each)

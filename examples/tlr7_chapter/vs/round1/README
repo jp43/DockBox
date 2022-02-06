@@ -1,0 +1,5 @@
+The current directory includes the input files to run rundbx on target #12 and a compound tested in VS (round 1). The config.ini file is the same as the one originally used in our study.
+
+The rundbx command can be simply executed using:
+
+    rundbx -f config.ini -l ligand.mol2 -r target12.pdb
