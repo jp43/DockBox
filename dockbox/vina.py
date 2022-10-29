@@ -7,7 +7,7 @@ from glob import glob
 from mdkit.utility import mol2
 import autodock
 
-required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'babel']
+required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'vina', 'obabel']
 
 default_settings = {'cpu': '1', 'num_modes': '9', 'energy_range': '3', 'seed': None}
 
@@ -91,7 +91,7 @@ vina --score_only --config vina.config > vina.out"""% locals()
         poses_extracted = False
         if os.path.exists('ligand_out.pdbqt'):
             try:
-                subprocess.check_output('babel -ipdbqt ligand_out.pdbqt -omol2 pose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+                subprocess.check_output('obabel -ipdbqt ligand_out.pdbqt -omol2 -Opose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:

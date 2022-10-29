@@ -3,8 +3,8 @@ import sys
 from glob import glob
 import subprocess
 
-known_programs = {'docking': ['autodock', 'vina', 'dock', 'glide', 'moe', 'gold'], \
-     'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'dsx', 'colvar']}
+known_programs = {'docking': ['autodock', 'vina', 'dock', 'moe'], \
+     'rescoring': ['autodock', 'vina', 'dock', 'glide', 'moe', 'dsx']}
 known_programs['scoring'] = known_programs['rescoring']
 
 single_run_scoring_programs = ['glide', 'dock']

@@ -301,9 +301,6 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
             line = '#' + ','.join(map(str,nposes))+'\n'
             ff.write(line.rstrip('\r\n') + '\n' + content)
 
-        # copy receptor in folder
-        shutil.copyfile(config.input_file_r, posedir+'/rec.pdb')
-
     def do_final_cleanup(self, config):
 
         if config.docking.cleanup >= 2:

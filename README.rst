@@ -17,8 +17,6 @@ the results using different consensus docking/scoring strategies.
   * AutoDock 4 (http://autodock.scripps.edu)
   * AutoDock Vina (http://vina.scripps.edu/index.html)
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
-  * Glide (https://www.schrodinger.com/glide)
-  * GOLD (https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 * **Rescoring**:
@@ -27,7 +25,6 @@ the results using different consensus docking/scoring strategies.
   * AutoDock Vina (https://vina.scripps.edu)
   * DOCK 6 (http://dock.compbio.ucsf.edu/DOCK_6/index.htm)
   * DSX (https://agklebe.pharmazie.uni-marburg.de/?id=11&lang=en)
-  * Glide (https://www.schrodinger.com/glide)
   * MOE (https://www.chemcomp.com/MOE-Molecular_Operating_Environment.htm)
 
 None of the above docking or scoring programs are included in the current repository.
@@ -37,8 +34,8 @@ install the program separately on the same system DockBox is installed.
 To make a docking or scoring program usable by DockBox, make sure all the executable files
 required for each program can be directly run on the command line from any location,
 i.e., are in your PATH (see section **executable files required for each program** 
-to find out the executables needed to run each docking/scoring programs). For MOE and 
-Glide, additional environment variables, i.e, MOE and SCHRODINGER, respectively, must be set up.
+to find out the executables needed to run each docking/scoring programs). For MOE, 
+additional environment variable, i.e, MOE, must be set up.
 
 .. contents:: **Table of Contents**
 
@@ -92,7 +89,7 @@ Any docking/scoring software intended to be used by DockBox should be installed 
 
   * autodock4
   * autogrid4
-  * babel
+  * obabel
   * prepare_dpf4.py
   * prepare_gpf4.py
   * prepare_ligand4.py
@@ -102,7 +99,7 @@ Any docking/scoring software intended to be used by DockBox should be installed 
 
 * **AutoDock Vina**
 
-  * babel
+  * obabel
   * prepare_ligand4.py
   * prepare_receptor4.py
   * vina
@@ -130,21 +127,6 @@ Any docking/scoring software intended to be used by DockBox should be installed 
 ::
 
   ln -s dsx_linux_64.lnx dsx
-
-* **Glide**
-
-  * glide
-  * glide_sort
-  * pdbconvert
-  * prepwizard
-  
-  All the executables can be found within the `Schrodinger package <https://www.schrodinger.com>`_. Make sure the SCHRODINGER environment variable (pointing towards Schrodinger's installation directory) has been correctly exported. Note that a valid license for Glide is required.
-
-* **GOLD**
-
-  * gold_auto
-  
-  gold_auto is the main executable of `GOLD <https://www.ccdc.cam.ac.uk/solutions/csd-discovery/components/gold/>`_.Note that a valid license of GOLD is required.
 
 * **MOE**
 
@@ -284,7 +266,7 @@ Below is an example of configuration file used to dock on two binding sites and 
 
     [DOCKING]
     site = site1, site2
-    program = autodock, vina, dock, glide
+    program = autodock, vina, dock
     rescoring = yes
     minimize = yes
     cleanup = yes
@@ -306,9 +288,6 @@ Below is an example of configuration file used to dock on two binding sites and 
     [DOCK]
     nposes = 20
     
-    [GLIDE]
-    poses_per_lig = 20
-    
     [SITE1]
     center = 75.5, 80.0, 31.0
     boxsize = 40.0, 40.0, 40.0
@@ -323,7 +302,7 @@ General options
 * The **DOCKING** section includes the software that should be used for docking, and if minimization, rescoring and/or cleanup should be performed. The docking software should be specified with coma separation through the key **programs**. The keys relative to the **DOCKING** section are:
 
 
-  * **programs**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the first example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+  * **programs**: specifies the software which are used for docking (autodock, dock6, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the first example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
   * **minimization**: performs minimization on the generated poses (yes or no).
 
@@ -345,7 +324,7 @@ Docking and rescoring options relative to each program are detailed in the secti
 
 * The **RESCORING** section has only one key specifying the programs used to rescore:
 
-  * **program**: specifies the software which are used for docking (autodock, dock6, glide, gold, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
+  * **program**: specifies the software which are used for docking (autodock, dock6, moe and/or vina). Options relative to each program (or instance) are specfied within the section of the same name. For example, if autodock is in the list of programs, options associated with autodock should be specified in the **AUTODOCK** section. In case the same software needs to be used multiple times, numbering can be appended to the name of the program (e.g., in the example below, multiple runs of MOE are performed using different scoring methods: moe, moe1, moe2).
 
 
 Docking/scoring options
@@ -372,7 +351,7 @@ Each section relative to a docking/scoring program should be named the way it wa
 
 ::
 
-        babel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
+        obabel -ad -ipdbqt dock.dlg -omol2 lig-.mol2 -m
 
 **Autodock Vina**
 
@@ -399,17 +378,6 @@ Each section relative to a docking/scoring program should be named the way it wa
 
 **DSX**
 
-**Glide**
-
-* pose_rmsd (default: 0.5):
-* poses_per_lig (default: 10): targeted number of final poses
-* precision (default: SP):
-* use_prepwizard (default: True):
-
-**GOLD**
-
-* nposes (default: 20)
-
 **MOE** (scoring)
 
 * gtest (default: 0.01)
@@ -432,7 +400,7 @@ Below is an example of configuration file that can be used as an input of *rundb
 ::
 
     [DOCKING]
-    program = autodock, vina, dock, glide, moe, moe1, moe2
+    program = autodock, vina, dock, moe, moe1, moe2
     rescoring = no
     minimize = yes
     cleanup = no
@@ -446,12 +414,6 @@ Below is an example of configuration file that can be used as an input of *rundb
     
     [DOCK]
     nposes = 200
-    
-    [GLIDE]
-    poses_per_lig = 200
-    pose_rmsd = 2.0
-    precision = SP
-    use_prepwizard = False
     
     [MOE]
     scoring = London dG
@@ -481,7 +443,7 @@ Below is another example of configuration file for *rundbx* used to dock on two 
 
     [DOCKING]
     site = site1, site2
-    program = autodock, vina, dock, glide
+    program = autodock, vina, dock
     rescoring = yes
     minimize = yes
     cleanup = yes
@@ -502,9 +464,6 @@ Below is another example of configuration file for *rundbx* used to dock on two 
     
     [DOCK]
     nposes = 20
-    
-    [GLIDE]
-    poses_per_lig = 20
     
     [SITE1]
     center = 75.5, 80.0, 31.0

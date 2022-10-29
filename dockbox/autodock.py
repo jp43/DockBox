@@ -7,7 +7,7 @@ from glob import glob
 from mdkit.utility import mol2
 import method
 
-required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'babel']
+required_programs = ['prepare_ligand4.py', 'prepare_receptor4.py', 'prepare_dpf4.py', 'prepare_gpf4.py', 'autogrid4', 'autodock4', 'obabel']
 
 default_settings = {'ga_run': '100', 'spacing': '0.3'}
 
@@ -246,7 +246,7 @@ autodock4 -p dock.dpf -l dock.dlg"""% locals()
         poses_extracted = False
         if os.path.exists('dock.dlg'):
             try:
-                subprocess.check_output('babel -ad -ipdbqt dock.dlg -omol2 pose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
+                subprocess.check_output('obabel -ad -ipdbqt dock.dlg -omol2 -Opose-.mol2 -m &>/dev/null', shell=True, executable='/bin/bash')
                 self.update_output_mol2files(sample=input_file_l)
                 poses_extracted = True
             except:

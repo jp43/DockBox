@@ -44,7 +44,7 @@ class Dock(method.DockingMethod):
         # cat mol2 files into a single mol2
         file_all_poses = 'poses.mol2'
 
-        if self.options['charge_method']:
+        if self.options['charge_method'].lower() not in ["none", "no"]:
             amber_version = utils.check_amber_version()
             ambertools.run_antechamber(files_l[0], 'pose-1.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
         else:
@@ -52,7 +52,7 @@ class Dock(method.DockingMethod):
 
         for idx, file_l in enumerate(files_l):
             if idx > 0:
-                if self.options['charge_method']:
+                if self.options['charge_method'].lower() not in ["none", "no"]:
                     # if not first one, do not regenerate the charges, copy charges generated the first time
                     coords_l = mol2.get_coordinates(file_l)
                     struct = mol2.Reader('pose-1.mol2').next()
@@ -206,7 +206,7 @@ dock6 -i dock6.in > dock.out\n"""%locals()
         locals().update(self.options)
         self.write_script_ligand_prep()
 
-        if self.options['charge_method']:
+        if self.options['charge_method'].lower() not in ["none", "no"]:
             amber_version = utils.check_amber_version()
             ambertools.run_antechamber(file_l, 'ligand-ref.mol2', at='sybyl', c=self.options['charge_method'], version=amber_version)
         else:
