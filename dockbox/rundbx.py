@@ -39,7 +39,7 @@ class DockingConfig(object):
         if ext != '.mol2':
             raise IOError("Ligand file provided with -l option should be in .mol2 format! %s format detected!"%ext)
 
-        nligands = int(subprocess.check_output('fgrep -c "@<TRIPOS>ATOM" %s'%file_l_abs, shell=True))
+        nligands = int(subprocess.check_output('fgrep -c "@<TRIPOS>MOLECULE" %s'%file_l_abs, shell=True))
         if nligands == 0:
             raise IOError("No ligand detected in %s, check your file again!"%args.input_file_l)
         elif nligands > 1:
@@ -63,6 +63,7 @@ class DockingConfig(object):
         self.check_pdbfile(args.input_file_r)
 
     def check_pdbfile(self, filename):
+        """Check if provided pdbfile is valid"""
 
         # check if receptor file exists
         if not os.path.isfile(filename):
@@ -71,21 +72,25 @@ class DockingConfig(object):
         proton_info = load_PROTON_INFO()
         ions_info = load_atomic_ions()
 
-        # check if the .pdb file is valid
         with open(filename, 'r') as pdbf:
             is_end_line = False
+
             for line in pdbf:
                 if line.startswith(('ATOM', 'HETATM')):
                     resname = line[17:20].strip()
+
                     if resname in ions_info:
                         for instance, program, options in self.docking.instances:
                             if program not in configure.programs_handling_ions:
                                 sys.exit("Ion %s found in structure %s! DockBox is not configured to apply %s with ions!" %(resname, filename, program))
+
                     elif resname not in proton_info or line.startswith('HETATM'):
-                        sys.exit('Unrecognized residue %s found in %s! The .pdb file should \
+                        sys.exit('Unrecognized residue %s found in %s! The pdbfile should \
 only contains one protein structure with standard residues (with possibly ions)!'%(resname, filename))
+
                     elif is_end_line:
-                        sys.exit("More than one structure detected in .pdb file! Check your file again!")
+                        sys.exit("More than one structure detected in pdbfile! Check your file again!")
+
                 elif line.startswith('END'):
                     is_end_line = True
 
@@ -198,7 +203,7 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
                 # cat output in file (cat instead of copying because of the binding sites)
                 subprocess.check_output('cat %s >> %s'%(outputfile,name+'.score'), shell=True, executable='/bin/bash')
 
-                if config.docking.cleanup >= 1:
+                if config.docking.cleanup == 1:
                     shutil.rmtree(os.path.dirname(outputfile), ignore_errors=True)
 
         os.chdir(curdir)
@@ -303,21 +308,17 @@ Requires one file for the ligand (1 struct.) and one file for the receptor (1 st
 
     def do_final_cleanup(self, config):
 
-        if config.docking.cleanup >= 2:
-            if os.path.isfile('poses/rec.pdb'):
-                os.remove('poses/rec.pdb')
+        if config.docking.cleanup == 1:
             config_d = config.docking
             # iterate over all the binding sites
             for kdx in range(len(config_d.site)):
                 for instance, program, options in config_d.instances: # iterate over all the instances
-                    for item in glob(instance+'/*'):
-                        if os.path.isfile(item) and item != instance+'/score.out':
-                            os.remove(item)
-                        elif os.path.isdir(item):
-                            shutil.rmtree(item)
-            if config.docking.cleanup == 3:
-                shutil.rmtree('poses', ignore_errors=True)
-        os.remove(config.input_file_l)
+
+                    for filename in glob(instance + '/*'):
+                        base = os.path.basename(filename)
+                        if os.path.isfile(filename) and base.startswith('pose-'):
+                            os.remove(filename)
+        #os.remove(config.input_file_l)
 
     def run_docking(self, config, args):
         """Running docking simulations using each program specified..."""
@@ -365,5 +366,5 @@ cleanup=config_d.cleanup, prepare_only=args.prepare_only, skip_docking=args.skip
             Scoring().run_rescoring(config, args)
 
         # final cleanup if needed
-        if config.docking.cleanup >= 1:
+        if config.docking.cleanup == 1:
             self.do_final_cleanup(config)

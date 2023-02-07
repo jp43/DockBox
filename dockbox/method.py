@@ -74,11 +74,11 @@ class DockingMethod(object):
         # (C) cleanup poses (minimization, remove out-of-box poses)
         if minimize_options['minimization']:
             self.backup_files('origin')
-            self.minimize_extracted_poses(file_r, 'score.out', cleanup=cleanup, **minimize_options)
+            self.minimize_extracted_poses(file_r, 'score.out', **minimize_options)
         self.remove_out_of_range_poses('score.out')
 
         # (D) remove intermediate files if required
-        if cleanup >= 1:
+        if cleanup == 1:
             self.cleanup()
 
         os.chdir(curdir)
@@ -101,7 +101,7 @@ class DockingMethod(object):
         os.chdir(rescordir)
 
         mol2files = files_l
-        if self.program in configure.single_run_scoring_programs or (self.program == 'colvar' and self.options['type'] == 'sasa'):
+        if self.program in configure.single_run_scoring_programs:
             # if the program rescores in one run, provides a list of files
             mol2files = [mol2files]
 
@@ -171,7 +171,7 @@ class DockingMethod(object):
                 for line in new_content:
                     sf.write(line)
 
-    def minimize_extracted_poses(self, file_r, file_s, cleanup=0, **minimize_options):
+    def minimize_extracted_poses(self, file_r, file_s, **minimize_options):
         """Perform AMBER minimization on extracted poses"""
 
         mol2files = self.get_output_mol2files()
@@ -198,10 +198,6 @@ ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_o
                 # display warning message
                 failed_mol2files = [mol2files[idx] for idx in failed_idxs]
                 print "Warning: minimization of poses %s failed, poses were removed!"%(', '.join(failed_mol2files))
-
-        if cleanup >= 1:
-            # if cleanup is more than 1, remove EM directory
-            shutil.rmtree('em', ignore_errors=True)
 
     def remove_out_of_range_poses(self, file_s):
         """Get rid of poses which were predicted outside the box"""
@@ -240,6 +236,9 @@ ncyc=minimize_options['ncyc'], maxcyc=minimize_options['maxcyc'], cut=minimize_o
             if os.path.isfile(filename) and not filename.startswith('pose-') and filename != 'score.out':
                 os.remove(filename)
 
+            elif os.path.isdir(filename):
+                shutil.rmtree(filename)
+                
     def write_rescoring_script(self, script_name, file_r, file_l):
         pass
 
