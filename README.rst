@@ -1,4 +1,4 @@
-.. image:: https://github.com/jp43/DockBox/raw/master/logo_small.png
+.. image:: https://github.com/jp43/DockBox/raw/master/logo.png
    :align: right
 
 *******
