@@ -24,7 +24,7 @@ ext_modules = [Extension(
 setup(name='dockbox',
     version='1.4',
     packages=['dockbox'],
-    scripts=['bin/rundbx', 'bin/extract_dbx_best_poses'],
+    scripts=['bin/rundbx', 'bin/extract_top_poses'],
     install_requires=['mdkit', 'pandas<=0.24.2', 'nwalign', 'oldnumeric'],
     ext_modules = cythonize(ext_modules),
     license='LICENSE.txt',

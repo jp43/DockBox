@@ -28,24 +28,28 @@ class Dsx(method.ScoringMethod):
             script ="""#!/bin/bash
 set -e
 # remove pre-existing result file
-rm -rf dsx.txt
+rm -rf dsx.out
 
 cp %(file_r)s protein.pdb
 cp %(file_l)s ligand.mol2
 
 # execute DSX
-dsx -P protein.pdb -L ligand.mol2 -F dsx.txt%(pot_dir_str)s%(other_flags_str)s
+dsx -P protein.pdb -L ligand.mol2 -F dsx.out%(pot_dir_str)s%(other_flags_str)s
 """% locals()
             file.write(script)
 
-    def extract_rescoring_results(self, file_s):
+    def extract_rescoring_results(self, filename):
 
-        with open(file_s, 'a') as sf:
-            if os.path.isfile('dsx.txt'):
-                with open('dsx.txt', 'r') as txtf:
-                    for line in txtf:
+        with open(filename, 'a') as sf:
+            is_score = False
+            if os.path.isfile('dsx.out'):
+                with open('dsx.out', 'r') as outf:
+                    for line in outf:
                         if line.startswith(" 0"):
-                            print >> sf, line.split('|')[3].strip()
+                            sf.write(line.split('|')[3].strip()+'\n')
+                            is_score = True
                             break
+                if not is_score:
+                    sf.write('NaN\n')
             else:
-                print >> sf, 'NaN'
+                sf.write('NaN\n')
